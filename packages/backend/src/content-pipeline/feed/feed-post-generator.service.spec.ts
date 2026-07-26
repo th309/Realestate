@@ -5,6 +5,7 @@ import { BrandVoiceLinterService } from '../gates/brand-voice-linter.service';
 import { PostsService } from '../posts/posts.service';
 import { PostImageRenderService } from '../post-images/post-image-render.service';
 import { MetroPhotoService } from '../media/metro-photo.service';
+import { PostVideoCardService } from '../post-images/post-video-card.service';
 import type { BrandProfile } from '../brand-kit/brand-kit.types';
 import type { ScoreMoverItem } from '../data/score-mover-context.queries';
 
@@ -25,6 +26,8 @@ type Overrides = {
   renderThrows?: boolean;
   /** null = no confident photo for this metro; 'throw' = lookup blew up. */
   skyline?: string | null | 'throw';
+  /** Non-null opts the post into the video-card branch. */
+  videoRefs?: unknown[] | null;
 };
 
 function build(o: Overrides = {}) {
@@ -90,6 +93,12 @@ function build(o: Overrides = {}) {
   const metroPhotos = {
     getSkylineDataUri,
   } as unknown as MetroPhotoService;
+  // Default: no video card, so the existing image expectations still describe
+  // the common path. `videoRefs` opts a test into the video-card branch.
+  const renderVideoCard = jest.fn(() => Promise.resolve(o.videoRefs ?? null));
+  const videoCards = {
+    renderForPost: renderVideoCard,
+  } as unknown as PostVideoCardService;
 
   const service = new FeedPostGeneratorService(
     ai,
@@ -98,6 +107,7 @@ function build(o: Overrides = {}) {
     posts,
     postImages,
     metroPhotos,
+    videoCards,
   );
   return {
     service,
@@ -106,6 +116,7 @@ function build(o: Overrides = {}) {
     renderForPost,
     getSkylineDataUri,
     complete,
+    renderVideoCard,
   };
 }
 
@@ -239,6 +250,55 @@ describe('FeedPostGeneratorService skyline photos', () => {
       geography: 'zip',
     });
     expect(getSkylineDataUri).not.toHaveBeenCalled();
+  });
+
+  it('ships a video card instead of images when one renders', async () => {
+    const videoRef = {
+      kind: 'video',
+      bucket: 'content-pipeline',
+      storage_path: 'posts/post-1/card.mp4',
+      width: 1080,
+      height: 1350,
+      duration_sec: 8,
+      order: 0,
+    };
+    const { service, updateMediaRefs, renderForPost } = build({
+      videoRefs: [videoRef],
+    });
+    const r = await service.generatePost(
+      BRAND,
+      'PREAMBLE',
+      'linkedin_post',
+      MOVER,
+    );
+    expect(r.outcome.status).toBe('inserted');
+    expect(updateMediaRefs).toHaveBeenCalledWith('post-1', [videoRef]);
+    // The image render is skipped entirely — one card per post, not both.
+    expect(renderForPost).not.toHaveBeenCalled();
+  });
+
+  it('falls back to images when no city-confident b-roll exists', async () => {
+    // renderForPost returning null IS the honest skip.
+    const { service, renderForPost, updateMediaRefs, renderVideoCard } = build({
+      videoRefs: null,
+    });
+    await service.generatePost(BRAND, 'PREAMBLE', 'linkedin_post', MOVER);
+    expect(renderVideoCard).toHaveBeenCalledTimes(1);
+    expect(renderForPost).toHaveBeenCalledTimes(1);
+    expect(updateMediaRefs).toHaveBeenCalledTimes(1);
+  });
+
+  it('falls back to images when the video-card render throws', async () => {
+    const { service, renderForPost, renderVideoCard } = build({});
+    renderVideoCard.mockRejectedValueOnce(new Error('ffmpeg exploded'));
+    const r = await service.generatePost(
+      BRAND,
+      'PREAMBLE',
+      'linkedin_post',
+      MOVER,
+    );
+    expect(r.outcome.status).toBe('inserted');
+    expect(renderForPost).toHaveBeenCalledTimes(1);
   });
 
   it('keeps the photo out of the generation prompt', async () => {

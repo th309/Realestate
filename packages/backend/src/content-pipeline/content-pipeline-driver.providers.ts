@@ -23,6 +23,7 @@ import { PuppeteerLeadMagnetRenderer } from './drivers/puppeteer-lead-magnet-ren
 import { LEAD_MAGNET_RENDERER } from './drivers/lead-magnet-renderer.interface';
 import { PuppeteerPostImageRenderer } from './post-images/post-image-renderer';
 import { POST_IMAGE_RENDERER } from './post-images/post-image-renderer.interface';
+import { VideoCardComposerService } from './media/video-card-composer.service';
 
 /**
  * Concrete third-party adapters (LLM, TTS, captioning, social publishers,
@@ -77,4 +78,7 @@ export const CONTENT_PIPELINE_DRIVER_PROVIDERS: Provider[] = [
 
   PuppeteerPostImageRenderer,
   { provide: POST_IMAGE_RENDERER, useExisting: PuppeteerPostImageRenderer },
+
+  // ffmpeg compositing for the video-card lane.
+  VideoCardComposerService,
 ];

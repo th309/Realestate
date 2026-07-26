@@ -9,6 +9,7 @@ import { BrandVoiceLinterService } from '../gates/brand-voice-linter.service';
 import { PostImageRenderService } from '../post-images/post-image-render.service';
 import { marketCityForQuery } from '../post-images/post-image-names';
 import { MetroPhotoService } from '../media/metro-photo.service';
+import { PostVideoCardService } from '../post-images/post-video-card.service';
 import type { PostCopy, PostRow } from '../posts/post.types';
 import {
   FEED_POST_TYPE_PLATFORM,
@@ -59,6 +60,7 @@ export class FeedPostGeneratorService {
     private readonly posts: PostsService,
     private readonly postImages: PostImageRenderService,
     private readonly metroPhotos: MetroPhotoService,
+    private readonly videoCards: PostVideoCardService,
   ) {}
 
   async generatePost(
@@ -202,6 +204,21 @@ export class FeedPostGeneratorService {
     grounding: FeedMarketGrounding,
   ): Promise<PostRow> {
     try {
+      // A metro post whose rotation landed on a photo look, and which has
+      // city-confident b-roll, ships as a video card instead. Everything else
+      // renders images exactly as before.
+      const videoRefs = await this.videoCards
+        .renderForPost(post, grounding)
+        .catch((err) => {
+          this.logger.error(
+            `video-card render failed for ${post.id}: ${(err as Error).message}`,
+          );
+          return null;
+        });
+      if (videoRefs && videoRefs.length > 0) {
+        return await this.posts.updateMediaRefs(post.id, videoRefs);
+      }
+
       const withPhoto = await this.attachSkylinePhoto(grounding);
       const refs = await this.postImages.renderForPost(post, withPhoto);
       if (refs.length > 0)

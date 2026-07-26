@@ -70,6 +70,8 @@ import { FeedService } from './feed/feed.service';
 import { FeedPostGeneratorService } from './feed/feed-post-generator.service';
 import { PostGenerateController } from './feed/post-generate.controller';
 import { PostImageRenderService } from './post-images/post-image-render.service';
+import { PostVideoCardService } from './post-images/post-video-card.service';
+import { MetroBrollService } from './media/metro-broll.service';
 
 // Registered via the provider groups below; imported here because the module
 // re-exports them to other feature modules.
@@ -149,10 +151,12 @@ import { CONTENT_PIPELINE_ANALYTICS_PROVIDERS } from './content-pipeline-analyti
     RankingResolverService,
     MetroHeroImageService,
     MetroPhotoService,
+    MetroBrollService,
 
     FeedService,
     FeedPostGeneratorService,
     PostImageRenderService,
+    PostVideoCardService,
 
     ...CONTENT_PIPELINE_DRIVER_PROVIDERS,
     ...CONTENT_PIPELINE_JOB_HANDLER_PROVIDERS,
