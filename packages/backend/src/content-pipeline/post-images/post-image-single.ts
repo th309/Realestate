@@ -18,7 +18,11 @@ import {
   scaleBarHtml,
   toneColor,
 } from './post-image-shared';
-import { PostImageContent } from './post-image.types';
+import {
+  PostImageContent,
+  PostImageFamily,
+  SinglePostVariant,
+} from './post-image.types';
 
 /** px value that scales with --s (for text that must shrink to fit). */
 function s(px: number): string {
@@ -126,18 +130,38 @@ function creamClaim(c: PostImageContent): string {
     </div>`;
 }
 
+/**
+ * One single-post layout. `skeleton` (stat/hook/claim) x `family` (dark/cream) is
+ * the matrix the selector reasons over; adding a look is appending an entry here
+ * plus its build fn — no dispatcher surgery.
+ */
+export interface SingleVariantEntry {
+  id: SinglePostVariant;
+  family: PostImageFamily;
+  skeleton: 'stat' | 'hook' | 'claim';
+  build: (c: PostImageContent) => string;
+}
+
+/** The single-post variant registry (the seam for the dozen-looks expansion). */
+export const SINGLE_VARIANT_REGISTRY: SingleVariantEntry[] = [
+  { id: 'daily_card_stat', family: 'dark', skeleton: 'stat', build: darkStat },
+  { id: 'daily_card_hook', family: 'dark', skeleton: 'hook', build: darkHook },
+  { id: 'editorial_stat', family: 'cream', skeleton: 'stat', build: creamStat },
+  {
+    id: 'editorial_claim',
+    family: 'cream',
+    skeleton: 'claim',
+    build: creamClaim,
+  },
+];
+
+const SINGLE_VARIANT_BY_ID = new Map(
+  SINGLE_VARIANT_REGISTRY.map((entry) => [entry.id, entry]),
+);
+
 /** Dispatch a single-post content to its variant layout (returns .stage inner). */
 export function buildSingleInner(c: PostImageContent): string {
-  switch (c.variant) {
-    case 'daily_card_stat':
-      return darkStat(c);
-    case 'daily_card_hook':
-      return darkHook(c);
-    case 'editorial_stat':
-      return creamStat(c);
-    case 'editorial_claim':
-      return creamClaim(c);
-    default:
-      return c.family === 'dark' ? darkHook(c) : creamClaim(c);
-  }
+  const entry = SINGLE_VARIANT_BY_ID.get(c.variant as SinglePostVariant);
+  if (entry) return entry.build(c);
+  return c.family === 'dark' ? darkHook(c) : creamClaim(c);
 }
