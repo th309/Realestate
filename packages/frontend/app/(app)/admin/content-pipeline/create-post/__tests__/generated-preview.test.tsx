@@ -18,6 +18,7 @@ function makePost(mediaUrls: string[]): PlannerPost {
     source: "ai_generated",
     mediaUrls,
     error: null,
+    attempts: 0,
     created_at: "",
     updated_at: "",
   };

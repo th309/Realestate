@@ -51,6 +51,9 @@ export interface QueueItem {
   platform?: string;
   copy?: PostCopy;
   created_at?: string;
+  /** Failed posts carry why they failed and how many attempts it took. */
+  error?: string | null;
+  attempts?: number;
 }
 
 export interface QueueNavigatorApi {

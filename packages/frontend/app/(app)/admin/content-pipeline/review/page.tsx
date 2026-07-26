@@ -1,29 +1,54 @@
 "use client";
 import Link from "next/link";
-import { Suspense, useEffect } from "react";
+import { Suspense, useEffect, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchReviewQueue, fetchRun } from "../lib/content-pipeline-api";
 import { approvePost, skipPost } from "../lib/posts-api";
+import { useFailedPosts } from "../lib/use-failed-posts";
+import {
+  useReschedulePost,
+  useUpdatePostCopy,
+} from "../lib/use-post-mutations";
 import {
   QueueNavigatorProvider,
   useQueueNavigator,
+  type QueueItem,
 } from "../lib/queue-navigator";
 import { KeybindingScopeProvider } from "../lib/keybinding-scope";
 import { useToast } from "../lib/toast";
 import { ReviewCard } from "./review-card";
 import { PostReviewCard } from "./post-review-card";
-import { isPostReviewItem, reviewItemTitle } from "./review-item";
+import {
+  failedPostToQueueItem,
+  isFailedPostItem,
+  isPostReviewItem,
+  reviewItemTitle,
+} from "./review-item";
 import { QueueRibbon } from "./queue-ribbon";
 
 export default function ReviewQueuePage() {
-  const { data: queue = [], isLoading } = useQuery({
+  const { data: reviewQueue = [], isLoading } = useQuery({
     queryKey: ["review-queue"],
     queryFn: fetchReviewQueue,
     refetchInterval: 30_000,
   });
 
-  if (isLoading) {
+  // Posts that failed to publish aren't in the backend's review queue (that
+  // carries work which hasn't shipped yet), but they're the most urgent thing
+  // an operator can be handed — so they're folded in at the head.
+  const failedPosts = useFailedPosts();
+
+  const queue = useMemo<QueueItem[]>(() => {
+    const failedItems = (failedPosts.data?.posts ?? []).map(
+      failedPostToQueueItem,
+    );
+    const seen = new Set(failedItems.map((item) => item.id));
+    const rest = (reviewQueue as QueueItem[]).filter((i) => !seen.has(i.id));
+    return [...failedItems, ...rest];
+  }, [failedPosts.data, reviewQueue]);
+
+  if (isLoading || failedPosts.isLoading) {
     return <ReviewSkeleton />;
   }
 
@@ -92,6 +117,11 @@ function ReviewShell() {
     onError: (e: Error) => toast.error(`Couldn't skip: ${e.message}`),
   });
 
+  // Retrying a failed post reschedules it to now (failed -> scheduled), which
+  // hands it back to the publish cron. Editing its copy first is the usual fix.
+  const retryMut = useReschedulePost();
+  const copyMut = useUpdatePostCopy();
+
   const headerTitle = isPost
     ? reviewItemTitle(currentItem)
     : (detail?.run?.market_query ?? "Loading…");
@@ -153,8 +183,22 @@ function ReviewShell() {
             item={currentItem}
             onApprove={() => approveMut.mutate(currentItem.id)}
             onSkip={() => skipMut.mutate(currentItem.id)}
+            onRetry={
+              isFailedPostItem(currentItem)
+                ? () => {
+                    retryMut.mutate({
+                      id: currentItem.id,
+                      iso: new Date().toISOString(),
+                    });
+                    nav.removeCurrent();
+                  }
+                : undefined
+            }
+            onSaveCopy={(copy) => copyMut.mutate({ id: currentItem.id, copy })}
             approving={approveMut.isPending}
             skipping={skipMut.isPending}
+            retrying={retryMut.isPending}
+            savingCopy={copyMut.isPending}
           />
         ) : detail ? (
           <ReviewCard run={detail} />

@@ -24,6 +24,7 @@ function makePost(
     platform_post_id: null,
     source: "ai_generated",
     error: null,
+    attempts: 0,
     created_at: "",
     updated_at: "",
   };

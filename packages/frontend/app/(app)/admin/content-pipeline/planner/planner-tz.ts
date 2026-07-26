@@ -49,6 +49,24 @@ export function formatEtTime(instant: Date | string): string {
   return TIME_FMT.format(d);
 }
 
+const DATE_TIME_FMT = new Intl.DateTimeFormat("en-US", {
+  timeZone: PLANNER_TZ,
+  month: "short",
+  day: "numeric",
+  hour: "numeric",
+  minute: "2-digit",
+  hour12: true,
+});
+
+/**
+ * ET date and clock time of an instant, e.g. `Jul 24, 9:05 AM`. For surfaces
+ * outside the calendar grid, where the day isn't already implied by position.
+ */
+export function formatEtDateTime(instant: Date | string): string {
+  const d = typeof instant === "string" ? new Date(instant) : instant;
+  return DATE_TIME_FMT.format(d);
+}
+
 /** ET hour (0-23) and minute of an instant. */
 export function etTimeParts(instant: Date | string): {
   hour: number;

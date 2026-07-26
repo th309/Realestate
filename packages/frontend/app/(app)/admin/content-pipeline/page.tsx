@@ -12,6 +12,8 @@ import {
   type ReviewLoadStatus,
 } from "./components/home/StudioGreeting";
 import { ReviewStrip } from "./components/home/ReviewStrip";
+import { NeedsAttentionCard } from "./components/home/NeedsAttentionCard";
+import { useFailedPosts } from "./lib/use-failed-posts";
 import { TaskGroup } from "./components/home/TaskGroup";
 import { TASK_GROUPS } from "./components/home/taskCatalog";
 import { RecentWorkRail } from "./components/home/RecentWorkRail";
@@ -49,6 +51,9 @@ function HomeContent() {
     refetchInterval: 30_000,
   });
 
+  // Same query key as the needs-attention card below — one fetch, two readers.
+  const failedPosts = useFailedPosts();
+
   // Memoize on the stable React Query data so the counts useMemo below (and
   // the child props) don't churn a fresh array reference every render.
   const recentRuns = useMemo(
@@ -68,12 +73,16 @@ function HomeContent() {
       ? "ready"
       : "loading";
 
+  // A post that failed to publish needs an operator as much as a failed run
+  // does, so both feed the one "Needs attention" count in the ticker.
+  const failedPostCount = failedPosts.data?.posts.length ?? 0;
+
   const counts = useMemo<InFlightCounts>(() => {
     const next: InFlightCounts = {
       generating: 0,
       review: reviewItems.length,
       published: 0,
-      attention: 0,
+      attention: failedPostCount,
     };
     for (const run of recentRuns) {
       const { tone } = pipelineStateToStatusChip(run.status);
@@ -82,7 +91,7 @@ function HomeContent() {
       else if (tone === "attention") next.attention += 1;
     }
     return next;
-  }, [recentRuns, reviewItems]);
+  }, [recentRuns, reviewItems, failedPostCount]);
 
   if (dashboard.isLoading) {
     return <HomeSkeleton />;
@@ -102,6 +111,8 @@ function HomeContent() {
         )}
 
         <CostCapBanner status={dashboard.data?.costCapStatus} />
+
+        <NeedsAttentionCard />
 
         <ReviewStrip
           items={reviewItems}

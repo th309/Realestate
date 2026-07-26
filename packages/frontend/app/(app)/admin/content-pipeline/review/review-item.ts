@@ -7,10 +7,36 @@
  * until the backend starts tagging items.
  */
 import type { QueueItem } from "../lib/queue-navigator";
+import type { PlannerPost } from "../lib/posts-api";
 
 /** Post items carry `kind: 'post'`; everything else (incl. absent) is a run. */
 export function isPostReviewItem(item: QueueItem): boolean {
   return item.kind === "post";
+}
+
+/**
+ * A post that failed to publish. These don't come from the backend's review
+ * queue (which carries work that hasn't shipped yet) — the review page folds
+ * them in so a failure is reviewable in the same place as everything else.
+ */
+export function isFailedPostItem(item: QueueItem): boolean {
+  return isPostReviewItem(item) && item.status === "failed";
+}
+
+/** Project a failed post onto the queue-item shape the navigator renders. */
+export function failedPostToQueueItem(post: PlannerPost): QueueItem {
+  return {
+    id: post.id,
+    kind: "post",
+    status: post.status,
+    post_type: post.post_type,
+    platform: post.platform,
+    copy: post.copy,
+    mediaUrls: post.mediaUrls,
+    created_at: post.created_at,
+    error: post.error,
+    attempts: post.attempts,
+  };
 }
 
 /**

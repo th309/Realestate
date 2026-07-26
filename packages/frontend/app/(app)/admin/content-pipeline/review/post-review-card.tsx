@@ -12,8 +12,14 @@ import {
   normalizeVideoScript,
   buildMakeVideoHref,
 } from "../video-scripts/video-script-copy";
-import { isVideoScriptItem, prettyPostType } from "./review-item";
+import {
+  isFailedPostItem,
+  isVideoScriptItem,
+  prettyPostType,
+} from "./review-item";
 import { SlideImage } from "./slide-image";
+import { PostCopyEditor } from "./post-copy-editor";
+import type { PostCopy } from "../lib/posts-api";
 
 /**
  * Review-queue detail for a POST item (image/carousel or video_script). Renders
@@ -21,19 +27,31 @@ import { SlideImage } from "./slide-image";
  * posts are mockup-first (approve/skip); video scripts are script-forward with a
  * "Make this video" handoff instead of approve (they're suggestions, not
  * publishable posts).
+ *
+ * A post that already failed to publish is the third case: approving it would
+ * mean nothing, so it reads back the failure and offers a retry. Editing the
+ * copy first is the usual fix, which is why the editor is on both paths.
  */
 export function PostReviewCard({
   item,
   onApprove,
   onSkip,
+  onRetry,
+  onSaveCopy,
   approving = false,
   skipping = false,
+  retrying = false,
+  savingCopy = false,
 }: {
   item: QueueItem;
   onApprove: () => void;
   onSkip: () => void;
+  onRetry?: () => void;
+  onSaveCopy?: (copy: PostCopy) => void;
   approving?: boolean;
   skipping?: boolean;
+  retrying?: boolean;
+  savingCopy?: boolean;
 }) {
   if (isVideoScriptItem(item)) {
     return <ScriptReview item={item} onSkip={onSkip} skipping={skipping} />;
@@ -43,8 +61,12 @@ export function PostReviewCard({
       item={item}
       onApprove={onApprove}
       onSkip={onSkip}
+      onRetry={onRetry}
+      onSaveCopy={onSaveCopy}
       approving={approving}
       skipping={skipping}
+      retrying={retrying}
+      savingCopy={savingCopy}
     />
   );
 }
@@ -66,24 +88,36 @@ function MockupReview({
   item,
   onApprove,
   onSkip,
+  onRetry,
+  onSaveCopy,
   approving,
   skipping,
+  retrying,
+  savingCopy,
 }: {
   item: QueueItem;
   onApprove: () => void;
   onSkip: () => void;
+  onRetry?: () => void;
+  onSaveCopy?: (copy: PostCopy) => void;
   approving: boolean;
   skipping: boolean;
+  retrying: boolean;
+  savingCopy: boolean;
 }) {
   const urls = item.mediaUrls ?? [];
   const [slide, setSlide] = useState(0);
+  const [editing, setEditing] = useState(false);
   const current = urls[Math.min(slide, urls.length - 1)];
   const copy = item.copy ?? {};
   const hashtags = copy.hashtags ?? [];
+  const failed = isFailedPostItem(item);
 
   return (
     <div className="mx-auto max-w-2xl space-y-6 p-6">
       <ChipRow item={item} />
+
+      {failed && <FailureNotice item={item} />}
 
       <div className="mx-auto w-full max-w-sm">
         <div
@@ -134,50 +168,115 @@ function MockupReview({
         )}
       </div>
 
-      <div className="space-y-3">
-        {copy.hook && (
-          <p className="text-base font-semibold text-on-surface">{copy.hook}</p>
-        )}
-        {copy.body && (
-          <p className="whitespace-pre-wrap text-sm leading-relaxed text-on-surface-variant">
-            {copy.body}
-          </p>
-        )}
-        {copy.cta && (
-          <p className="text-sm font-medium text-on-surface">{copy.cta}</p>
-        )}
-        {hashtags.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {hashtags.map((tag) => (
-              <span
-                key={tag}
-                className="rounded-full bg-surface-container-high px-2 py-0.5 text-xs text-on-surface-variant"
-              >
-                {tag.startsWith("#") ? tag : `#${tag}`}
-              </span>
-            ))}
-          </div>
-        )}
-      </div>
+      {editing && onSaveCopy ? (
+        <PostCopyEditor
+          copy={copy}
+          saving={savingCopy}
+          onSave={(next) => {
+            onSaveCopy(next);
+            setEditing(false);
+          }}
+          onCancel={() => setEditing(false)}
+        />
+      ) : (
+        <div className="space-y-3">
+          {copy.hook && (
+            <p className="text-base font-semibold text-on-surface">
+              {copy.hook}
+            </p>
+          )}
+          {copy.body && (
+            <p className="whitespace-pre-wrap text-sm leading-relaxed text-on-surface-variant">
+              {copy.body}
+            </p>
+          )}
+          {copy.cta && (
+            <p className="text-sm font-medium text-on-surface">{copy.cta}</p>
+          )}
+          {hashtags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {hashtags.map((tag) => (
+                <span
+                  key={tag}
+                  className="rounded-full bg-surface-container-high px-2 py-0.5 text-xs text-on-surface-variant"
+                >
+                  {tag.startsWith("#") ? tag : `#${tag}`}
+                </span>
+              ))}
+            </div>
+          )}
+          {onSaveCopy && (
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              className="rounded-full px-3 py-1.5 text-sm font-semibold text-primary transition-colors duration-200 hover:bg-primary/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            >
+              Edit copy
+            </button>
+          )}
+        </div>
+      )}
 
-      <div className="flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          onClick={onApprove}
-          disabled={approving}
-          className="rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-on-primary transition-colors duration-200 hover:bg-primary/90 disabled:opacity-60"
-        >
-          {approving ? "Approving…" : "Approve"}
-        </button>
-        <button
-          type="button"
-          onClick={onSkip}
-          disabled={skipping}
-          className="rounded-full border border-outline-variant px-6 py-2.5 text-sm font-semibold text-on-surface transition-colors duration-200 hover:bg-surface-container-high disabled:opacity-60"
-        >
-          {skipping ? "Skipping…" : "Skip"}
-        </button>
-      </div>
+      {!editing && (
+        <div className="flex flex-wrap items-center gap-3">
+          {failed ? (
+            onRetry && (
+              <button
+                type="button"
+                onClick={onRetry}
+                disabled={retrying}
+                className="rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-on-primary transition-colors duration-200 hover:bg-primary/90 disabled:opacity-60"
+              >
+                {retrying ? "Queueing…" : "Try again"}
+              </button>
+            )
+          ) : (
+            <button
+              type="button"
+              onClick={onApprove}
+              disabled={approving}
+              className="rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-on-primary transition-colors duration-200 hover:bg-primary/90 disabled:opacity-60"
+            >
+              {approving ? "Approving…" : "Approve"}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onSkip}
+            disabled={skipping}
+            className="rounded-full border border-outline-variant px-6 py-2.5 text-sm font-semibold text-on-surface transition-colors duration-200 hover:bg-surface-container-high disabled:opacity-60"
+          >
+            {skipping ? "Skipping…" : "Skip"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Why a post failed, in the words the platform used. Shown above the mockup
+ * because it's the reason the operator is looking at this card at all.
+ */
+function FailureNotice({ item }: { item: QueueItem }) {
+  const attempts = item.attempts ?? 0;
+  return (
+    <div className="rounded-xl border border-warning/40 bg-warning-container/40 p-4">
+      <p className="text-sm font-semibold text-on-surface">
+        This post didn&apos;t publish
+        {attempts > 0
+          ? ` — ${attempts} attempt${attempts === 1 ? "" : "s"}`
+          : ""}
+      </p>
+      <p className="mt-1 text-sm leading-relaxed text-on-surface-variant">
+        {item.error?.trim()
+          ? item.error
+          : "The publisher recorded no reason for this failure."}
+      </p>
+      <p className="mt-2 text-xs text-on-surface-variant">
+        Fix the copy if that was the problem, then try again — it goes back in
+        the publish queue, which sweeps every minute.
+      </p>
     </div>
   );
 }

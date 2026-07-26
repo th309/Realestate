@@ -6,6 +6,13 @@
  */
 import { fetchAPI, fetchAPIRaw } from "@/lib/data/fetchers/base";
 
+/**
+ * Publish attempts the backend publisher spends before it stops retrying a
+ * post. Mirrors MAX_PUBLISH_ATTEMPTS in the backend's post-publisher helpers —
+ * the frontend can't import across packages, so this is a deliberate copy.
+ */
+export const MAX_PUBLISH_ATTEMPTS = 3;
+
 export type PostStatus =
   | "draft"
   | "pending_review"
@@ -73,6 +80,8 @@ export interface PlannerPost {
   mediaUrls?: string[];
   /** Failure reason — present for the `failed` status the planner renders. */
   error: string | null;
+  /** Publish attempts spent so far. The publisher stops at MAX_PUBLISH_ATTEMPTS. */
+  attempts: number;
   created_at: string;
   updated_at: string;
 }
@@ -115,63 +124,8 @@ export async function fetchPosts(
   return res.data;
 }
 
-/**
- * Post kinds the generate endpoint can produce. The guided create-post flow
- * uses the first three; `video_script` is generated only by the Video Scripts
- * page's "Suggest one now" (no platform pick — the server routes it to YouTube).
- */
-export type GeneratePostType =
-  | "image_post"
-  | "carousel"
-  | "from_topic"
-  | "video_script";
-
-/** Platforms the create-post flow targets (one per generated post). */
-export type GeneratePostPlatform =
-  | "instagram"
-  | "facebook"
-  | "tiktok"
-  | "linkedin"
-  | "x";
-
-export interface GeneratePostInput {
-  type: GeneratePostType;
-  /** Chosen in the create-post flow; omitted for `video_script` suggestions. */
-  platform?: GeneratePostPlatform;
-  /** Free-text idea — only for `from_topic` (server caps length). */
-  topic?: string;
-  /** Market to ground the post in — for `image_post` / `carousel`. */
-  marketQuery?: string;
-}
-
-/**
- * Generate a single post from the guided create-post flow. Synchronous on the
- * server (DeepSeek copy + image render, ~15s) — the created post lands in the
- * review feed as `pending_review` and is returned here so the flow can preview
- * it immediately. Follows the sibling POST idiom: fetchAPIRaw + { success, data }.
- */
-export async function generatePost(
-  input: GeneratePostInput,
-): Promise<PlannerPost> {
-  const res = await fetchAPIRaw("/api/admin/content-pipeline/posts/generate", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(input),
-  });
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`generatePost failed: ${res.status} ${body}`);
-  }
-  const json = (await res.json()) as {
-    success?: boolean;
-    data: PlannerPost;
-    error?: string;
-  };
-  if (json.success === false) {
-    throw new Error(json.error ?? "generatePost failed");
-  }
-  return json.data;
-}
+// Post generation lives in `generate-post-api.ts` (extracted to keep this file
+// under the 300-line hard limit) and is re-exported at the bottom of this file.
 
 /**
  * POST a lifecycle action to a post's dedicated endpoint and return the updated
@@ -214,6 +168,63 @@ export function skipPost(id: string): Promise<PlannerPost> {
 }
 
 /**
+ * The copy fields the backend's edit endpoint accepts. Anything outside this
+ * list is dropped by the validation whitelist — and because the PATCH replaces
+ * the whole `copy` JSONB rather than merging, a dropped key is gone from the
+ * row. So a save always sends this exact surface, carrying through the fields
+ * the editor doesn't expose.
+ */
+const EDITABLE_COPY_KEYS = [
+  "hook",
+  "body",
+  "cta",
+  "hashtags",
+  "slides",
+  "title",
+  "close",
+  "sceneDirection",
+  "durationSeconds",
+  "suggestedFormat",
+  "suggestedMarketQuery",
+] as const;
+
+/** Narrow a post's copy to the fields the edit endpoint will keep. */
+export function toEditableCopy(copy: PostCopy): PostCopy {
+  const out: Record<string, unknown> = {};
+  for (const key of EDITABLE_COPY_KEYS) {
+    const value = copy[key];
+    if (value !== undefined) out[key] = value;
+  }
+  return out as PostCopy;
+}
+
+/** Save edited copy. The backend rejects edits once a post is published. */
+export async function updatePostCopy(
+  id: string,
+  copy: PostCopy,
+): Promise<PlannerPost> {
+  const res = await fetchAPIRaw(
+    `/api/admin/content-pipeline/posts/${id}/copy`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ copy: toEditableCopy(copy) }),
+    },
+  );
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`copy edit failed: ${res.status} ${body}`);
+  }
+  const json = (await res.json()) as {
+    success?: boolean;
+    data: PlannerPost;
+    error?: string;
+  };
+  if (json.success === false) throw new Error(json.error ?? "copy edit failed");
+  return json.data;
+}
+
+/**
  * Reschedule a post to a new instant. Sends the canonical scheduled state so
  * this both reschedules an already-scheduled post and schedules an approved
  * one (approved -> scheduled is a valid transition; same-status is a no-op that
@@ -248,3 +259,12 @@ export async function reschedulePost(
   }
   return json.data;
 }
+
+// Generation fetchers live in `generate-post-api.ts` (extracted to keep this
+// file under the 300-line hard limit).
+export {
+  type GeneratePostType,
+  type GeneratePostPlatform,
+  type GeneratePostInput,
+  generatePost,
+} from "./generate-post-api";
