@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useOnlineStatus } from "./use-online-status";
 
 // Same-origin, non-image static asset — safe from host-scoped content blockers
@@ -10,26 +10,25 @@ import { useOnlineStatus } from "./use-online-status";
 const PROBE_URL = "/manifest.webmanifest";
 const PROBE_TIMEOUT_MS = 3000;
 const RECHECK_INTERVAL_MS = 15_000;
+// Debounce rapid online/offline/visibility flapping — don't re-probe if we
+// just did within this window.
+const PROBE_COOLDOWN_MS = 2500;
 
 /**
  * Whether a real same-origin request reaches our own origin. Any response —
- * even a 404 — proves connectivity; only a network error / timeout counts as
- * unreachable.
+ * even a 404 — proves connectivity; only a network error / abort counts as
+ * unreachable. The caller owns the AbortSignal (timeout + unmount cancellation).
  */
-async function originReachable(): Promise<boolean> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), PROBE_TIMEOUT_MS);
+async function originReachable(signal: AbortSignal): Promise<boolean> {
   try {
     await fetch(`${PROBE_URL}?connectivity=${Date.now()}`, {
       method: "HEAD",
       cache: "no-store",
-      signal: controller.signal,
+      signal,
     });
     return true;
   } catch {
     return false;
-  } finally {
-    clearTimeout(timer);
   }
 }
 
@@ -50,6 +49,7 @@ export function useVerifiedOffline(): boolean {
   // Tracks ONLY the probe outcome; whether we're online is derived below so the
   // effect never has to setState synchronously (which would cascade-render).
   const [probeFailed, setProbeFailed] = useState(false);
+  const lastProbeAtRef = useRef(0);
 
   useEffect(() => {
     // Trust "online": no probe needed, and the derived return already treats
@@ -59,15 +59,28 @@ export function useVerifiedOffline(): boolean {
     // Browser says offline — verify before showing anything. setState happens
     // only inside this async callback, never in the effect body.
     let cancelled = false;
+    let inFlight: AbortController | null = null;
+
     const check = async () => {
-      const reachable = await originReachable();
+      // Skip if we probed very recently (flap guard).
+      const now = Date.now();
+      if (now - lastProbeAtRef.current < PROBE_COOLDOWN_MS) return;
+      lastProbeAtRef.current = now;
+
+      const controller = new AbortController();
+      inFlight = controller;
+      const timer = setTimeout(() => controller.abort(), PROBE_TIMEOUT_MS);
+      const reachable = await originReachable(controller.signal);
+      clearTimeout(timer);
       if (!cancelled) setProbeFailed(!reachable);
     };
+
     void check();
     const interval = setInterval(() => void check(), RECHECK_INTERVAL_MS);
     return () => {
       cancelled = true;
       clearInterval(interval);
+      inFlight?.abort(); // cancel any in-flight probe on unmount / re-run
     };
   }, [browserOnline]);
 
