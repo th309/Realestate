@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   UseGuards,
@@ -46,7 +47,10 @@ export class AutoIdeationController {
   }
 
   @Patch('rules/:id')
-  async update(@Param('id') id: string, @Body() dto: UpdateTriggerRuleDto) {
+  async update(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() dto: UpdateTriggerRuleDto,
+  ) {
     const { data, error } = await this.supabase
       .getClient()
       .from('auto_ideation_rules')
@@ -59,7 +63,7 @@ export class AutoIdeationController {
   }
 
   @Delete('rules/:id')
-  async remove(@Param('id') id: string) {
+  async remove(@Param('id', new ParseUUIDPipe()) id: string) {
     const { error } = await this.supabase
       .getClient()
       .from('auto_ideation_rules')
@@ -70,7 +74,7 @@ export class AutoIdeationController {
   }
 
   @Post('rules/:id/fire-now')
-  async fireNow(@Param('id') id: string) {
+  async fireNow(@Param('id', new ParseUUIDPipe()) id: string) {
     const { data, error } = await this.supabase
       .getClient()
       .from('auto_ideation_rules')
@@ -79,8 +83,9 @@ export class AutoIdeationController {
       .single();
     if (error || !data) throw error ?? new Error('rule not found');
     // Return honest counts so the UI never claims success on 0 matches.
+    // Keep `fired: true` for back-compat with the existing client contract.
     const result = await this.service.evaluateAndEnqueue(data);
-    return { success: true, data: result };
+    return { success: true, data: { fired: true, ...result } };
   }
 
   @Get('upcoming')
