@@ -15,6 +15,7 @@ export const CONTENT_FORMATS: readonly ContentFormat[] = [
   'farm_area_spotlight',
   'brokerage_market_share',
   'recruitment_angle',
+  'infographic',
 ];
 
 export function isContentFormat(value: string): value is ContentFormat {

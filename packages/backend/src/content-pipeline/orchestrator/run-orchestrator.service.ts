@@ -19,6 +19,9 @@ const STATE_QUEUE_MAP: Record<PipelineStatus, QueueName | null> = {
   rendering_voice: 'render-audio',
   timing_captions: 'render-captions',
   rendering_video: 'render-video',
+  // No backend queue can advance the infographic lane — it runs locally.
+  generating_infographic: null,
+  infographic_ready: null,
   ready_for_review: null,
   publishing: 'orchestrator',
   published: null,

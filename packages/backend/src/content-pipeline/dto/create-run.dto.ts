@@ -6,12 +6,14 @@ import {
   IsUUID,
   IsObject,
   MinLength,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ContentFormat, Platform, ApprovalMode } from '../types';
 import { FormatOptionsDto } from './format-options.dto';
 import { CONTENT_FORMATS } from './content-format';
+import { InfographicRunParamsDto } from '../infographics/infographic-params.dto';
 
 /**
  * Snapshot of ranking resolution params submitted by the operator at
@@ -36,6 +38,12 @@ export class CreateRunDto {
   @IsIn(CONTENT_FORMATS)
   format!: ContentFormat;
 
+  /**
+   * Required for market-scoped formats. Infographic runs are product
+   * explainers with no market, so the service derives the label from the
+   * chosen topic and task instead.
+   */
+  @ValidateIf((o: CreateRunDto) => o.format !== 'infographic')
   @IsString()
   @MinLength(2)
   marketQuery!: string;
@@ -72,6 +80,15 @@ export class CreateRunDto {
   @ValidateNested()
   @Type(() => FormatOptionsDto)
   formatOptions?: FormatOptionsDto;
+
+  /**
+   * Required when format is `infographic`: which vetted topic doc, which
+   * single task within it, and which approved visual style to generate.
+   */
+  @ValidateIf((o: CreateRunDto) => o.format === 'infographic')
+  @ValidateNested()
+  @Type(() => InfographicRunParamsDto)
+  infographicParams?: InfographicRunParamsDto;
 
   /**
    * Internal-only usage: auto-ideation cron can enqueue runs without human action.

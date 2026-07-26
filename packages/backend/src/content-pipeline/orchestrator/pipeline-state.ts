@@ -5,7 +5,11 @@ import { PipelineStatus } from '../types';
 // states (including `cancelled` itself) accept no further transitions —
 // a cancelled run cannot be resumed; the operator creates a fresh run.
 export const ALLOWED_TRANSITIONS: Record<PipelineStatus, PipelineStatus[]> = {
-  queued: ['fetching_data', 'cancelled'],
+  queued: ['fetching_data', 'generating_infographic', 'cancelled'],
+  // Infographic lane. The local NotebookLM worker owns these transitions and
+  // writes them directly; no backend handler advances an infographic run.
+  generating_infographic: ['infographic_ready', 'failed', 'cancelled'],
+  infographic_ready: [],
   fetching_data: ['scripting', 'failed', 'cancelled'],
   scripting: ['verifying_data', 'failed', 'cancelled'],
   verifying_data: ['linting_voice', 'ready_for_review', 'failed', 'cancelled'],

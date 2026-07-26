@@ -45,6 +45,8 @@ import { AttributionService } from './short-links/attribution.service';
 
 import { AutoIdeationController } from './auto-ideation/auto-ideation.controller';
 
+import { InfographicOptionsController } from './infographics/infographic-options.controller';
+
 import { RankingResolverController } from './ranking/ranking-resolver.controller';
 import { RankingResolverService } from './ranking/ranking-resolver.service';
 import { MetroHeroImageService } from './metro-hero-image.service';
@@ -107,6 +109,7 @@ import { CONTENT_PIPELINE_ANALYTICS_PROVIDERS } from './content-pipeline-analyti
     RankingResolverController,
     AutoIdeationController,
     PostGenerateController,
+    InfographicOptionsController,
   ],
   providers: [
     ContentRunsService,
