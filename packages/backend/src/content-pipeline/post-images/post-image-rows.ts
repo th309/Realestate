@@ -18,9 +18,6 @@ import {
   toneColor,
   truncateWords,
 } from './post-image-shared';
-
-/** Backstop cap for a market row name after shortMarketName (rarely triggers). */
-const ROW_NAME_MAX = 32;
 import {
   accentBarHtml,
   footerHtml,
@@ -36,6 +33,8 @@ import {
 
 /** Max rows a card shows — keeps the list from crowding the footer at floor scale. */
 const MAX_ROWS = 5;
+/** Backstop cap for a market row name after shortMarketName (rarely triggers). */
+const ROW_NAME_MAX = 32;
 
 /** One market row: name (wraps, never truncates) + momentum chip + score. */
 function marketRowHtml(

@@ -42,8 +42,30 @@ export async function downloadImageBytes(
 
 /** `data:<mime>;base64,<...>` URI for embedding an image in self-contained HTML. */
 export function toDataUri(img: DownloadedImage): string {
-  const mime = img.contentType.startsWith('image/')
-    ? img.contentType
-    : 'image/jpeg';
-  return `data:${mime};base64,${img.bytes.toString('base64')}`;
+  return `data:${imageMime(img.contentType)};base64,${img.bytes.toString('base64')}`;
+}
+
+/** Normalized image mime (falls back to jpeg for a missing/odd content-type). */
+export function imageMime(contentType: string): string {
+  return contentType.startsWith('image/') ? contentType : 'image/jpeg';
+}
+
+/** File extension for an image content-type (jpg/png/webp/gif; default jpg). */
+export function imageExt(contentType: string): string {
+  const t = contentType.toLowerCase();
+  if (t.includes('png')) return 'png';
+  if (t.includes('webp')) return 'webp';
+  if (t.includes('gif')) return 'gif';
+  return 'jpg';
+}
+
+/** Sanitize an id into a safe storage-path segment (lowercased, kebab, capped). */
+export function sanitizeStorageSegment(id: string): string {
+  const s = String(id ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80);
+  return s.length > 0 ? s : 'option';
 }

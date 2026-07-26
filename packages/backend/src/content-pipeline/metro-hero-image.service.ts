@@ -2,11 +2,15 @@ import { Injectable, Logger } from '@nestjs/common';
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { SupabaseService } from '../supabase/supabase.service';
+import {
+  downloadImageBytes,
+  imageExt,
+  imageMime,
+  sanitizeStorageSegment,
+} from './media/download-image';
 
 const BUCKET = 'content-pipeline';
 const SIGN_SEC = 7200;
-const FETCH_TIMEOUT_MS = 30_000;
-const MAX_BYTES = 15 * 1024 * 1024;
 
 /** Curated skyline option surfaced to operators and matched to downloads. */
 export interface MetroHeroOptionPublic {
@@ -74,16 +78,6 @@ export function loadBundledHeroOptions(): Record<
   return bundledOptionsByCbsa;
 }
 
-function sanitizeOptionIdForPath(id: string): string {
-  const s = String(id ?? '')
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9_-]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 80);
-  return s.length > 0 ? s : 'option';
-}
-
 /**
  * Downloads hero skyline images once per (metro, option), stores in Supabase Storage,
  * and exposes time-limited signed URLs for Remotion during render_video.
@@ -140,7 +134,7 @@ export class MetroHeroImageService {
     const sourceUrl = selected.source_url?.trim();
     if (!sourceUrl) return null;
 
-    const optionKey = sanitizeOptionIdForPath(selected.id);
+    const optionKey = sanitizeStorageSegment(selected.id);
     const client = this.supabase.getClient();
 
     const { data: existing } = await client
@@ -153,12 +147,12 @@ export class MetroHeroImageService {
     let storagePath = existing?.storage_path as string | undefined;
 
     if (!storagePath) {
-      const buffer = await this.downloadRemoteImage(sourceUrl);
-      storagePath = `metro-heroes/${cbsa}/${optionKey}.jpg`;
+      const img = await downloadImageBytes(sourceUrl);
+      storagePath = `metro-heroes/${cbsa}/${optionKey}.${imageExt(img.contentType)}`;
       const { error: uploadErr } = await client.storage
         .from(BUCKET)
-        .upload(storagePath, buffer, {
-          contentType: 'image/jpeg',
+        .upload(storagePath, img.bytes, {
+          contentType: imageMime(img.contentType),
           upsert: true,
         });
       if (uploadErr) {
@@ -199,32 +193,5 @@ export class MetroHeroImageService {
       throw new Error(signErr?.message ?? 'metro hero signed URL failed');
     }
     return signed.signedUrl;
-  }
-
-  private async downloadRemoteImage(url: string): Promise<Buffer> {
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
-    try {
-      const res = await fetch(url, {
-        redirect: 'follow',
-        signal: ctrl.signal,
-        headers: { Accept: 'image/*' },
-      });
-      clearTimeout(timer);
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}`);
-      }
-      const ct = res.headers.get('content-type') ?? '';
-      if (!ct.startsWith('image/')) {
-        throw new Error(`unexpected content-type: ${ct}`);
-      }
-      const buf = Buffer.from(await res.arrayBuffer());
-      if (buf.length > MAX_BYTES) {
-        throw new Error('image exceeds max size');
-      }
-      return buf;
-    } finally {
-      clearTimeout(timer);
-    }
   }
 }

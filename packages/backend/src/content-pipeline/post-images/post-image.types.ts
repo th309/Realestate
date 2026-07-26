@@ -150,7 +150,8 @@ export interface PostImageGrounding {
   /**
    * Full-bleed skyline photo (data URI) for this market, resolved by the feed via
    * MetroPhotoService before render. Present only when a subject-aligned photo was
-   * found; the photo-hero look is eligible only when this is set.
+   * found; the photo-hero look is eligible only when this is set. Server-fetched
+   * bytes, never client input — safe to interpolate un-escaped into `<img src>`.
    */
   photoDataUri?: string;
 }
@@ -185,7 +186,9 @@ export interface PostImageContent {
   emphasis?: string;
   /** Attribution / source line under a quote (e.g. "PropertyIQ market intelligence"). */
   attribution?: string;
-  /** Full-bleed skyline background as a data URI (photo family) — embedded, offline. */
+  /** Full-bleed skyline background as a data URI (photo family) — embedded, offline.
+   *  Server-fetched bytes via MetroPhotoService, NEVER client input — safe to
+   *  interpolate into `<img src>` un-escaped. */
   photoDataUri?: string;
   /** Slide position label for carousels, e.g. "1 / 5". */
   slideLabel?: string;

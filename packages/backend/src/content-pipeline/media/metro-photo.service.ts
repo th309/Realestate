@@ -12,7 +12,13 @@ import { Injectable, Logger } from '@nestjs/common';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { SupabaseService } from '../../supabase/supabase.service';
 import { loadBundledHeroOptions } from '../metro-hero-image.service';
-import { downloadImageBytes, toDataUri } from './download-image';
+import {
+  downloadImageBytes,
+  imageExt,
+  imageMime,
+  sanitizeStorageSegment,
+  toDataUri,
+} from './download-image';
 import { searchCitySkylinePhoto } from './pexels-media';
 
 const BUCKET = 'content-pipeline';
@@ -31,14 +37,49 @@ export interface SkylinePhoto {
   provenance: PhotoProvenance;
 }
 
-function sanitizeId(id: string): string {
-  const s = String(id ?? '')
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9_-]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 80);
-  return s.length > 0 ? s : 'option';
+/**
+ * Schema-averse provenance: photographer + alt ride as `piq_by`/`piq_alt` query
+ * params on the stored source_url, so a CACHE-HIT render (the common case)
+ * recovers full provenance without a metro_hero_images schema change.
+ */
+function encodeSourceUrl(
+  pageUrl: string,
+  photographer?: string,
+  alt?: string,
+): string {
+  try {
+    const u = new URL(pageUrl);
+    if (photographer) u.searchParams.set('piq_by', photographer);
+    if (alt) u.searchParams.set('piq_alt', alt);
+    return u.toString();
+  } catch {
+    return pageUrl;
+  }
+}
+function decodeSourceUrl(sourceUrl: string): {
+  url: string;
+  photographer?: string;
+  alt?: string;
+} {
+  try {
+    const u = new URL(sourceUrl);
+    const photographer = u.searchParams.get('piq_by') ?? undefined;
+    const alt = u.searchParams.get('piq_alt') ?? undefined;
+    u.searchParams.delete('piq_by');
+    u.searchParams.delete('piq_alt');
+    return { url: u.toString(), photographer, alt };
+  } catch {
+    return { url: sourceUrl };
+  }
+}
+
+/** Best-effort image mime for cached bytes: the Blob type, else the path extension. */
+function mimeForCached(blobType: string, path: string): string {
+  if (blobType.startsWith('image/')) return blobType;
+  if (/\.png$/i.test(path)) return 'image/png';
+  if (/\.webp$/i.test(path)) return 'image/webp';
+  if (/\.gif$/i.test(path)) return 'image/gif';
+  return 'image/jpeg';
 }
 
 @Injectable()
@@ -80,7 +121,11 @@ export class MetroPhotoService {
     });
   }
 
-  /** Reuse a previously cached skyline (any option for the metro). */
+  /**
+   * Reuse a previously cached skyline. Deterministic: ordered by option_id so a
+   * curated option (e.g. "lou-neff-point") wins over a "pexels-…" row and two
+   * cold starts resolve to the same photo (also keeps one-call-per-metro true).
+   */
   private async readCache(
     client: SupabaseClient,
     cbsa: string,
@@ -89,6 +134,7 @@ export class MetroPhotoService {
       .from('metro_hero_images')
       .select('option_id, storage_path, source_url')
       .eq('cbsa_code', cbsa)
+      .order('option_id', { ascending: true })
       .limit(1)
       .maybeSingle();
     const path = data?.storage_path as string | undefined;
@@ -97,12 +143,18 @@ export class MetroPhotoService {
     if (dl.error || !dl.data) return null;
     const bytes = Buffer.from(await dl.data.arrayBuffer());
     const optionId = (data?.option_id as string) ?? 'cached';
+    const dec = decodeSourceUrl((data?.source_url as string) ?? '');
     return {
-      dataUri: toDataUri({ bytes, contentType: 'image/jpeg' }),
+      dataUri: toDataUri({
+        bytes,
+        contentType: mimeForCached(dl.data.type ?? '', path),
+      }),
       provenance: {
         provider: optionId.startsWith('pexels-') ? 'pexels' : 'wikimedia',
         optionId,
-        sourceUrl: (data?.source_url as string) ?? '',
+        sourceUrl: dec.url,
+        photographer: dec.photographer,
+        alt: dec.alt,
       },
     };
   }
@@ -115,12 +167,12 @@ export class MetroPhotoService {
     const option = loadBundledHeroOptions()[cbsa]?.[0];
     if (!option?.source_url) return null;
     const img = await downloadImageBytes(option.source_url);
-    const storagePath = `metro-heroes/${cbsa}/${sanitizeId(option.id)}.jpg`;
+    const storagePath = `metro-heroes/${cbsa}/${sanitizeStorageSegment(option.id)}.${imageExt(img.contentType)}`;
     await this.persist(client, {
       cbsa,
       optionId: option.id,
       storagePath,
-      bytes: img.bytes,
+      img,
       sourceUrl: option.source_url,
     });
     return {
@@ -144,15 +196,14 @@ export class MetroPhotoService {
     if (!photo) return null; // no key, error, or no confident city match
     const img = await downloadImageBytes(photo.downloadUrl);
     const optionId = `pexels-${photo.id}`;
-    const storagePath = `metro-heroes/${cbsa}/${optionId}.jpg`;
-    // Provenance recoverable schema-averse: option_id carries the photo id,
-    // source_url the Pexels page (photographer + alt live there).
+    const storagePath = `metro-heroes/${cbsa}/${optionId}.${imageExt(img.contentType)}`;
     await this.persist(client, {
       cbsa,
       optionId,
       storagePath,
-      bytes: img.bytes,
-      sourceUrl: photo.pageUrl,
+      img,
+      // Provenance survives cache hits: photographer + alt encoded on source_url.
+      sourceUrl: encodeSourceUrl(photo.pageUrl, photo.photographer, photo.alt),
     });
     return {
       dataUri: toDataUri(img),
@@ -173,15 +224,15 @@ export class MetroPhotoService {
       cbsa: string;
       optionId: string;
       storagePath: string;
-      bytes: Buffer;
+      img: { bytes: Buffer; contentType: string };
       sourceUrl: string;
     },
   ): Promise<void> {
     try {
       const up = await client.storage
         .from(BUCKET)
-        .upload(p.storagePath, p.bytes, {
-          contentType: 'image/jpeg',
+        .upload(p.storagePath, p.img.bytes, {
+          contentType: imageMime(p.img.contentType),
           upsert: true,
         });
       if (up.error) throw up.error;

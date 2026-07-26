@@ -67,7 +67,9 @@ function ruleOf(family: PostImageFamily): string {
       : CREAM.hairline;
 }
 
-/** Brand mark: logomark chip + wordmark, colored for the family. */
+/** Brand mark: logomark chip + wordmark, colored for the family. The wordmark is
+ *  FIXED-SIZE BY DESIGN (brand identity anchors the card; it does not ride the --s
+ *  copy-shrink ladder). */
 export function markHtml(family: PostImageFamily): string {
   const logo = isDarkSkin(family) ? logoReversedDataUri() : logoNormalDataUri();
   const chipBg = isDarkSkin(family)
@@ -98,7 +100,9 @@ export function categoryPillHtml(
   return `<div style="border:2px solid ${ruleOf(family)};color:${mutedOf(family)};border-radius:999px;padding:12px 28px;font-size:${s(22)};font-weight:700;letter-spacing:2px;text-transform:uppercase;white-space:nowrap;">${escapeHtml(label)}</div>`;
 }
 
-/** Footer: site + as-of + the standing disclaimer. */
+/** Footer: site + as-of + the standing disclaimer. Site/as-of/disclaimer are
+ *  FIXED-SIZE BY DESIGN — the disclaimer has a legibility floor and must not
+ *  shrink with the --s copy ladder. */
 export function footerHtml(
   family: PostImageFamily,
   asOf?: string | null,
@@ -116,7 +120,8 @@ export function footerHtml(
   </div>`;
 }
 
-/** 1-99 score scale bar with a marker at the score position (the score signature). */
+/** 1-99 score scale bar with a marker at the score position (the score signature).
+ *  End labels (1 / 99) are FIXED-SIZE BY DESIGN — short axis furniture, not copy. */
 export function scaleBarHtml(family: PostImageFamily, score: number): string {
   const pct = Math.max(2, Math.min(98, score));
   const endLabel = mutedOf(family);

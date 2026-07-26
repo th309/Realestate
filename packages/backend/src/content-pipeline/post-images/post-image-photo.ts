@@ -19,6 +19,8 @@ import { PostImageContent, SingleVariantEntry } from './post-image.types';
 
 /** Full-bleed skyline + dark gradient overlay (top scrim + bottom weight). */
 function backdrop(c: PostImageContent): string {
+  // photoDataUri is server-fetched bytes via MetroPhotoService (never client
+  // input), so interpolating it into `src` un-escaped is safe.
   const img = c.photoDataUri
     ? `<img src="${c.photoDataUri}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" alt=""/>`
     : '';

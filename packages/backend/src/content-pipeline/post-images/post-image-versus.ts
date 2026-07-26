@@ -17,9 +17,6 @@ import {
   toneColor,
   truncateWords,
 } from './post-image-shared';
-
-/** Backstop cap for a versus panel market name after shortMarketName. */
-const PANEL_NAME_MAX = 34;
 import {
   accentBarHtml,
   footerHtml,
@@ -32,6 +29,9 @@ import {
   PostImageRow,
   SingleVariantEntry,
 } from './post-image.types';
+
+/** Backstop cap for a versus panel market name after shortMarketName. */
+const PANEL_NAME_MAX = 34;
 
 /** One head-to-head panel: market name, big score, momentum chip, "out of 99". */
 function versusPanelHtml(family: PostImageFamily, row: PostImageRow): string {
