@@ -22,7 +22,11 @@ const IDLE_BROWSER_TIMEOUT_MS = 5 * 60_000;
 @Injectable()
 export class AnalyzerPdfService implements OnModuleDestroy {
   private readonly logger = new Logger(AnalyzerPdfService.name);
-  private browser: Browser | null = null;
+  // The LAUNCH PROMISE (not the browser) is the shared state, set synchronously
+  // before any await — otherwise two concurrent renders both see null and each
+  // launch a Chromium, leaking one. Cleared on failed launch or disconnect so a
+  // later call relaunches instead of handing back a dead browser.
+  private browserPromise: Promise<Browser> | null = null;
   private idleTimer: NodeJS.Timeout | null = null;
 
   async renderToBuffer(token: string): Promise<Buffer> {
@@ -94,15 +98,27 @@ export class AnalyzerPdfService implements OnModuleDestroy {
     }
   }
 
-  private async getBrowser(): Promise<Browser> {
-    if (!this.browser) {
-      this.browser = await puppeteer.launch({
-        args: ['--no-sandbox'],
-        headless: true,
-      });
-      this.logger.log('puppeteer browser launched for analyzer pdf');
+  private getBrowser(): Promise<Browser> {
+    if (!this.browserPromise) {
+      const launch = puppeteer
+        .launch({
+          args: ['--no-sandbox'],
+          headless: true,
+        })
+        .then((browser) => {
+          this.logger.log('puppeteer browser launched for analyzer pdf');
+          browser.on('disconnected', () => {
+            if (this.browserPromise === launch) this.browserPromise = null;
+          });
+          return browser;
+        })
+        .catch((err) => {
+          if (this.browserPromise === launch) this.browserPromise = null;
+          throw err;
+        });
+      this.browserPromise = launch;
     }
-    return this.browser;
+    return this.browserPromise;
   }
 
   private resetIdleTimer(): void {
@@ -113,18 +129,21 @@ export class AnalyzerPdfService implements OnModuleDestroy {
   }
 
   private async shutdownBrowser(reason: string): Promise<void> {
-    if (!this.browser) return;
-    const browser = this.browser;
-    this.browser = null;
+    const pending = this.browserPromise;
+    if (!pending) return;
+    this.browserPromise = null;
     if (this.idleTimer) {
       clearTimeout(this.idleTimer);
       this.idleTimer = null;
     }
-    await browser.close().catch((err) => {
-      this.logger.warn(
-        `puppeteer browser close failed (${reason}): ${(err as Error).message}`,
-      );
-    });
+    const browser = await pending.catch(() => null);
+    if (browser) {
+      await browser.close().catch((err) => {
+        this.logger.warn(
+          `puppeteer browser close failed (${reason}): ${(err as Error).message}`,
+        );
+      });
+    }
     this.logger.log(`puppeteer browser shut down (${reason})`);
   }
 
