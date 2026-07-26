@@ -2,7 +2,9 @@
 //
 // Types for the post-images render pipeline: Puppeteer renders a post's copy into
 // branded PNG(s), uploads them to the content-pipeline Storage bucket, and records
-// media_refs (storing PATHS, not URLs — the posts API signs them on read).
+// media_refs (storing PATHS, not URLs). The admin UI reads images SAME-ORIGIN via
+// the posts media streaming endpoint (content blockers filter supabase.co images);
+// the publish path signs the paths server-side.
 
 /** Image templates the renderer supports. */
 export type PostImageTemplate = 'single_post' | 'carousel_slide';
@@ -40,9 +42,9 @@ export const RENDER_DEVICE_SCALE = 2;
 
 /**
  * A rendered image reference stored in posts.media_refs. Stores the bucket +
- * `storage_path` (never a signed URL — those expire); the posts API mints
- * short-lived signed URLs from these on list/get. Field name matches
- * PostMediaRef in posts/post.types.ts (the frozen publisher contract).
+ * `storage_path` (never a signed URL — those expire); the posts API serves the
+ * bytes same-origin on read and the publish path signs the path. Field name
+ * matches PostMediaRef in posts/post.types.ts (the frozen publisher contract).
  */
 export interface PostImageMediaRef {
   kind: 'image';

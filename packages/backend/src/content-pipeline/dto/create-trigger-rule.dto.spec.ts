@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { CreateTriggerRuleDto } from './create-trigger-rule.dto';
+import { isValidTriggerConfig } from './trigger-config.dto';
 
 function errorsFor(obj: unknown) {
   return validate(plainToInstance(CreateTriggerRuleDto, obj), {
@@ -124,5 +125,33 @@ describe('CreateTriggerRuleDto (discriminated trigger_config validation)', () =>
         })
       ).some((e) => e.property === 'rule_name'),
     ).toBe(true);
+  });
+});
+
+describe('isValidTriggerConfig (PATCH merged-config discrimination)', () => {
+  it('accepts a complete merged config for its type', () => {
+    expect(
+      isValidTriggerConfig('score_movement', {
+        min_delta_points: 5,
+        direction: 'both',
+        lookback_days: 90,
+        geography: 'metro',
+      }),
+    ).toBe(true);
+  });
+
+  it('rejects a merged config that stripped a required field (the PATCH gap)', () => {
+    // e.g. PATCH trigger_config: { direction: 'up' } that removed lookback_days
+    expect(
+      isValidTriggerConfig('score_movement', {
+        min_delta_points: 5,
+        direction: 'up',
+        geography: 'metro',
+      }),
+    ).toBe(false);
+  });
+
+  it('skips discrimination only when the trigger_type is unknown', () => {
+    expect(isValidTriggerConfig(undefined, {})).toBe(true);
   });
 });

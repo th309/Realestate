@@ -65,42 +65,55 @@ export class TriggerConfigDto {
 }
 
 /**
- * Discriminates trigger_config by the sibling trigger_type: the config must carry
- * the fields that trigger's RPC needs. Reads the parent object via Validation
- * arguments. When trigger_type is absent (the PATCH path may omit it) the check
- * is skipped — the field bounds above still apply and the evaluator guards NaN.
+ * True if `config` carries the fields the given trigger's RPC needs. When
+ * `triggerType` is undefined (the class validator on a PATCH that omits it) the
+ * check is skipped — the field bounds still apply. The update CONTROLLER calls
+ * this with the rule's existing trigger_type + the MERGED config so a PATCH can't
+ * strip a required field (e.g. drop lookback_days and reopen the NaN crash).
  */
+export function isValidTriggerConfig(
+  triggerType: string | undefined,
+  config: unknown,
+): boolean {
+  if (!triggerType) return true;
+  const c = (config ?? {}) as Record<string, unknown>;
+  const dir = c.direction as string;
+  const dirOk = DIRECTIONS.includes(dir as (typeof DIRECTIONS)[number]);
+  const geoOk = GEOS.includes(c.geography as (typeof GEOS)[number]);
+  if (triggerType === 'score_movement') {
+    return (
+      typeof c.min_delta_points === 'number' &&
+      dirOk &&
+      Number.isInteger(c.lookback_days) &&
+      geoOk
+    );
+  }
+  if (triggerType === 'rank_change') {
+    return (
+      Number.isInteger(c.min_rank_delta) &&
+      dirOk &&
+      geoOk &&
+      Number.isInteger(c.top_n)
+    );
+  }
+  if (triggerType === 'threshold_cross') {
+    return (
+      typeof c.threshold_value === 'number' &&
+      (dir === 'up' || dir === 'down') &&
+      c.metric === 'propertyiq_score'
+    );
+  }
+  return false;
+}
+
+/** Discriminates trigger_config by the sibling trigger_type on create. */
 @ValidatorConstraint({ name: 'triggerConfigMatchesType', async: false })
 export class TriggerConfigMatchesType implements ValidatorConstraintInterface {
   validate(config: unknown, args: ValidationArguments): boolean {
-    const type = (args.object as { trigger_type?: string }).trigger_type;
-    if (!type) return true;
-    const c = (config ?? {}) as Record<string, unknown>;
-    const dir = c.direction as string;
-    if (type === 'score_movement') {
-      return (
-        typeof c.min_delta_points === 'number' &&
-        DIRECTIONS.includes(dir as (typeof DIRECTIONS)[number]) &&
-        Number.isInteger(c.lookback_days) &&
-        GEOS.includes(c.geography as (typeof GEOS)[number])
-      );
-    }
-    if (type === 'rank_change') {
-      return (
-        Number.isInteger(c.min_rank_delta) &&
-        DIRECTIONS.includes(dir as (typeof DIRECTIONS)[number]) &&
-        GEOS.includes(c.geography as (typeof GEOS)[number]) &&
-        Number.isInteger(c.top_n)
-      );
-    }
-    if (type === 'threshold_cross') {
-      return (
-        typeof c.threshold_value === 'number' &&
-        (dir === 'up' || dir === 'down') &&
-        c.metric === 'propertyiq_score'
-      );
-    }
-    return false;
+    return isValidTriggerConfig(
+      (args.object as { trigger_type?: string }).trigger_type,
+      config,
+    );
   }
 
   defaultMessage(): string {
