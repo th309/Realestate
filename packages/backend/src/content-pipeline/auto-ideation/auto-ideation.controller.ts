@@ -78,8 +78,9 @@ export class AutoIdeationController {
       .eq('id', id)
       .single();
     if (error || !data) throw error ?? new Error('rule not found');
-    await this.service.evaluateAndEnqueue(data as any);
-    return { success: true, data: { fired: true } };
+    // Return honest counts so the UI never claims success on 0 matches.
+    const result = await this.service.evaluateAndEnqueue(data);
+    return { success: true, data: result };
   }
 
   @Get('upcoming')
@@ -90,4 +91,3 @@ export class AutoIdeationController {
     };
   }
 }
-
