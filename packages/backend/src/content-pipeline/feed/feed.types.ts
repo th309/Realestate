@@ -89,6 +89,15 @@ export interface FeedMarketGrounding {
     scoreLabel?: string | null;
     scoreDelta?: number | null;
   }>;
+  /**
+   * The market's own skyline as a self-contained data URI, which makes the
+   * photo-hero image variants eligible. Present only for metro posts where a
+   * confidently-aligned photo exists. Like `markets`, this is image render only
+   * and is NEVER surfaced in the generation prompt — groundingLines never reads
+   * it, and it is attached on the render path only, so megabytes of base64 can
+   * never reach the model.
+   */
+  photoDataUri?: string;
 }
 
 /**
