@@ -9,10 +9,8 @@ import {
   ScriptGenerationResult,
   ScriptVariant,
 } from './script-generator.interface';
-import {
-  generateRankingScript,
-  buildPriorFeedbackBlock,
-} from './anthropic-ranking-script';
+import { generateRankingScript } from './anthropic-ranking-script';
+import { buildPriorFeedbackBlock } from './ranking-prior-feedback-block';
 import { anthropicMessagesCreateDeepSeekFirstWithAnthropicFallback } from './anthropic-messages-retry';
 import {
   estimateEmitScriptCostUsd,

@@ -1,48 +1,20 @@
+// packages/backend/src/content-pipeline/analytics/performance.service.ts
 import { Injectable } from '@nestjs/common';
 import { SupabaseService } from '../../supabase/supabase.service';
 import { RevenueAttributionService } from './revenue-attribution.service';
-
-export interface PerformanceHeroCard {
-  sinceDays: number;
-  publishedRuns: number;
-  avgViews7d: number | null;
-  avgSignups7d: number | null;
-  avgMrr7dUsd: number | null;
-}
-
-export interface FormatConversionRow {
-  format: string;
-  runs: number;
-  posts: number;
-  views7d: number;
-  signups7d: number;
-  mrr7dUsd: number;
-  signupsPer1kViews: number | null;
-}
-
-export interface HookPatternRow {
-  format: string;
-  winnerVariantId: 'A' | 'B';
-  confidence: number;
-  lift: number;
-  aMeanRetention: number;
-  bMeanRetention: number;
-  aSamples: number;
-  bSamples: number;
-  lastPromotedAt: string | null;
-}
-
-export interface PerformanceRunRow {
-  id: string;
-  created_at: string;
-  format: string;
-  status: string;
-  market_query: string;
-  views_7d: number;
-  signups_7d: number;
-  mrr_7d_usd: number;
-  platforms: string[];
-}
+import {
+  fetchMrrByRun,
+  fetchPlatformsByRun,
+  fetchPostsByRun,
+  fetchSignupsByRun,
+  fetchViewsByRun,
+} from './performance-run-aggregates.queries';
+import type {
+  FormatConversionRow,
+  HookPatternRow,
+  PerformanceHeroCard,
+  PerformanceRunRow,
+} from './performance.types';
 
 @Injectable()
 export class PerformanceService {
@@ -80,9 +52,9 @@ export class PerformanceService {
     }
 
     const [viewsByRun, signupsByRun, mrrByRun] = await Promise.all([
-      this.getViewsByRun(runIds, '7d'),
-      this.getSignupsByRun(runIds, 7),
-      this.getMrrByRun(runIds),
+      fetchViewsByRun(client, runIds, '7d'),
+      fetchSignupsByRun(client, runIds, 7),
+      fetchMrrByRun(this.revenue, runIds),
     ]);
 
     const avg = (xs: number[]) =>
@@ -114,13 +86,12 @@ export class PerformanceService {
     const formatByRun = new Map<string, string>();
     for (const r of runs ?? []) formatByRun.set(String(r.id), String(r.format));
 
-    const [viewsByRun, signupsByRun, mrrByRun, postsByRun] =
-      await Promise.all([
-        this.getViewsByRun(runIds, '7d'),
-        this.getSignupsByRun(runIds, 7),
-        this.getMrrByRun(runIds),
-        this.getPostsByRun(runIds),
-      ]);
+    const [viewsByRun, signupsByRun, mrrByRun, postsByRun] = await Promise.all([
+      fetchViewsByRun(client, runIds, '7d'),
+      fetchSignupsByRun(client, runIds, 7),
+      fetchMrrByRun(this.revenue, runIds),
+      fetchPostsByRun(client, runIds),
+    ]);
 
     const byFormat = new Map<string, FormatConversionRow>();
     for (const runId of runIds) {
@@ -205,10 +176,10 @@ export class PerformanceService {
 
     const [viewsByRun, signupsByRun, mrrByRun, platformsByRun] =
       await Promise.all([
-        this.getViewsByRun(runIds, '7d'),
-        this.getSignupsByRun(runIds, 7),
-        this.getMrrByRun(runIds),
-        this.getPlatformsByRun(runIds),
+        fetchViewsByRun(client, runIds, '7d'),
+        fetchSignupsByRun(client, runIds, 7),
+        fetchMrrByRun(this.revenue, runIds),
+        fetchPlatformsByRun(client, runIds),
       ]);
 
     const rows: PerformanceRunRow[] = (runs ?? []).map((r) => ({
@@ -237,97 +208,4 @@ export class PerformanceService {
 
     return rows;
   }
-
-  private async getViewsByRun(
-    runIds: string[],
-    window: '7d' | '30d',
-  ): Promise<Record<string, number>> {
-    if (runIds.length === 0) return {};
-    const client = this.supabase.getClient();
-    const { data } = await client
-      .from('content_metrics')
-      .select('run_id, views')
-      .in('run_id', runIds)
-      .eq('window', window);
-    const out: Record<string, number> = {};
-    for (const row of data ?? []) {
-      const runId = String(row.run_id);
-      out[runId] = (out[runId] ?? 0) + Number(row.views ?? 0);
-    }
-    return out;
-  }
-
-  private async getSignupsByRun(
-    runIds: string[],
-    windowDays: number,
-  ): Promise<Record<string, number>> {
-    if (runIds.length === 0) return {};
-    const client = this.supabase.getClient();
-    const sinceIso = new Date(
-      Date.now() - windowDays * 24 * 3600 * 1000,
-    ).toISOString();
-    const { data } = await client
-      .from('signup_attributions')
-      .select('content_run_id')
-      .in('content_run_id', runIds)
-      .gte('signup_at', sinceIso);
-    const out: Record<string, number> = {};
-    for (const row of data ?? []) {
-      const runId = String(row.content_run_id);
-      out[runId] = (out[runId] ?? 0) + 1;
-    }
-    return out;
-  }
-
-  private async getMrrByRun(runIds: string[]): Promise<Record<string, number>> {
-    if (runIds.length === 0) return {};
-    const out: Record<string, number> = {};
-    await Promise.all(
-      runIds.map(async (runId) => {
-        try {
-          const rev = await this.revenue.getRevenueByRun(runId);
-          out[runId] = Number(rev.total_mrr_contribution_usd ?? 0);
-        } catch {
-          out[runId] = 0;
-        }
-      }),
-    );
-    return out;
-  }
-
-  private async getPostsByRun(runIds: string[]): Promise<Record<string, number>> {
-    if (runIds.length === 0) return {};
-    const client = this.supabase.getClient();
-    const { data } = await client
-      .from('platform_posts')
-      .select('run_id')
-      .in('run_id', runIds);
-    const out: Record<string, number> = {};
-    for (const row of data ?? []) {
-      const runId = String(row.run_id);
-      out[runId] = (out[runId] ?? 0) + 1;
-    }
-    return out;
-  }
-
-  private async getPlatformsByRun(
-    runIds: string[],
-  ): Promise<Record<string, string[]>> {
-    if (runIds.length === 0) return {};
-    const client = this.supabase.getClient();
-    const { data } = await client
-      .from('platform_posts')
-      .select('run_id, platform')
-      .in('run_id', runIds);
-    const out: Record<string, string[]> = {};
-    for (const row of data ?? []) {
-      const runId = String(row.run_id);
-      const platform = String(row.platform ?? '');
-      if (!platform) continue;
-      out[runId] = out[runId] ?? [];
-      if (!out[runId].includes(platform)) out[runId].push(platform);
-    }
-    return out;
-  }
 }
-
