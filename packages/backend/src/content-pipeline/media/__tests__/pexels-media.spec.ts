@@ -1,4 +1,8 @@
-import { MEDIA_QUERY_MAP, searchCitySkylinePhoto } from '../pexels-media';
+import {
+  MEDIA_QUERY_MAP,
+  searchCitySkylinePhoto,
+  searchCitySkylineVideo,
+} from '../pexels-media';
 
 function mockFetch(photosByQuery: Record<string, unknown[]>): typeof fetch {
   return (async (url: string) => {
@@ -71,5 +75,80 @@ describe('searchCitySkylinePhoto (alignment gate)', () => {
       'Austin cityscape': [],
     });
     expect(await searchCitySkylinePhoto('Austin', 'KEY', f)).toBeNull();
+  });
+});
+
+function mockVideoFetch(byQuery: Record<string, unknown[]>): typeof fetch {
+  return (async (url: string) => {
+    const q = decodeURIComponent(new URL(url).searchParams.get('query') ?? '');
+    return { ok: true, json: async () => ({ videos: byQuery[q] ?? [] }) };
+  }) as unknown as typeof fetch;
+}
+
+const vid = (
+  id: number,
+  slug: string,
+  tags: string[],
+  files = [{ link: `link-${id}`, width: 1080, height: 1920 }],
+) => ({
+  id,
+  url: `https://www.pexels.com/video/${slug}-${id}/`,
+  tags,
+  duration: 10,
+  user: { name: 'V. User' },
+  video_files: files,
+});
+
+describe('searchCitySkylineVideo (alignment gate on slug/tags — no alt on videos)', () => {
+  it('accepts a video whose url slug names the city', async () => {
+    const f = mockVideoFetch({
+      'Chicago skyline': [vid(1, 'chicago-downtown-at-night', [])],
+    });
+    const res = await searchCitySkylineVideo('Chicago', 'KEY', f);
+    expect(res?.id).toBe(1);
+    expect(res?.downloadUrl).toBe('link-1');
+  });
+
+  it('accepts a video whose tags name the city when the slug is generic', async () => {
+    const f = mockVideoFetch({
+      'Miami skyline': [
+        vid(2, 'aerial-cityscape', ['skyline', 'miami', 'usa']),
+      ],
+    });
+    expect((await searchCitySkylineVideo('Miami', 'KEY', f))?.id).toBe(2);
+  });
+
+  it('rejects a wrong-city clip (Seattle result on a Houston search)', async () => {
+    const f = mockVideoFetch({
+      'Houston skyline': [vid(3, 'seattle-in-motion', ['seattle'])],
+      'Houston downtown': [vid(4, 'generic-cityscape', ['city', 'night'])],
+      'Houston cityscape': [],
+    });
+    expect(await searchCitySkylineVideo('Houston', 'KEY', f)).toBeNull();
+  });
+
+  it('picks the portrait file nearest 1080 wide', async () => {
+    const f = mockVideoFetch({
+      'Denver skyline': [
+        vid(
+          5,
+          'denver-skyline',
+          [],
+          [
+            { link: 'sd', width: 540, height: 960 },
+            { link: 'hd', width: 1080, height: 1920 },
+            { link: 'uhd', width: 2160, height: 3840 },
+          ],
+        ),
+      ],
+    });
+    expect(
+      (await searchCitySkylineVideo('Denver', 'KEY', f))?.downloadUrl,
+    ).toBe('hd');
+  });
+
+  it('returns null with no API key', async () => {
+    const f = mockVideoFetch({ 'Denver skyline': [vid(5, 'denver', [])] });
+    expect(await searchCitySkylineVideo('Denver', undefined, f)).toBeNull();
   });
 });

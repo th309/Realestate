@@ -20,12 +20,21 @@ import {
   PostImageGrounding,
 } from './post-image.types';
 
-/** Full HTML for a single-post card at the given scale (1 = design size). */
+/** Full HTML for a single-post card at the given scale (1 = design size).
+ *  `transparentBody` renders the card with no page background — used to capture
+ *  the photo card's gradient+text as a transparent overlay for video compositing. */
 export function buildSinglePostHtml(
   content: PostImageContent,
   scale = 1,
+  opts?: { transparentBody?: boolean },
 ): string {
-  return shell(content.family, 'single_post', scale, buildSingleInner(content));
+  return shell(
+    content.family,
+    'single_post',
+    scale,
+    buildSingleInner(content),
+    opts,
+  );
 }
 
 /** Full HTML for one carousel slide at the given scale. */

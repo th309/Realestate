@@ -76,6 +76,23 @@ export class PuppeteerPostImageRenderer
     });
   }
 
+  /**
+   * Render HTML to a PNG with a TRANSPARENT background (Puppeteer omitBackground)
+   * — used to capture a card's gradient+text as an overlay to composite over
+   * video b-roll. No fit ladder (the overlay is authored to fit at scale 1).
+   */
+  async renderTransparentPng(
+    html: string,
+    width: number,
+    height: number,
+  ): Promise<Buffer> {
+    return this.withPage(width, height, async (page) => {
+      await this.load(page, html);
+      const shot = await page.screenshot({ type: 'png', omitBackground: true });
+      return Buffer.from(shot);
+    });
+  }
+
   /** Acquire a page, run `fn`, always close it and reset the idle timer. */
   private async withPage<T>(
     width: number,

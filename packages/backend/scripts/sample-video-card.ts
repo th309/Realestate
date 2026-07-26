@@ -1,16 +1,16 @@
-// Dev-only PROOF render for the photo-hero family: resolve 5 real metros (CBSA +
-// score) from the production DB, fetch each skyline via the real source chain
-// (curated Wikimedia for Austin, Pexels subject-aligned for the rest), embed as a
-// data URI, and render mixed stat/hook photo cards. Reports provenance per metro
-// (never prints the API key). Not part of the build/suite. Run:
-//   npx ts-node --transpile-only scripts/sample-photo-hero.ts <outDir>
+// Dev-only PROOF render for the video-card lane (samples-only, NOT feed-wired):
+// resolve real metros (CBSA + score) from prod, fetch subject-aligned Pexels b-roll
+// (city confirmed in the video's slug/tags — no alt on videos), render the photo-
+// hero card as a TRANSPARENT overlay, and composite to an ~8s 1080x1350 MP4 with
+// ffmpeg. b-roll cached locally per metro (one download). Per-metro try/catch;
+// honest skips. Run:  npx ts-node --transpile-only scripts/sample-video-card.ts <outDir>
 import 'reflect-metadata';
 import { config } from 'dotenv';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { writeFileSync } from 'fs';
+import { execFileSync } from 'child_process';
+import { existsSync, mkdirSync, writeFileSync } from 'fs';
 import { join } from 'path';
-import type { SupabaseService } from '../src/supabase/supabase.service';
-import { MetroPhotoService } from '../src/content-pipeline/media/metro-photo.service';
+import { searchCitySkylineVideo } from '../src/content-pipeline/media/pexels-media';
 import {
   formatAsOfDate,
   scoreMomentumLabel,
@@ -29,26 +29,22 @@ import type { PostImageContent } from '../src/content-pipeline/post-images/post-
 
 const OUT = process.argv[2];
 if (!OUT) {
-  console.error('usage: sample-photo-hero.ts <outDir>');
+  console.error('usage: sample-video-card.ts <outDir>');
   process.exit(1);
 }
 config({ path: ['.env.local', '.env'] });
 const url = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
 const key =
   process.env.SUPABASE_SERVICE_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
+const pexelsKey = process.env.PEXELS_API_KEY;
 
-const METROS = ['Austin', 'Houston', 'Denver', 'Phoenix', 'Nashville'];
-const STAT_LOOK = new Set(['Austin', 'Houston', 'Denver']); // rest use the hook look
+// Metros with confident Pexels video coverage (slug/tags name the city) — scanned
+// live; Houston/Austin/NYC/LA return 0 city-confident clips (thin/wrong-city).
+const METROS = ['Chicago', 'Miami', 'Seattle', 'Nashville', 'Philadelphia'];
+const STAT_LOOK = new Set(['Chicago', 'Miami', 'Seattle']);
+const CACHE = join(OUT, '.broll-cache');
 
-async function resolveMetro(
-  client: SupabaseClient,
-  city: string,
-): Promise<{
-  cbsa: string;
-  name: string;
-  score: number | null;
-  scoreDate: string | null;
-} | null> {
+async function resolveMetro(client: SupabaseClient, city: string) {
   const { data: geo, error: geoErr } = await client
     .from('geographies')
     .select('geography_id, name')
@@ -57,7 +53,7 @@ async function resolveMetro(
     .order('population', { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (geoErr) throw new Error(`geographies lookup: ${geoErr.message}`);
+  if (geoErr) throw new Error(`geographies: ${geoErr.message}`);
   if (!geo?.geography_id) return null;
   const { data: score, error: scoreErr } = await client
     .from('propertyiq_scores')
@@ -68,24 +64,66 @@ async function resolveMetro(
     .order('score_date', { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (scoreErr) throw new Error(`score lookup: ${scoreErr.message}`);
+  if (scoreErr) throw new Error(`score: ${scoreErr.message}`);
   return {
-    cbsa: geo.geography_id as string,
     name: geo.name as string,
     score: (score?.score as number) ?? null,
     scoreDate: (score?.score_date as string) ?? null,
   };
 }
 
+async function fetchBroll(city: string, downloadUrl: string): Promise<string> {
+  if (!existsSync(CACHE)) mkdirSync(CACHE, { recursive: true });
+  const path = join(CACHE, `${city.toLowerCase()}.mp4`);
+  if (existsSync(path)) return path; // one download per metro
+  const res = await fetch(downloadUrl);
+  if (!res.ok) throw new Error(`b-roll download HTTP ${res.status}`);
+  writeFileSync(path, Buffer.from(await res.arrayBuffer()));
+  return path;
+}
+
+function composite(broll: string, overlay: string, out: string): void {
+  execFileSync(
+    'ffmpeg',
+    [
+      '-y',
+      '-stream_loop',
+      '-1',
+      '-t',
+      '8',
+      '-i',
+      broll,
+      '-loop',
+      '1',
+      '-t',
+      '8',
+      '-i',
+      overlay,
+      // Overlay is rendered at 2x (2160x1350*2); scale it back to the canvas
+      // (supersamples the text) before compositing, else only its top-left quarter shows.
+      '-filter_complex',
+      '[0:v]scale=1080:1350:force_original_aspect_ratio=increase,crop=1080:1350,fps=30,setsar=1[bg];[1:v]scale=1080:1350[ov];[bg][ov]overlay=0:0[v]',
+      '-map',
+      '[v]',
+      '-t',
+      '8',
+      '-c:v',
+      'libx264',
+      '-pix_fmt',
+      'yuv420p',
+      '-movflags',
+      '+faststart',
+      out,
+    ],
+    { stdio: 'ignore' },
+  );
+}
+
 async function main() {
   if (!url || !key)
     throw new Error('SUPABASE_URL / SUPABASE_SERVICE_KEY missing');
+  if (!pexelsKey) throw new Error('PEXELS_API_KEY missing');
   const client = createClient(url, key);
-  const supabaseShim = {
-    getClient: () => client,
-  } as unknown as SupabaseService;
-  const photos = new MetroPhotoService(supabaseShim);
-
   const renderer = new PuppeteerPostImageRenderer();
   try {
     for (const city of METROS) {
@@ -96,14 +134,14 @@ async function main() {
           continue;
         }
         const queryCity = marketCityForQuery(metro.name, null);
-        const photo = await photos.getSkylineDataUri(metro.cbsa, queryCity);
-        if (!photo) {
+        const video = await searchCitySkylineVideo(queryCity, pexelsKey);
+        if (!video) {
           console.log(
-            `${city} (CBSA ${metro.cbsa}): NO subject-aligned photo — would fall back to typographic (skipping sample)`,
+            `${city}: NO city-confident b-roll — skipping (no wrong-city clip)`,
           );
           continue;
         }
-        const display = shortMarketName(metro.name, null);
+        const broll = await fetchBroll(city, video.downloadUrl);
         const momentum = scoreMomentumLabel(metro.score);
         const useStat = STAT_LOOK.has(city) && metro.score != null;
         const content: PostImageContent = {
@@ -111,7 +149,7 @@ async function main() {
           template: 'single_post',
           variant: useStat ? 'photo_hero_stat' : 'photo_hero_hook',
           category: 'Market Signal',
-          eyebrow: display,
+          eyebrow: shortMarketName(metro.name, null),
           headline: useStat
             ? `How strong is ${queryCity} right now?`
             : `The market the numbers are watching`,
@@ -127,18 +165,20 @@ async function main() {
               }
             : undefined,
           scaleScore: useStat ? metro.score : null,
-          photoDataUri: photo.dataUri,
-          asOf: formatAsOfDate(metro.scoreDate), // derived from the real score row, never hardcoded
+          // no photoDataUri: the b-roll IS the background; overlay is gradient+text only
+          asOf: formatAsOfDate(metro.scoreDate),
         };
-        const png = await renderer.renderFitted(
-          (scale) => buildSinglePostHtml(content, scale),
+        const overlayPng = await renderer.renderTransparentPng(
+          buildSinglePostHtml(content, 1, { transparentBody: true }),
           1080,
           1350,
         );
-        const file = `photo-hero-${city.toLowerCase()}.png`;
-        writeFileSync(join(OUT, file), png);
+        const overlayPath = join(CACHE, `overlay-${city.toLowerCase()}.png`);
+        writeFileSync(overlayPath, overlayPng);
+        const outFile = join(OUT, `video-card-${city.toLowerCase()}.mp4`);
+        composite(broll, overlayPath, outFile);
         console.log(
-          `wrote ${file} (${png.length} bytes) — source=${photo.provenance.provider} option=${photo.provenance.optionId}${photo.provenance.photographer ? ` by ${photo.provenance.photographer}` : ''} asOf=${content.asOf}`,
+          `wrote video-card-${city.toLowerCase()}.mp4 — pexels video ${video.id} by ${video.user} (${video.durationSec}s src), asOf=${content.asOf}`,
         );
       } catch (e) {
         console.log(

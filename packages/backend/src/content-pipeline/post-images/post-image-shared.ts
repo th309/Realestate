@@ -223,16 +223,20 @@ export {
 
 // ---- shared HTML fragments --------------------------------------------------
 
-/** The <html> shell with embedded fonts, reset, fixed canvas, and a --s scale hook. */
+/** The <html> shell with embedded fonts, reset, fixed canvas, and a --s scale hook.
+ *  `transparentBody` makes the page background transparent (for capturing the
+ *  gradient+text as a video overlay to composite over b-roll — no card bg). */
 export function shell(
   family: PostImageFamily,
   template: PostImageTemplate,
   scale: number,
   inner: string,
+  opts?: { transparentBody?: boolean },
 ): string {
   const { width, height } = POST_IMAGE_DIMENSIONS[template];
-  const bg =
-    family === 'dark'
+  const bg = opts?.transparentBody
+    ? 'transparent'
+    : family === 'dark'
       ? `linear-gradient(180deg, ${DARK.bgTop} 0%, ${DARK.bgBottom} 100%)`
       : family === 'photo'
         ? DARK.bgBottom // dark fallback behind the full-bleed skyline
