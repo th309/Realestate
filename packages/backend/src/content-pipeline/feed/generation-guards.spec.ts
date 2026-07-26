@@ -4,6 +4,7 @@ import {
   EmptyCompletionError,
   parseJsonObject,
 } from './generation-guards';
+import type { PostCopy } from '../posts/post.types';
 
 describe('generation guards', () => {
   it('throws EmptyCompletionError on blank completions (DeepSeek 402 silent empty)', () => {
@@ -50,19 +51,17 @@ describe('assertNonBlankPostCopy (valid-but-blank JSON guard)', () => {
       EmptyCompletionError,
     );
     expect(() =>
-      // cast: the fixture intentionally carries extra parsed-JSON keys
+      // double-cast: the fixtures intentionally carry extra/unknown parsed-JSON
+      // keys the guard must tolerate — PostCopy itself has no index signature.
       assertNonBlankPostCopy(
-        { hook: '', body: '', cta: '', hashtags: [] } as Record<
-          string,
-          unknown
-        >,
+        { hook: '', body: '', cta: '', hashtags: [] } as unknown as PostCopy,
         'linkedin_post',
         'ctx',
       ),
     ).toThrow(EmptyCompletionError);
     expect(() =>
       assertNonBlankPostCopy(
-        { foo: 'bar' } as Record<string, unknown>,
+        { foo: 'bar' } as unknown as PostCopy,
         'facebook_post',
         'ctx',
       ),

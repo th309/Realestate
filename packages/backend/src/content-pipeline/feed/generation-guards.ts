@@ -46,7 +46,7 @@ export function assertNonBlankPostCopy(
     title?: unknown;
     close?: unknown;
     sceneDirection?: unknown;
-    slides?: Array<{ heading?: unknown; body?: unknown }> | unknown;
+    slides?: Array<{ heading?: unknown; body?: unknown }>;
   },
   postType: string,
   context: string,
