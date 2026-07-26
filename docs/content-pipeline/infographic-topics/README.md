@@ -9,6 +9,13 @@ canonical claim constants.
 
 ## Rules for topic docs
 
+0. **One task per infographic (Troy, 2026-07-26).** Every generated infographic
+   covers exactly ONE thing the site can do — one tool, one workflow, one
+   question answered. Never bundle multiple tasks onto a single graphic. Topic
+   docs may describe a family of tasks, but each generation run targets a
+   single task section. Also: never use underscores in user-facing text or
+   output filenames — hyphens or spaces.
+
 1. **Feature truth:** every tool, page, button, or workflow described must exist
    in the product today, under the name the product uses. Source product facts
    from `packages/backend/src/admin/analytics/site-context.ts` (the corrected

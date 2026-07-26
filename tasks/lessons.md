@@ -237,3 +237,21 @@
 **Rule:** On a trunk being edited by multiple concurrent agents, an intermediate hazardous state is NOT temporary — someone will build against it within minutes. Any restructure with a known collision risk (case-insensitive dir/file overlap, renamed exports, moved barrels) must land the final safe name/shape in its first commit. Never sequence "create hazardous state → fix → clean up" as separate commits on a live shared branch.
 
 **Related pipeline gap (ticket):** `ignoreBuildErrors: true` in next.config + eslint-only frontend CI + Linux CI runners = NO pipeline stage catches TypeScript errors at all (including case collisions). Only local tsc/IDE does.
+
+## One Owner Per Module; Only the Lead Assigns Tasks
+
+**Date:** 2026-07-25
+**Context:** During the content-pipeline completion round, task #13 was assigned by one agent (backend-foundation-2) to another (backend-foundation) — and then the delegating agent ALSO built the entire task itself in parallel. Both agents edited the same content-pipeline files in the shared working tree, clobbering each other's edits. Separately, an agent-to-agent assignment of task #14 landed in the wrong agent's inbox and stalled work until ownership was resolved. This also explains why ordered fixes (e.g. the getBrowser launch-race guard) repeatedly appeared "not landed" on disk after being reported complete — parallel same-file edits were overwriting each other.
+
+**Rules:**
+- Only the team lead assigns, transfers, or reassigns tasks. Agents who think work should move propose it to the lead; they never task each other directly.
+- One owner per backend module per round. Parallelism runs ACROSS modules (content-pipeline vs social-connect vs frontend), never within one module's files.
+- A delegating agent must never also build the delegated work. Delegate OR build, never both.
+- Lead verifies "complete" reports against disk (grep the actual fix) before accepting — completion messages routinely cross in-flight fix orders.
+
+## Deliverables Beat Ceremony — Review Post-Hoc on Sample/Demo Work
+
+**Date:** 2026-07-26
+**Context:** User waited over an hour for 5 sample images while the lead ran a per-batch review-relay loop (every stop-hook → reviewer → findings → relay → fix → re-verify) on a SAMPLES pipeline. Reviews caught real bugs (fabricated as-of date, missing timeouts) but most findings were polish (doc comments, consolidation, style) that gated pixels the user was actively waiting for. User: "what in the ever loving fuck are you doing?"
+
+**Rule:** When the user is waiting on a visible artifact (samples, demos, previews — anything not shipping to production), the ONLY pre-ship gates are factual correctness (real data, no wrong-subject media, no fabricated numbers/dates/claims). Everything else — style, dedup, docs, hygiene — accumulates into ONE post-hoc cleanup pass after the artifact is in the user's hands. Per-batch review relays are for production-bound code only. Ship increments the moment they exist; never batch deliverables behind polish.
