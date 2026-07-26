@@ -156,6 +156,14 @@ export function fitField(
  * SENTENCES up to a soft length, ending on a real sentence boundary — never a
  * mid-word ellipsis. The full body still lives in the published caption; the
  * card shows a clean, whole-sentence excerpt (so nothing reads as "cut off").
+ *
+ * The excerpt is ALWAYS a PREFIX of the body, because it is a slice taken at a
+ * boundary index. It must never be assembled by joining the results of a global
+ * `match`, which silently DROPS whatever the pattern skipped: a body opening
+ * "dropped 22.6% year over year" yielded "6% year over year", because no
+ * sentence could start at index 0 (that "." is followed by a digit, not a
+ * space) so the engine resumed mid-number — and the card stated a figure its
+ * own caption never made.
  */
 export function leadingSentences(
   text: string | undefined,
@@ -163,18 +171,21 @@ export function leadingSentences(
 ): string {
   const t = (text ?? '').trim().replace(/\s+/g, ' ');
   if (t.length <= softMax) return t;
-  const sentences = t.match(/[^.!?]+[.!?]+(?:\s|$)/g);
-  if (sentences) {
-    let out = '';
-    for (const s of sentences) {
-      if (out && (out + s).length > softMax) break;
-      out += s;
-    }
-    out = out.trim();
-    if (out && out.length <= softMax) return out; // whole sentences fit the budget
+
+  // A boundary is a terminator (plus any closing quote/bracket) followed by a
+  // SPACE. A "." inside a decimal ("22.6") or an abbreviation is not one — a
+  // digit or letter follows it. Keep the last boundary within the budget.
+  const boundary = /[.!?]+["'”’)\]]?(?=\s)/g;
+  let end = 0;
+  for (let m = boundary.exec(t); m !== null; m = boundary.exec(t)) {
+    const stop = m.index + m[0].length;
+    if (stop > softMax) break;
+    end = stop;
   }
-  // No usable sentence boundary within softMax (incl. a punctuation-less body):
-  // word-safe backstop + warn — never return an over-length or mid-word blob.
+  if (end > 0) return t.slice(0, end); // whole leading sentences, prefix-safe
+
+  // The first sentence alone blows the budget (incl. a punctuation-less body):
+  // word-safe backstop + warn — still a prefix, and visibly elided.
   return fitField(t, softMax, 'subhead (no sentence boundary)');
 }
 

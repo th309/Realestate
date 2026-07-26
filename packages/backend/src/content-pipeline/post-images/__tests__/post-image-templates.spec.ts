@@ -366,3 +366,88 @@ describe('text fit — never cut off legal copy', () => {
     expect(closer.cta).toContain('Now you know');
   });
 });
+
+/**
+ * Regression: rendered cards dropped an interior run of body copy and resumed
+ * MID-NUMBER, so the graphic stated a DIFFERENT statistic than its own caption —
+ * a body reading "dropped 22.6% year over year" rendered as "6% year over year".
+ * The rule these tests lock in: a card excerpt is always a PREFIX of the body.
+ * Dropping a trailing run and marking it with "…" is the only edit allowed;
+ * splicing text out of the middle means the card is inventing a number.
+ */
+describe('card excerpts never splice interior copy (mid-number cut)', () => {
+  const JOHNSTOWN =
+    'The median home value dropped 22.6% year over year, and rents are flat. ' +
+    'Johnstown, PA now scores 12 on the PropertyIQ Score, weak momentum against ' +
+    'a state average of 50. Median days on market stretched to 61, and 34.8% of ' +
+    'listings took a price cut last month. PropertyIQ tracks the turn before ' +
+    'list prices catch up.';
+
+  const BANGOR =
+    'A score of 83 signals strong momentum. The jump suggests Bangor’s ' +
+    'market is heating up, even as median home values sit at $289,934, down ' +
+    '4.5% year over year. Median rent held steady at $1,563.';
+
+  /** Every excerpt must be a leading slice of the body (a trailing "…" aside). */
+  function expectPrefixOf(excerpt: string, body: string): void {
+    const normalized = body.trim().replace(/\s+/g, ' ');
+    const withoutEllipsis = excerpt.replace(/…$/, '');
+    expect(normalized.startsWith(withoutEllipsis)).toBe(true);
+  }
+
+  const budgets = [80, 120, 160, 200, 260];
+
+  it('keeps a decimal statistic whole instead of resuming mid-number', () => {
+    for (const budget of budgets) {
+      const out = leadingSentences(JOHNSTOWN, budget);
+      expectPrefixOf(out, JOHNSTOWN);
+      expect(out.startsWith('6%')).toBe(false);
+      // If the drop is quoted at all it must read 22.6%, never a bare 6%.
+      if (out.includes('% year over year')) {
+        expect(out).toContain('22.6% year over year');
+      }
+    }
+  });
+
+  it('never drops an interior sentence from a multi-statistic body', () => {
+    for (const budget of budgets) {
+      const out = leadingSentences(BANGOR, budget);
+      expectPrefixOf(out, BANGOR);
+      expect(out).not.toContain('momentum. 5% year over year');
+      // The $289,934 clause may be dropped from the END, but if the sentence
+      // that carries the YoY figure survives, it must carry its subject too.
+      if (out.includes('4.5%')) {
+        expect(out).toContain('median home values sit at $289,934');
+      }
+    }
+  });
+
+  it('treats a decimal point as part of the number, not a sentence end', () => {
+    const body =
+      'Inventory rose 3.4% while days on market fell to 28.6 from 41.2 last ' +
+      'spring, a swing that usually shows up in list prices within two quarters. ' +
+      'PropertyIQ tracks it monthly so the turn is visible before the sale prices move.';
+    for (const budget of budgets) {
+      const out = leadingSentences(body, budget);
+      expectPrefixOf(out, body);
+      expect(out.startsWith('Inventory rose')).toBe(true);
+    }
+  });
+
+  it('builds single-post card copy that is a prefix of the post body', () => {
+    const copy = {
+      hook: 'Johnstown, PA is cooling fast.',
+      body: JOHNSTOWN,
+      cta: 'See the full breakdown at propertyiq.app',
+    };
+    const subheads = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
+      .flatMap((seed) =>
+        copyToImageContents('image_post', copy, undefined, seed),
+      )
+      .map((item) => item.content.subhead)
+      .filter((text): text is string => !!text);
+
+    expect(subheads.length).toBeGreaterThan(0);
+    for (const subhead of subheads) expectPrefixOf(subhead, JOHNSTOWN);
+  });
+});
