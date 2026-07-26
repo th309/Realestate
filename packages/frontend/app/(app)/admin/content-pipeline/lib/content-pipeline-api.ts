@@ -53,7 +53,11 @@ export interface DashboardData {
   };
   recentRuns: RunSummary[];
   reviewQueueCount: number;
-  upcomingAutoRuns?: Array<{ rule_name: string; format: string; matches: any[] }>;
+  upcomingAutoRuns?: Array<{
+    rule_name: string;
+    format: string;
+    matches: any[];
+  }>;
   costCapStatus?: { breached: boolean; usdSpent: number; usdCap: number };
 }
 
@@ -74,47 +78,8 @@ export async function fetchRun(id: string) {
   return res.data;
 }
 
-export interface RankingRunParams {
-  format: "top_10_ranking" | "bottom_10_ranking";
-  metric: { id: string };
-  geo_level: "metro" | "county" | "zip";
-  scope: { type: "national" | "state" | "metro"; id: string | null };
-  resolved_markets: Array<{
-    rank: number;
-    region_id: string;
-    region_name: string;
-    state: string | null;
-    value: number;
-    value_formatted: string;
-  }>;
-}
-
-export interface CreateRunFormatOptions {
-  windowDays?: 30 | 90 | 180 | 365;
-  /** Long-form metro hero: id from bundled `metro-hero-options.json`. */
-  heroImageOptionId?: string;
-  /** Phase 3: video style reference id (Style Library). */
-  styleReferenceId?: string;
-}
-
-export async function createRun(payload: {
-  format: string;
-  marketQuery: string;
-  idempotencyKey: string;
-  approvalMode?: "auto" | "review" | "draft";
-  selectedPlatforms?: string[];
-  rankingParams?: RankingRunParams;
-  formatOptions?: CreateRunFormatOptions;
-}) {
-  const res = await fetchAPIRaw("/api/admin/content-pipeline/runs", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  const json = await res.json();
-  if (!json.success) throw new Error(json.error ?? "createRun failed");
-  return json.data;
-}
+// Run creation lives in `create-run-api.ts` (extracted to keep this file under
+// the 300-line hard limit) and is re-exported at the bottom of this file.
 
 export async function approveRun(id: string): Promise<void> {
   const res = await fetchAPIRaw(
@@ -150,8 +115,7 @@ export async function rejectRun(id: string, reason: string): Promise<void> {
     success?: boolean;
     error?: string;
   };
-  if (json.success === false)
-    throw new Error(json.error ?? "rejectRun failed");
+  if (json.success === false) throw new Error(json.error ?? "rejectRun failed");
 }
 
 export async function cancelRun(id: string, reason?: string) {
@@ -318,3 +282,12 @@ export {
   editScript,
   continuePipelineFromReview,
 } from "./script-edit-and-resume-api";
+
+// Run creation fetchers live in `create-run-api.ts` (extracted to keep this file
+// under the 300-line hard limit).
+export {
+  type RankingRunParams,
+  type CreateRunFormatOptions,
+  type InfographicRunParams,
+  createRun,
+} from "./create-run-api";

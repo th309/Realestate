@@ -36,6 +36,16 @@ describe("resolvePrefill", () => {
     });
   });
 
+  it("infographic ignores market → infographic-params step", () => {
+    expect(resolvePrefill({ format: "infographic", market: "Austin" })).toEqual(
+      {
+        format: "infographic",
+        marketSeed: "",
+        step: "infographic-params",
+      },
+    );
+  });
+
   it("ranking format ignores market → ranking-params step", () => {
     expect(
       resolvePrefill({ format: "top_10_ranking", market: "Austin" }),

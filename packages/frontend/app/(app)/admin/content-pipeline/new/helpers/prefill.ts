@@ -8,16 +8,19 @@
  * `resolveMarket` returns a match the step can pick — the same validation every
  * other path goes through. So we never jump straight to confirm with an
  * unverified string. Invalid/absent format lands on the format step; ranking
- * formats can't carry a single market, so they route to ranking-params.
+ * formats can't carry a single market, so they route to ranking-params, and
+ * infographics have no market at all, so they route to infographic-params.
  */
 import { isValidRunFormat } from "../../lib/format-previews";
+import { INFOGRAPHIC_FORMAT } from "./infographic-params";
 
 export type WizardStep =
   | "format"
   | "market"
   | "confirm"
   | "ranking-params"
-  | "ranking-preview";
+  | "ranking-preview"
+  | "infographic-params";
 
 const RANKING_FORMATS = new Set(["top_10_ranking", "bottom_10_ranking"]);
 
@@ -30,6 +33,9 @@ export function resolvePrefill(input: {
   }
   if (RANKING_FORMATS.has(input.format)) {
     return { format: input.format, marketSeed: "", step: "ranking-params" };
+  }
+  if (input.format === INFOGRAPHIC_FORMAT) {
+    return { format: input.format, marketSeed: "", step: "infographic-params" };
   }
   return {
     format: input.format,
