@@ -28,18 +28,27 @@ export const POST_IMAGE_DEFAULT_BUCKET = 'content-pipeline';
  *   - Legacy already-public: { kind:'image', url:'https://…' } → passed through.
  *     (Rendered refs carry no `url`; this is only for older/manual refs.)
  *
+ * Video refs (the video-card lane's rendered MP4) sign exactly the same way —
+ * same bucket, same storage_path contract, same fresh-per-attempt TTL. Signing
+ * happens at PUBLISH time only; the review UI streams bytes same-origin instead.
+ *
  * Honest-failure contract: a storage-backed ref that FAILS to sign THROWS, so
  * the publish fails visibly (→ Needs-attention) rather than silently dropping
- * the image and posting text-only. Non-image refs and refs with no resolvable
- * location are dropped; a post with zero resolvable images publishes text-only
- * exactly as before (no regression).
+ * the media and posting text-only. Refs of other kinds, and refs with no
+ * resolvable location, are dropped; a post with zero resolvable media publishes
+ * text-only exactly as before (no regression).
  */
+const PUBLISHABLE_MEDIA_KINDS: ReadonlySet<string> = new Set([
+  'image',
+  'video',
+]);
+
 export async function resolvePostMediaUrls(
   client: SupabaseClient,
   refs: PostMediaRef[] | null,
 ): Promise<string[]> {
-  const images = (refs ?? [])
-    .filter((ref) => ref.kind === 'image')
+  const publishable = (refs ?? [])
+    .filter((ref) => PUBLISHABLE_MEDIA_KINDS.has(ref.kind))
     .map((ref, index) => ({
       ref,
       order: typeof ref.order === 'number' ? ref.order : index,
@@ -48,7 +57,7 @@ export async function resolvePostMediaUrls(
     .map((entry) => entry.ref);
 
   const urls: string[] = [];
-  for (const ref of images) {
+  for (const ref of publishable) {
     const url = await signRef(client, ref);
     if (url) urls.push(url);
   }
@@ -81,7 +90,7 @@ async function signRef(
     } catch (err) {
       const reason = err instanceof Error ? err.message : String(err);
       throw new Error(
-        `failed to sign post image ${bucket}/${storagePath}: ${reason}`,
+        `failed to sign post ${ref.kind} ${bucket}/${storagePath}: ${reason}`,
       );
     }
   }

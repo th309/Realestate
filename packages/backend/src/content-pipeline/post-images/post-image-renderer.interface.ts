@@ -34,6 +34,18 @@ export interface PostImageRenderer {
     width: number,
     height: number,
   ): Promise<Buffer>;
+
+  /**
+   * Render to a PNG with a TRANSPARENT background, for compositing over video.
+   * The video-card lane draws the card as a gradient + text overlay and lets the
+   * b-roll show through underneath, so the page body must not paint a backdrop
+   * (`buildSinglePostHtml(content, scale, { transparentBody: true })`).
+   */
+  renderTransparentPng(
+    html: string,
+    width: number,
+    height: number,
+  ): Promise<Buffer>;
 }
 
 export const POST_IMAGE_RENDERER = Symbol('PostImageRenderer');

@@ -14,7 +14,10 @@ import {
   PostRow,
   PostStatus,
 } from './post.types';
-import type { PostImageMediaRef } from '../post-images/post-image.types';
+import type {
+  PostImageMediaRef,
+  PostVideoMediaRef,
+} from '../post-images/post-image.types';
 
 /**
  * A post row plus same-origin image URLs in slide order (list/get/generate).
@@ -26,6 +29,9 @@ export type PostWithMedia = PostRow & { mediaUrls: string[] };
 
 /** Base path for the same-origin media streaming endpoint. */
 const POSTS_MEDIA_BASE = '/api/admin/content-pipeline/posts';
+
+/** Ref kinds the same-origin media route can stream to the review UI. */
+const STREAMABLE_MEDIA_KINDS: ReadonlySet<string> = new Set(['image', 'video']);
 
 /** Read the numeric slide order off a media ref (0 default; refs store it loosely). */
 function refOrder(ref: PostMediaRef): number {
@@ -204,26 +210,37 @@ export class PostsService {
   // eslint-disable-next-line @typescript-eslint/require-await
   async withSignedMedia(post: PostRow): Promise<PostWithMedia> {
     const mediaUrls = (post.media_refs ?? [])
-      .filter((r) => r?.kind === 'image' && typeof r.storage_path === 'string')
+      .filter(
+        (r) =>
+          STREAMABLE_MEDIA_KINDS.has(String(r?.kind)) &&
+          typeof r.storage_path === 'string',
+      )
       .sort((a, b) => refOrder(a) - refOrder(b))
       .map((r) => `${POSTS_MEDIA_BASE}/${post.id}/media/${refOrder(r)}`);
     return { ...post, mediaUrls };
   }
 
   /**
-   * Download the bytes of a post's rendered image via the service-role client, to
+   * Download the bytes of a post's rendered media via the service-role client, to
    * stream same-origin (blocker-proof). 404 if the post or the ref at that order
    * is missing. Signing stays server-side (this + the publish path).
+   *
+   * Returns the content type alongside the bytes so the controller can label an
+   * MP4 correctly — a video served as image/png will not play.
    */
-  async downloadMedia(id: string, order: number): Promise<Buffer> {
+  async downloadMedia(
+    id: string,
+    order: number,
+  ): Promise<{ bytes: Buffer; contentType: string }> {
     const post = await this.getById(id);
     const ref = (post.media_refs ?? []).find(
-      (r) => r?.kind === 'image' && refOrder(r) === order,
+      (r) =>
+        STREAMABLE_MEDIA_KINDS.has(String(r?.kind)) && refOrder(r) === order,
     );
     const bucket = (ref as { bucket?: unknown } | undefined)?.bucket;
     const path = ref?.storage_path;
     if (!ref || typeof bucket !== 'string' || typeof path !== 'string') {
-      throw new NotFoundException(`no image at order ${order} for post ${id}`);
+      throw new NotFoundException(`no media at order ${order} for post ${id}`);
     }
     const { data, error } = await this.supabase
       .getClient()
@@ -234,7 +251,10 @@ export class PostsService {
         `media object missing for post ${id}/${order}`,
       );
     }
-    return Buffer.from(await data.arrayBuffer());
+    return {
+      bytes: Buffer.from(await data.arrayBuffer()),
+      contentType: ref.kind === 'video' ? 'video/mp4' : 'image/png',
+    };
   }
 
   /**
@@ -243,7 +263,7 @@ export class PostsService {
    */
   async updateMediaRefs(
     id: string,
-    mediaRefs: PostImageMediaRef[],
+    mediaRefs: Array<PostImageMediaRef | PostVideoMediaRef>,
   ): Promise<PostRow> {
     const client = this.supabase.getClient();
     const { data, error } = await client

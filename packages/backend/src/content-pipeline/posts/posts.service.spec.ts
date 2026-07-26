@@ -307,11 +307,38 @@ describe('PostsService media refs (render output + signing)', () => {
     const post = { ...seedPost('pending_review'), media_refs: [imageRef] };
     const { supabase } = makePostsFake([post]);
     const service = new PostsService(supabase);
-    const bytes = await service.downloadMedia('post-1', 0);
+    const { bytes, contentType } = await service.downloadMedia('post-1', 0);
     expect(Buffer.isBuffer(bytes)).toBe(true);
     expect(bytes.length).toBeGreaterThan(0);
+    expect(contentType).toBe('image/png');
     await expect(service.downloadMedia('post-1', 9)).rejects.toMatchObject({
       status: 404,
     });
+  });
+
+  it('streams a video ref as video/mp4 and exposes it as a media url', async () => {
+    const videoRef = {
+      kind: 'video',
+      bucket: 'content-pipeline',
+      storage_path: 'posts/post-1/card.mp4',
+      width: 1080,
+      height: 1350,
+      duration_sec: 8,
+      order: 0,
+    };
+    const post = { ...seedPost('pending_review'), media_refs: [videoRef] };
+    const { supabase } = makePostsFake([post]);
+    const service = new PostsService(supabase);
+
+    const { contentType } = await service.downloadMedia('post-1', 0);
+    // An MP4 labelled image/png does not play.
+    expect(contentType).toBe('video/mp4');
+
+    const withMedia = await service.withSignedMedia(
+      (await service.getById('post-1')) as never,
+    );
+    expect(withMedia.mediaUrls).toEqual([
+      '/api/admin/content-pipeline/posts/post-1/media/0',
+    ]);
   });
 });

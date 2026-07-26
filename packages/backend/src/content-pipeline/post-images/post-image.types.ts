@@ -88,6 +88,21 @@ export interface PostImageMediaRef {
 }
 
 /**
+ * A rendered video-card MP4 attached to a post. Mirrors PostImageMediaRef —
+ * same frozen contract (`storage_path`, never a persisted signed URL) — plus
+ * the runtime the review player and the publishers need.
+ */
+export interface PostVideoMediaRef {
+  kind: 'video';
+  bucket: string;
+  storage_path: string;
+  width: number;
+  height: number;
+  order: number;
+  duration_sec: number;
+}
+
+/**
  * A stat rendered on a card — real data only (never invented). `tone` drives the
  * accent color; accent-green is reserved for genuinely positive metrics per brand.
  */

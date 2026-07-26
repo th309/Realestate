@@ -10,6 +10,8 @@ import {
   Patch,
   Post,
   Query,
+  Req,
+  Res,
   StreamableFile,
   UseGuards,
 } from '@nestjs/common';
@@ -17,6 +19,13 @@ import { AdminGuard } from '../../common/guards/admin-auth.guard';
 import { PostsService } from './posts.service';
 import { ListPostsQueryDto } from './dto/posts-query.dto';
 import { UpdatePostCopyDto, UpdatePostStatusDto } from './dto/update-post.dto';
+import { parseByteRange } from './posts-byte-range';
+
+/** The slice of the Express response the media route needs (no express import). */
+interface ExpressResponseLike {
+  status(code: number): unknown;
+  setHeader(name: string, value: string): unknown;
+}
 
 /**
  * Admin posts API for the feed UI. Lists posts by status, moves them through the
@@ -55,22 +64,50 @@ export class PostsController {
   }
 
   /**
-   * Stream a post's rendered image SAME-ORIGIN so <img src> survives content
-   * blockers that filter supabase.co image requests. Downloaded server-side with
-   * the service-role client; the path is immutable per render, so it caches 1h.
+   * Stream a post's rendered media SAME-ORIGIN so <img src> / <video src>
+   * survive content blockers that filter supabase.co requests. Downloaded
+   * server-side with the service-role client; the path is immutable per render,
+   * so it caches 1h.
+   *
+   * Video cards answer Range requests with a 206 slice: browsers issue one
+   * before playing an MP4, and a player that only ever gets 200 cannot seek.
    */
   @Get(':id/media/:order')
   @Header('Cache-Control', 'private, max-age=3600')
   async media(
     @Param('id', new ParseUUIDPipe()) id: string,
     @Param('order', new ParseIntPipe()) order: number,
+    @Req() req: { headers: Record<string, string | string[] | undefined> },
+    @Res({ passthrough: true }) res: ExpressResponseLike,
   ): Promise<StreamableFile> {
     if (order < 0 || order > 40) {
       throw new BadRequestException('media order out of range');
     }
-    const bytes = await this.posts.downloadMedia(id, order);
+    const { bytes, contentType } = await this.posts.downloadMedia(id, order);
+
+    const rangeHeader = req.headers.range;
+    const range =
+      typeof rangeHeader === 'string'
+        ? parseByteRange(rangeHeader, bytes.length)
+        : null;
+    if (range) {
+      const slice = bytes.subarray(range.start, range.end + 1);
+      res.status(206);
+      res.setHeader('Accept-Ranges', 'bytes');
+      res.setHeader(
+        'Content-Range',
+        `bytes ${range.start}-${range.end}/${bytes.length}`,
+      );
+      return new StreamableFile(slice, {
+        type: contentType,
+        disposition: 'inline',
+        length: slice.length,
+      });
+    }
+
+    res.setHeader('Accept-Ranges', 'bytes');
     return new StreamableFile(bytes, {
-      type: 'image/png',
+      type: contentType,
       disposition: 'inline',
       length: bytes.length,
     });

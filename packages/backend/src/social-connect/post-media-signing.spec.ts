@@ -88,15 +88,63 @@ describe('resolvePostMediaUrls', () => {
     expect(createSignedUrl).not.toHaveBeenCalled();
   });
 
-  it('drops non-image refs and refs with no resolvable location', async () => {
+  it('drops unpublishable kinds and refs with no resolvable location', async () => {
     const { client } = makeClient();
     const urls = await resolvePostMediaUrls(client, [
-      { kind: 'video', storage_path: 'posts/p/v.mp4' },
+      { kind: 'document', storage_path: 'posts/p/brief.pdf' },
       { kind: 'image', url: 'http://cdn.example/insecure.png' }, // not https
       { kind: 'image' }, // no location at all
       { kind: 'image', storage_path: 'posts/p/1.png', order: 0 },
     ]);
     expect(urls).toEqual(['https://signed.test/posts/p/1.png?ttl=3600']);
+  });
+
+  // The video-card lane attaches an MP4 the same way images are attached, so it
+  // must sign at publish time rather than be dropped (which would silently
+  // publish a video post as text-only).
+  it('signs video refs the same way as images', async () => {
+    const { client, from, createSignedUrl } = makeClient();
+    const urls = await resolvePostMediaUrls(client, [
+      {
+        kind: 'video',
+        bucket: 'content-pipeline',
+        storage_path: 'posts/p/card.mp4',
+        width: 1080,
+        height: 1350,
+        duration_sec: 8,
+        order: 0,
+      },
+    ]);
+    expect(urls).toEqual(['https://signed.test/posts/p/card.mp4?ttl=3600']);
+    expect(from).toHaveBeenCalledWith('content-pipeline');
+    expect(createSignedUrl).toHaveBeenCalledWith(
+      'posts/p/card.mp4',
+      POST_IMAGE_SIGNED_URL_TTL_SEC,
+    );
+  });
+
+  it('orders mixed image and video refs by the order field', async () => {
+    const { client } = makeClient();
+    const urls = await resolvePostMediaUrls(client, [
+      { kind: 'video', storage_path: 'posts/p/card.mp4', order: 1 },
+      { kind: 'image', storage_path: 'posts/p/0.png', order: 0 },
+    ]);
+    expect(urls).toEqual([
+      'https://signed.test/posts/p/0.png?ttl=3600',
+      'https://signed.test/posts/p/card.mp4?ttl=3600',
+    ]);
+  });
+
+  it('THROWS naming the kind when a video ref cannot be signed', async () => {
+    const { client } = makeClient(async () => ({
+      data: null,
+      error: { message: 'nope' },
+    }));
+    await expect(
+      resolvePostMediaUrls(client, [
+        { kind: 'video', storage_path: 'posts/p/card.mp4' },
+      ]),
+    ).rejects.toThrow(/failed to sign post video/);
   });
 
   it('THROWS with context when a storage ref cannot be signed (no silent text-only downgrade)', async () => {

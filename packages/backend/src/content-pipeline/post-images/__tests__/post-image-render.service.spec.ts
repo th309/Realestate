@@ -39,6 +39,9 @@ describe('PostImageRenderService', () => {
     renderer = {
       renderPng: jest.fn().mockResolvedValue(Buffer.from('png')),
       renderFitted: jest.fn().mockResolvedValue(Buffer.from('png-bytes')),
+      renderTransparentPng: jest
+        .fn()
+        .mockResolvedValue(Buffer.from('transparent-png')),
     };
     supabase = {
       getClient: () => ({
