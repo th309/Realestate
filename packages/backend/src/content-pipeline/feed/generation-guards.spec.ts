@@ -50,14 +50,22 @@ describe('assertNonBlankPostCopy (valid-but-blank JSON guard)', () => {
       EmptyCompletionError,
     );
     expect(() =>
+      // cast: the fixture intentionally carries extra parsed-JSON keys
       assertNonBlankPostCopy(
-        { hook: '', body: '', cta: '', hashtags: [] },
+        { hook: '', body: '', cta: '', hashtags: [] } as Record<
+          string,
+          unknown
+        >,
         'linkedin_post',
         'ctx',
       ),
     ).toThrow(EmptyCompletionError);
     expect(() =>
-      assertNonBlankPostCopy({ foo: 'bar' }, 'facebook_post', 'ctx'),
+      assertNonBlankPostCopy(
+        { foo: 'bar' } as Record<string, unknown>,
+        'facebook_post',
+        'ctx',
+      ),
     ).toThrow(EmptyCompletionError);
   });
 
