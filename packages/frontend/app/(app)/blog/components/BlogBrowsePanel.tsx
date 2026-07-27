@@ -41,7 +41,10 @@ export function BlogBrowsePanel({
 }) {
   return (
     <section>
-      <h2 className="text-lg font-semibold text-on-surface mb-4">
+      <h2
+        id="browse-archive-heading"
+        className="text-lg font-semibold text-on-surface mb-4"
+      >
         Browse the archive
       </h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-4">

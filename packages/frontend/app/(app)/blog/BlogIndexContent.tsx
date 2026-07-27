@@ -80,7 +80,7 @@ function PostSection({
           </button>
         )}
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {visible.map((post) => (
           <PostCard key={post.slug} post={post} />
         ))}
@@ -314,7 +314,7 @@ export function BlogIndexContent({
               <h2 className="text-lg font-semibold text-on-surface mb-4">
                 Latest
               </h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 gap-4">
                 {featured.map((post) => (
                   <PostCard key={post.slug} post={post} featured />
                 ))}
@@ -328,7 +328,10 @@ export function BlogIndexContent({
             )}
           </div>
 
-          <aside className="mt-10 lg:mt-8">
+          <aside
+            aria-labelledby="browse-archive-heading"
+            className="mt-10 lg:mt-8"
+          >
             <BlogBrowsePanel tree={archiveTree} stateIndex={stateIndex} />
           </aside>
         </div>
