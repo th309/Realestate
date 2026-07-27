@@ -308,26 +308,30 @@ export function BlogIndexContent({
           )}
         </section>
       ) : (
-        <>
-          <section className="mt-8">
-            <h2 className="text-lg font-semibold text-on-surface mb-4">
-              Latest
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {featured.map((post) => (
-                <PostCard key={post.slug} post={post} featured />
-              ))}
-            </div>
-          </section>
+        <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-8 lg:items-start">
+          <div>
+            <section className="mt-8">
+              <h2 className="text-lg font-semibold text-on-surface mb-4">
+                Latest
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {featured.map((post) => (
+                  <PostCard key={post.slug} post={post} featured />
+                ))}
+              </div>
+            </section>
 
-          <BlogBrowsePanel tree={archiveTree} stateIndex={stateIndex} />
+            {GROUP_ORDER.map((group) =>
+              grouped[group].length > 0 ? (
+                <PostSection key={group} group={group} posts={grouped[group]} />
+              ) : null,
+            )}
+          </div>
 
-          {GROUP_ORDER.map((group) =>
-            grouped[group].length > 0 ? (
-              <PostSection key={group} group={group} posts={grouped[group]} />
-            ) : null,
-          )}
-        </>
+          <aside className="mt-10 lg:mt-8">
+            <BlogBrowsePanel tree={archiveTree} stateIndex={stateIndex} />
+          </aside>
+        </div>
       )}
     </div>
   );

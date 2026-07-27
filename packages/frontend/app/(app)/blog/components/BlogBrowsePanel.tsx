@@ -40,11 +40,11 @@ export function BlogBrowsePanel({
   stateIndex: StateIndex;
 }) {
   return (
-    <section className="mt-10">
+    <section>
       <h2 className="text-lg font-semibold text-on-surface mb-4">
         Browse the archive
       </h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-4">
         <BrowseCard
           icon={<CalendarDays className="w-4 h-4 text-on-surface-variant" />}
           title="By month"
