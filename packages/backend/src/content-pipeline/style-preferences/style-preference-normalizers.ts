@@ -11,6 +11,7 @@ import {
 import type {
   CollectionsPreferencesRow,
   HydratedStyleRef,
+  SavedStyleRef,
   StylePreferences,
 } from './style-preference.types';
 
@@ -27,6 +28,32 @@ export type LiveStyleRefs = Map<
   string,
   { label: string; attributes: StyleReferenceAttrs }
 >;
+
+/**
+ * Put likes in canonical newest-first order and apply the persisted-row cap.
+ *
+ * Ordering is explicit rather than relying on callers prepending, so "the
+ * newest N" is well defined no matter how the stored array was written. Entries
+ * with an unparseable saved_at sort last (treated as oldest) instead of
+ * poisoning the comparison.
+ *
+ * `maxSaved` is the STORAGE bound, not the prompt cap — see MAX_SAVED_STYLE_REFS
+ * in style-preference.service.ts for why overflow evicts the oldest.
+ */
+export function orderNewestFirstAndCap(
+  refs: SavedStyleRef[],
+  maxSaved: number,
+): { saved: SavedStyleRef[]; evicted: number } {
+  const at = (r: SavedStyleRef) => {
+    const t = Date.parse(r.saved_at ?? '');
+    return Number.isNaN(t) ? Number.NEGATIVE_INFINITY : t;
+  };
+  const ordered = [...refs].sort((a, b) => at(b) - at(a));
+  return {
+    saved: ordered.slice(0, maxSaved),
+    evicted: Math.max(0, ordered.length - maxSaved),
+  };
+}
 
 /** Coerce a raw Supabase row into the typed shape (JSONB arrives loose). */
 export function normalizeRow(data: unknown): CollectionsPreferencesRow {

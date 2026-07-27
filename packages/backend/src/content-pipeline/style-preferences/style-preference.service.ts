@@ -10,6 +10,7 @@ import {
 import {
   LiveStyleRefs,
   normalizeRow,
+  orderNewestFirstAndCap,
   StyleReferenceAttrs,
   toStylePreferences,
 } from './style-preference-normalizers';
@@ -18,6 +19,24 @@ import type {
   SavedStyleRef,
   StylePreferences,
 } from './style-preference.types';
+
+/**
+ * Hard bound on how many likes are PERSISTED for a brand, so the JSONB column
+ * cannot grow without limit over the brand's lifetime.
+ *
+ * This is a storage bound and nothing more. Do not confuse it with
+ * MAX_REFS_IN_PREAMBLE (5), which is a READ-time cap on how many likes reach a
+ * generation prompt. The two are deliberately far apart: an operator who likes
+ * 12 references keeps all 12 on the record and sees the newest 5 influencing
+ * generation. Capping writes at 5 would silently discard the 6th like.
+ *
+ * Overflow evicts the OLDEST like rather than rejecting the save. Because only
+ * the newest MAX_REFS_IN_PREAMBLE ever reach a prompt, dropping the 51st-oldest
+ * entry cannot change what generation sees, so blocking the operator would cost
+ * them a real action to satisfy a bound that exists purely for row size. The
+ * eviction is logged so it is not invisible.
+ */
+export const MAX_SAVED_STYLE_REFS = 50;
 
 /**
  * The preference-learning loop: which style references a brand has liked, and
@@ -60,15 +79,21 @@ export class StylePreferenceService {
     );
     if (already) return this.hydrate(row);
 
-    // Newest first: the prompt builder takes the head of this list.
-    const saved: SavedStyleRef[] = [
-      {
-        style_reference_id: styleReferenceId,
-        label,
-        saved_at: new Date().toISOString(),
-      },
-      ...row.saved_style_refs,
-    ];
+    const { saved, evicted } = orderNewestFirstAndCap(
+      [
+        {
+          style_reference_id: styleReferenceId,
+          label,
+          saved_at: new Date().toISOString(),
+        },
+        ...row.saved_style_refs,
+      ],
+      MAX_SAVED_STYLE_REFS,
+    );
+    if (evicted > 0)
+      this.logger.log(
+        `[STYLE PREFS] brand ${row.brand_id} hit the ${MAX_SAVED_STYLE_REFS}-like cap; evicted ${evicted} oldest`,
+      );
     return this.hydrate(await this.writeSaved(row.id, saved));
   }
 

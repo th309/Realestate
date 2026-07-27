@@ -1,121 +1,23 @@
 import { NotFoundException } from '@nestjs/common';
-import { StylePreferenceService } from './style-preference.service';
-import { SupabaseService } from '../../supabase/supabase.service';
-import { BrandKitService } from '../brand-kit/brand-kit.service';
+import {
+  MAX_SAVED_STYLE_REFS,
+  StylePreferenceService,
+} from './style-preference.service';
+import { MAX_REFS_IN_PREAMBLE } from './style-preference-preamble';
+import { orderNewestFirstAndCap } from './style-preference-normalizers';
+import type { SavedStyleRef } from './style-preference.types';
+import {
+  makeBrandKitStub,
+  makeSupabaseFake,
+  styleRef,
+  type Row,
+} from './__tests__/style-preference-test-helpers';
 
 const BRAND_ID = 'brand-1';
 
-type Row = Record<string, unknown>;
-
-/**
- * In-memory Supabase fake covering the chain surface StylePreferenceService
- * uses: select().eq().order().limit().maybeSingle(), select().in(),
- * insert().select().maybeSingle(), and update().eq().select().maybeSingle().
- */
-function makeSupabaseFake(seed: {
-  preferences?: Row[];
-  styleReferences?: Row[];
-}) {
-  const store: Record<string, Row[]> = {
-    collections_preferences: [...(seed.preferences ?? [])],
-    style_references: [...(seed.styleReferences ?? [])],
-  };
-  let idCounter = 1;
-
-  function builder(table: string) {
-    let op: 'select' | 'insert' | 'update' = 'select';
-    const filters: Array<[string, unknown]> = [];
-    let inFilter: [string, unknown[]] | null = null;
-    let patch: Row | null = null;
-    let inserted: Row | null = null;
-    let ascending = true;
-    let ordered = false;
-
-    const match = () => {
-      let rows = store[table].filter((r) =>
-        filters.every(([c, v]) => r[c] === v),
-      );
-      if (inFilter)
-        rows = rows.filter((r) => inFilter![1].includes(r[inFilter![0]]));
-      if (ordered)
-        rows = [...rows].sort((a, b) =>
-          ascending
-            ? String(a.created_at).localeCompare(String(b.created_at))
-            : String(b.created_at).localeCompare(String(a.created_at)),
-        );
-      return rows;
-    };
-
-    const b = {
-      select: () => b,
-      insert(obj: Row) {
-        op = 'insert';
-        inserted = {
-          id: `pref-${idCounter++}`,
-          created_at: new Date(2026, 6, idCounter).toISOString(),
-          updated_at: new Date(2026, 6, idCounter).toISOString(),
-          ...obj,
-        };
-        store[table].push(inserted);
-        return b;
-      },
-      update(p: Row) {
-        op = 'update';
-        patch = p;
-        return b;
-      },
-      eq(c: string, v: unknown) {
-        filters.push([c, v]);
-        return b;
-      },
-      in(c: string, vs: unknown[]) {
-        inFilter = [c, vs];
-        return b;
-      },
-      order(_c: string, opts?: { ascending?: boolean }) {
-        ordered = true;
-        ascending = opts?.ascending ?? true;
-        return b;
-      },
-      limit: () => b,
-      maybeSingle() {
-        if (op === 'insert')
-          return Promise.resolve({ data: inserted, error: null });
-        const rows = match();
-        if (op === 'update') {
-          rows.forEach((r) => Object.assign(r, patch));
-          return Promise.resolve({ data: rows[0] ?? null, error: null });
-        }
-        return Promise.resolve({ data: rows[0] ?? null, error: null });
-      },
-      then(resolve: (v: { data: Row[]; error: null }) => unknown) {
-        return Promise.resolve(resolve({ data: match(), error: null }));
-      },
-    };
-    return b;
-  }
-
-  const supabase = {
-    getClient: () => ({ from: (t: string) => builder(t) }),
-  } as unknown as SupabaseService;
-  return { supabase, store };
-}
-
-function styleRef(id: string, label: string, attrs: Row = {}) {
-  return {
-    id,
-    label,
-    extracted_attributes: attrs,
-    created_at: '2026-07-01T00:00:00.000Z',
-  };
-}
-
 function build(seed: { preferences?: Row[]; styleReferences?: Row[] } = {}) {
   const { supabase, store } = makeSupabaseFake(seed);
-  const brandKit = {
-    ensurePropertyIqBrand: jest.fn(() => Promise.resolve({ id: BRAND_ID })),
-    buildPromptPreamble: jest.fn(() => 'BRAND PREAMBLE'),
-  } as unknown as BrandKitService;
+  const brandKit = makeBrandKitStub(BRAND_ID);
   return {
     service: new StylePreferenceService(supabase, brandKit),
     store,
@@ -313,5 +215,115 @@ describe('StylePreferenceService.buildGenerationPreamble closes the loop', () =>
       id: BRAND_ID,
     } as never);
     expect(out).toBe('BRAND PREAMBLE');
+  });
+});
+
+describe('orderNewestFirstAndCap makes "newest" well defined', () => {
+  const ref = (id: string, savedAt: string): SavedStyleRef => ({
+    style_reference_id: id,
+    label: id,
+    saved_at: savedAt,
+  });
+
+  it('sorts newest first regardless of the stored array order', () => {
+    const { saved } = orderNewestFirstAndCap(
+      [
+        ref('old', '2026-01-01T00:00:00.000Z'),
+        ref('new', '2026-07-01T00:00:00.000Z'),
+        ref('mid', '2026-04-01T00:00:00.000Z'),
+      ],
+      10,
+    );
+    expect(saved.map((r) => r.style_reference_id)).toEqual([
+      'new',
+      'mid',
+      'old',
+    ]);
+  });
+
+  it('sorts an unparseable saved_at last instead of poisoning the order', () => {
+    const { saved } = orderNewestFirstAndCap(
+      [
+        ref('broken', 'not-a-date'),
+        ref('real', '2026-04-01T00:00:00.000Z'),
+      ],
+      10,
+    );
+    expect(saved.map((r) => r.style_reference_id)).toEqual(['real', 'broken']);
+  });
+
+  it('evicts the oldest beyond the cap and reports how many', () => {
+    const refs = Array.from({ length: 6 }, (_, i) =>
+      ref(`ref-${i}`, `2026-0${i + 1}-01T00:00:00.000Z`),
+    );
+    const { saved, evicted } = orderNewestFirstAndCap(refs, 4);
+    expect(evicted).toBe(2);
+    expect(saved).toHaveLength(4);
+    expect(saved.map((r) => r.style_reference_id)).toEqual([
+      'ref-5',
+      'ref-4',
+      'ref-3',
+      'ref-2',
+    ]);
+  });
+
+  it('reports no eviction when the list fits', () => {
+    expect(orderNewestFirstAndCap([ref('a', '2026-01-01T00:00:00.000Z')], 50))
+      .toEqual({ saved: [expect.objectContaining({ style_reference_id: 'a' })], evicted: 0 });
+  });
+});
+
+describe('the storage cap and the prompt cap are separate limits', () => {
+  function withRefs(count: number) {
+    return build({
+      styleReferences: Array.from({ length: count }, (_, i) =>
+        styleRef(`ref-${i}`, `Look ${i}`, { summary: `Summary ${i}.` }),
+      ),
+    });
+  }
+
+  it('keeps every like below the storage cap, even past the prompt cap', async () => {
+    const { service } = withRefs(MAX_REFS_IN_PREAMBLE + 3);
+    for (let i = 0; i < MAX_REFS_IN_PREAMBLE + 3; i++) {
+      await service.saveStyleRef(`ref-${i}`);
+    }
+    const prefs = await service.getPreferences();
+    // A 6th like is NOT discarded on save; it is simply not in the prompt.
+    expect(prefs.savedStyleRefs).toHaveLength(MAX_REFS_IN_PREAMBLE + 3);
+    const bullets = prefs.stylePreamble
+      .split('\n')
+      .filter((l) => l.startsWith('- '));
+    expect(bullets).toHaveLength(MAX_REFS_IN_PREAMBLE);
+  });
+
+  it('puts the newest likes in the prompt and leaves the older ones stored', async () => {
+    const { service } = withRefs(MAX_REFS_IN_PREAMBLE + 2);
+    for (let i = 0; i < MAX_REFS_IN_PREAMBLE + 2; i++) {
+      await service.saveStyleRef(`ref-${i}`);
+    }
+    const prefs = await service.getPreferences();
+    const newest = `Look ${MAX_REFS_IN_PREAMBLE + 1}`;
+    expect(prefs.stylePreamble).toContain(newest);
+    expect(prefs.stylePreamble).not.toContain('Look 0');
+    expect(
+      prefs.savedStyleRefs.some((r) => r.style_reference_id === 'ref-0'),
+    ).toBe(true);
+  });
+
+  it('bounds the persisted row at the storage cap by evicting the oldest', async () => {
+    const total = MAX_SAVED_STYLE_REFS + 5;
+    const { service, store } = withRefs(total);
+    for (let i = 0; i < total; i++) {
+      await service.saveStyleRef(`ref-${i}`);
+    }
+    const row = store.collections_preferences[0] as {
+      saved_style_refs: SavedStyleRef[];
+    };
+    expect(row.saved_style_refs).toHaveLength(MAX_SAVED_STYLE_REFS);
+    // The five oldest were evicted; the newest survived.
+    const ids = row.saved_style_refs.map((r) => r.style_reference_id);
+    expect(ids).toContain(`ref-${total - 1}`);
+    expect(ids).not.toContain('ref-0');
+    expect(ids).not.toContain('ref-4');
   });
 });

@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { M3Dialog } from "../m3-dialog";
 
-export const KIND_OPTIONS = ["thumbnail", "video", "pdf", "general"] as const;
-export type ReferenceKind = (typeof KIND_OPTIONS)[number];
+const KIND_OPTIONS = ["thumbnail", "video", "pdf", "general"] as const;
+type ReferenceKind = (typeof KIND_OPTIONS)[number];
 
 /**
  * Add a reference by image URL, video URL, or video upload. The "video" kind
