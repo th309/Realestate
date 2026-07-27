@@ -57,17 +57,29 @@ git merge-base --is-ancestor origin/develop develop \
   || die "Local develop is behind origin/develop. Run: git pull --ff-only"
 
 # --- Collect top-level MDX changes (drafts/ never publishes) ------------------
+is_top_level_mdx() {
+  case "$1" in
+    "$BLOG_DIR"/*/*) return 1 ;;                 # subdirs (drafts/) excluded
+    "$BLOG_DIR"/*.mdx) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
 ADDED=() MODIFIED=() DELETED=() SKIPPED_FUTURE=()
 while IFS= read -r line; do
   [ -n "$line" ] || continue
   status="${line:0:2}"
   file="${line:3}"
   file="${file#\"}"; file="${file%\"}"           # porcelain may quote paths
-  case "$file" in
-    "$BLOG_DIR"/*/*) continue ;;                 # subdirs (drafts/) excluded
-    "$BLOG_DIR"/*.mdx) ;;
-    *) continue ;;
-  esac
+  if [[ "$file" == *" -> "* ]]; then             # staged rename/copy: "old -> new"
+    old_path="${file%% -> *}"; new_path="${file##* -> }"
+    if [[ "$status" == *R* ]]; then              # a copy (C) keeps the original
+      if is_top_level_mdx "$old_path"; then DELETED+=("$old_path"); fi
+    fi
+    if is_top_level_mdx "$new_path"; then ADDED+=("$new_path"); fi
+    continue
+  fi
+  is_top_level_mdx "$file" || continue
   case "$status" in
     "??") ADDED+=("$file") ;;
     *D*)  DELETED+=("$file") ;;
@@ -82,10 +94,13 @@ fi
 
 # --- Validate added/modified posts --------------------------------------------
 TODAY="$(date +%F)"
-PUBLISH=()   # files that will actually be committed
+PUBLISH=()       # files that will actually be committed
+PUBLISH_NEW=()   # subset of PUBLISH that is brand-new (drives the live poll)
 frontmatter() { awk '/^---[[:space:]]*$/{c++; next} c==1{print} c>=2{exit}' "$1"; }
 
-for file in ${ADDED[@]+"${ADDED[@]}"} ${MODIFIED[@]+"${MODIFIED[@]}"}; do
+# Returns 0 = publishable, 1 = skipped (future-dated). Dies on hard failures.
+validate_post() {
+  local file="$1" fm post_date match
   fm="$(frontmatter "$file")"
   echo "$fm" | grep -q '^title:' || die "$file: frontmatter is missing 'title:'."
   post_date="$(echo "$fm" | sed -n 's/^date:[[:space:]]*"\{0,1\}\([0-9][0-9-]*\)"\{0,1\}.*/\1/p' | head -1)"
@@ -94,7 +109,7 @@ for file in ${ADDED[@]+"${ADDED[@]}"} ${MODIFIED[@]+"${MODIFIED[@]}"}; do
   # getAllPosts() hides future-dated posts; publishing one would silently no-op.
   if [[ "$post_date" > "$TODAY" ]]; then
     SKIPPED_FUTURE+=("$file (dated $post_date)")
-    continue
+    return 1
   fi
 
   # Retired coverage-count claims are a hard fail (see CLAUDE.md §9: use COVERAGE_COPY).
@@ -102,7 +117,14 @@ for file in ${ADDED[@]+"${ADDED[@]}"} ${MODIFIED[@]+"${MODIFIED[@]}"}; do
     die "$file contains retired coverage claims — source counts from COVERAGE_COPY instead:
 $match"
   fi
-  PUBLISH+=("$file")
+  return 0
+}
+
+for file in ${ADDED[@]+"${ADDED[@]}"}; do
+  if validate_post "$file"; then PUBLISH+=("$file"); PUBLISH_NEW+=("$file"); fi
+done
+for file in ${MODIFIED[@]+"${MODIFIED[@]}"}; do
+  if validate_post "$file"; then PUBLISH+=("$file"); fi
 done
 PUBLISH+=(${DELETED[@]+"${DELETED[@]}"})
 
@@ -113,7 +135,7 @@ for f in ${SKIPPED_FUTURE[@]+"${SKIPPED_FUTURE[@]}"}; do echo "   SKIPPED (futur
 [ "${#PUBLISH[@]}" -gt 0 ] || die "All candidate posts were skipped; nothing publishable."
 
 slugs_of() { for f in "$@"; do basename "$f" .mdx; done; }
-NEW_SLUGS=($(slugs_of ${ADDED[@]+"${ADDED[@]}"}))
+NEW_SLUGS=($(slugs_of ${PUBLISH_NEW[@]+"${PUBLISH_NEW[@]}"}))
 ALL_SLUGS=($(slugs_of ${PUBLISH[@]+"${PUBLISH[@]}"}))
 
 if [ "$DRY_RUN" -eq 1 ]; then
@@ -134,7 +156,8 @@ git merge-base --is-ancestor main origin/main 2>/dev/null \
 Push or discard that release first, then re-run. Blog commit on develop is kept."
 
 say "Publishing to main via temporary worktree..."
-git branch -f main origin/main 2>/dev/null || true   # forward-only; ancestry verified above
+retry_git git branch -f main origin/main \
+  || die "Could not move local main to origin/main (checked out in another worktree, or lock contention?). Nothing pushed; blog commit on develop is kept."
 WT="$(mktemp -d)"
 trap 'git worktree remove --force "$WT" 2>/dev/null || true' EXIT
 git worktree add --quiet "$WT" main
@@ -149,11 +172,19 @@ fi
 git -C "$WT" commit --quiet -m "content(blog): publish ${ALL_SLUGS[*]}"
 
 say "Pushing main to origin (Railway will rebuild)..."
-git -C "$WT" push origin main
+git -C "$WT" push origin main \
+  || die "Push to origin/main failed (network? non-fast-forward from a concurrent push?). NOTHING is live; blog commit on develop is kept. Re-run after resolving."
 
 # --- Back-merge so develop contains main's publish commit ---------------------
+# This is a real 3-way merge (develop carries its own blog commit), so a conflict
+# is possible if main diverged. Never retry a merge: abort cleanly and say so.
 say "Back-merging main into develop..."
-retry_git git merge --no-edit --quiet main
+if ! git merge --no-edit --quiet main; then
+  git merge --abort 2>/dev/null || true
+  die "Back-merge of main into develop hit conflicts. THE PUBLISH IS ALREADY LIVE on origin/main.
+develop was left as it was; finish by hand: git merge main (resolve), then verify
+git rev-list --count develop..origin/main prints 0."
+fi
 
 BEHIND="$(git rev-list --count develop..origin/main)"
 [ "$BEHIND" = "0" ] || die "develop is $BEHIND commits behind origin/main after back-merge. Inspect manually."
