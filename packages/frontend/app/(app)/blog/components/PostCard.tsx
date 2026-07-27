@@ -22,7 +22,7 @@ export function formatDate(dateString: string): string {
 
 export function CategoryChip({ category }: { category: string }) {
   return (
-    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-container text-on-primary-container">
+    <span className="inline-flex shrink-0 items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-container text-on-primary-container">
       {category.replace(/-/g, " ")}
     </span>
   );
@@ -45,11 +45,11 @@ export function PostCard({
         <CategoryChip category={post.frontmatter.category} />
         <time
           dateTime={post.frontmatter.date}
-          className="text-xs text-on-surface-variant"
+          className="min-w-0 truncate text-xs text-on-surface-variant"
         >
           {formatDate(post.frontmatter.date)}
         </time>
-        <span className="text-xs text-on-surface-variant">
+        <span className="min-w-0 truncate text-xs text-on-surface-variant">
           {post.readingTime}
         </span>
       </div>

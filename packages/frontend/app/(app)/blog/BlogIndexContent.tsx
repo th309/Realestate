@@ -314,6 +314,8 @@ export function BlogIndexContent({
               <h2 className="text-lg font-semibold text-on-surface mb-4">
                 Latest
               </h2>
+              {/* Column count dips at lg because the 360px sidebar appears there
+                  and shrinks this column below 3-card width until xl. */}
               <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 gap-4">
                 {featured.map((post) => (
                   <PostCard key={post.slug} post={post} featured />
