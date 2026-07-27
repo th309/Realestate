@@ -1,0 +1,63 @@
+---
+title: "What Is a Real Estate Market Score, and How Is It Calculated?"
+slug: "/blog/what-is-a-real-estate-market-score"
+date: "2026-06-30"
+description: "What a real estate market score is, how investors use one to rank markets, the inputs that go into it, and why transparency and validation matter more than the number."
+keywords:
+  - what is a real estate market score and how is it calculated
+  - how do investors score real estate markets
+  - real estate market score
+  - how to rank real estate markets
+  - market performance index real estate
+tags: ["market-score", "real-estate-investing", "market-analysis"]
+author: "PropertyIQ Research"
+authorTitle: "Data Science & Market Analysis"
+category: "market-analysis"
+targetKeyword: "what is a real estate market score and how is it calculated"
+---
+
+import { CTABlock } from "@/components/blog/CTABlock";
+
+A real estate market score compresses many market signals into one number so you can compare hundreds of markets at a glance. Done well, it turns a spreadsheet of prices, rents, and days on market into a single read of whether a market is strengthening or cooling. Done poorly, it hides its assumptions and gives you false confidence. This guide explains what a market score is, how one is calculated, and how to tell a trustworthy score from a black box.
+
+## What a market score is
+
+A market score is a composite index. It takes a set of underlying metrics for a geography (a metro, a county, or a ZIP code), weights them, and blends them into a single value on a fixed scale, often 0 to 100. The goal is comparability. A raw table of median prices, rent levels, and inventory is hard to rank across markets, because the units are different and no single column tells the whole story. A score puts every market on the same axis so you can sort a national list in seconds and then dig into the few that stand out.
+
+The important thing to understand is that a score is an opinion expressed as a number. The choice of inputs and weights encodes a view of what makes a market attractive. That is fine, and useful, as long as the view is stated openly so you can judge whether you agree with it.
+
+## How a market score is calculated
+
+Most credible market scores follow the same basic recipe.
+
+First, choose inputs that capture demand and supply. Common signals include price momentum (how fast values are moving), days on market (how quickly homes sell), price-cut share (how many sellers are forced to reduce), inventory and new-listing trends (how much supply is arriving), rent levels and rent growth, and sometimes economic inputs like jobs and migration.
+
+Second, normalize the inputs. Because the metrics use different units, each one is converted to a comparable scale, often a z-score that measures how far a market sits from the average. This lets you add a percentage change to a day count without the math being nonsense.
+
+Third, weight and combine. The normalized inputs are added up, sometimes with heavier weight on the signals the model treats as most predictive, to produce a single composite.
+
+Fourth, calibrate the scale. The composite is mapped onto a fixed range and, in the better systems, anchored to a reference point so a given number means the same thing over time and across geographies.
+
+## Why transparency and validation matter more than the number
+
+Two market scores can both run 0 to 100 and mean completely different things. The questions that separate a useful score from a marketing gimmick are simple. Are the inputs disclosed? Are the weights published, or is it a black box? Has the score been validated against what actually happened, out of sample, rather than just fit to the past? And does the provider tell you how fresh the data is and how confident the score is when coverage is thin?
+
+A score you cannot audit is hard to act on, because you cannot tell whether it is measuring demand or just reflecting the provider's bias. The scores worth using show their work.
+
+## A worked example
+
+PropertyIQ publishes one such score, and it is a useful illustration because the method is public. The [PropertyIQ Score](/blog/how-to-use-propertyiq-score-to-pick-a-market) is a 1 to 99 demand-momentum measure where 50 equals the market's state average, updated monthly. It is built from four signals: Zillow 12-month home-value momentum, Zillow 3-month home-value momentum, Realtor median days on market, and Realtor price-cut share. The first two capture how prices have moved over the past year and quarter; the second two capture how the active market is behaving right now, because rising days on market and rising price cuts are the earliest signs demand is softening.
+
+Those inputs are normalized, combined, and calibrated so that 50 is the state average, then every value is stamped with an A to F confidence grade and an as-of date. The result is comparable across markets: as of June 30, 2026, Youngstown, Ohio scored 91 while Columbus, Ohio scored 38, which tells you at a glance that demand momentum in Youngstown was running far ahead of the Ohio average while Columbus was below it. The score is also validated out of sample against multi-year outcomes, and the full derivation is public in the [PropertyIQ Score methodology](/blog/propertyiq-score-methodology).
+
+## How to use a market score well
+
+A score is a starting filter, not a verdict. Use it to rank a national universe down to a short list, then read the underlying metrics behind the number so you understand why a market scores the way it does. Check the as-of date and the confidence grade, because a high score on stale or thin data is not the same as a high score on fresh, well-covered data. And always drop from the metro to the ZIP before you act, since a single metro can contain ZIPs that score twenty points apart. For a fuller walkthrough, see [how to research a real estate market](/blog/how-to-research-a-real-estate-market).
+
+## The takeaway
+
+A real estate market score blends demand and supply signals into one comparable number so you can rank markets fast. What makes it trustworthy is not the scale but the disclosure: known inputs, published weights, out-of-sample validation, and an honest confidence grade. Use the score to filter, then read the metrics underneath before you commit. Validated, not vibes.
+
+<CTABlock heading="See your market's momentum score" body="Look up the current PropertyIQ Score, price momentum, days on market, and price-cut share for any metro, county, or ZIP code in the country. Free to start." cta="Check a market" href="/signup" />
+
+*Example scores as of June 30, 2026. PropertyIQ provides market-level intelligence, not property valuation or investment advice.*

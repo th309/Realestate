@@ -1,0 +1,97 @@
+---
+title: "Real Estate Syndication Underwriting: How to Screen Markets Before You Model a Deal"
+slug: "/blog/real-estate-syndication-underwriting-guide-2026"
+date: "2026-06-30"
+description: "How real estate syndicators underwrite markets before modeling a single deal: the demand, rent, and supply data that separates a strong metro from a cheap trap."
+keywords:
+  - real estate syndication underwriting
+  - deal underwriting real estate markets
+  - how do syndicators evaluate a new real estate market
+  - multifamily market analysis
+  - what data do real estate syndicators use to underwrite deals
+tags: ["syndication", "underwriting", "multifamily", "market-analysis"]
+author: "PropertyIQ Research"
+authorTitle: "Data Science & Market Analysis"
+category: "market-analysis"
+targetKeyword: "real estate syndication underwriting"
+---
+
+import { CTABlock } from "@/components/blog/CTABlock";
+
+Most syndication deals do not fail in the model. They fail in the market. A clean pro forma with a 6 percent going-in cap rate, 3 percent annual rent growth, and a tidy exit assumption can look bulletproof on a spreadsheet and still lose money if the metro underneath it is quietly cooling. Rents flatten, concessions creep in, days on market stretch, and the exit cap you penciled at year five arrives wider than you planned. The deal was fine. The market was not.
+
+This is why experienced syndicators underwrite the market first and the property second. The property model tells you what a specific building could do under a set of assumptions. The market screen tells you whether those assumptions are even reasonable. Get the order wrong and you spend three weeks building a beautiful model on top of a weak foundation.
+
+Below is how to screen a metro before you open the deal model, the specific data that actually moves the decision, and a checklist you can run in an afternoon.
+
+## Market screen before the deal model
+
+Think of underwriting as two gates. The first gate is the market. The second gate is the property. A deal has to clear the market gate before it earns your modeling time.
+
+The reason is simple. Almost every input in a property pro forma is downstream of the market. Your rent growth assumption is a bet on the metro's demand. Your exit cap is a bet on where the metro sits in its cycle at sale. Your lease-up speed, your vacancy, your concession budget, your bad-debt line, all of it inherits the health of the surrounding market. If the market is weakening, you are not modeling a deal, you are modeling optimism.
+
+Screening first also saves you from the most expensive mistake in syndication: falling in love with a specific building. Once you have toured a property and pictured the value-add plan, it is very hard to stay objective about the metro. Run the market screen while you are still unattached. Kill weak markets before they get a chance to charm you.
+
+## The data syndicators actually use
+
+A market screen does not need forty tabs. It needs a short list of signals that describe demand, pricing, and supply. Here is the working set.
+
+**Rent growth and rent level.** Rent level tells you what the market can support today. Rent growth tells you where it is heading. A high rent level with flat growth is a mature market. A moderate rent level with accelerating growth is often where the return lives.
+
+**Demand momentum.** This is the direction and speed of buyer and renter demand right now, not a year ago. Momentum is the single most predictive input for whether your rent-growth assumption holds. A market with strong momentum tends to absorb new supply and support rent increases. A market losing momentum does the opposite, no matter how good today's numbers look.
+
+**Days on market.** Rising days on market is one of the earliest signs that demand is softening. When homes and units sit longer, pricing power is shifting from sellers to buyers, which eventually shows up in rents and exit caps.
+
+**Price-cut share.** The share of listings with a price reduction is a direct read on seller pressure. A climbing price-cut share means the market is repricing downward in real time. It is a leading indicator, not a lagging one.
+
+**Cap rate and rent-to-price.** At the market level, the ratio of median rent to median price gives you a screening cap rate. It tells you roughly how much yield the metro offers before you underwrite a single building. Treat it as a filter, not a valuation.
+
+**Supply and inventory trend.** New deliveries and rising inventory can cap rent growth even in a healthy demand market. You want demand momentum that outpaces the supply coming online.
+
+**Population and jobs.** The slow-moving base layer. Population growth and job growth do not change month to month, but they set the ceiling on how much demand a market can generate over a hold period.
+
+## How the PropertyIQ Score compresses this into one number
+
+Tracking seven signals across dozens of metros by hand is slow, and most of them move together anyway. The PropertyIQ Score is a 1 to 99 demand-momentum measure where 50 equals the state average, updated monthly. It is built from four signals: Zillow 12-month home-value momentum, Zillow 3-month home-value momentum, Realtor median days on market, and Realtor price-cut share. Rising home values and short, stable days on market push the score up. Widening days on market and a growing price-cut share pull it down.
+
+The score is a screening tool, not a substitute for your model. It answers one question well: is demand in this metro strengthening or weakening right now, relative to its state. That is exactly the question your rent-growth and exit-cap assumptions depend on. For the full formula and how the four signals are weighted, see the [PropertyIQ Score methodology](/blog/propertyiq-score-methodology).
+
+## Cheap is not the same as strong
+
+Here is where most first-pass screens go wrong. Investors sort a list of metros by cap rate, grab the top of the list, and start modeling. Cap rate alone will walk you straight into a value trap.
+
+Look at the table. As of June 30, 2026, [Youngstown, OH](/markets/youngstown-oh) offers a market-level cap rate of 4.18 percent. Memphis, TN offers 4.17 percent. On yield, they are effectively identical. If cap rate were the whole story, you would flip a coin.
+
+| Metro | PropertyIQ Score | Home value | Cap rate (est.) | Rent index |
+| --- | --- | --- | --- | --- |
+| [Youngstown, OH](/markets/youngstown-oh) | 91 (A-) | $180,319 | 4.18% | $1,046 |
+| Detroit, MI | 72 (C-) | $271,675 | 4.02% | $1,518 |
+| Pittsburgh, PA | 59 (F) | n/a | n/a | n/a |
+| [Columbus, OH](/markets/columbus-oh) | 38 (F) | $335,357 | 3.28% | $1,528 |
+| Memphis, TN | 12 (F) | $247,919 | 4.17% | $1,435 |
+| Dallas, TX | 6 (F) | n/a | n/a | n/a |
+| Tampa, FL | 4 (F) | n/a | n/a | n/a |
+
+Now add momentum. Youngstown scores 91. Memphis scores 12. Same yield, opposite trajectory. Youngstown's demand is strengthening; Memphis's is weakening. A syndicator who buys Memphis on its cap rate is buying a market that is repricing against them while they underwrite the growth into their pro forma. The cheap cap rate is not a discount, it is a warning.
+
+Two clarifications on the numbers. First, the cap rate here is a market-level estimate: median rent versus median price with a standard expense assumption. It is a screening number, not a property-level cap rate you would take to a lender. Second, notice Columbus at a 3.28 percent cap rate and a score of 38. A tighter cap rate does not rescue a weak momentum signal, and a wide cap rate does not redeem one either. Yield and momentum are separate questions, and you underwrite both.
+
+## Underwriting checklist
+
+Run this before you build a single model. All figures below are as of June 30, 2026.
+
+1. **Pull the PropertyIQ Score.** Is demand momentum strengthening or weakening relative to the state. A score comfortably above 50 clears the demand gate. A score in the single digits, like Dallas at 6 or Tampa at 4, is a hard stop no matter how the yield looks.
+2. **Check the screening cap rate.** Use rent-to-price to filter for markets that offer enough yield to justify the work. Remember it is a screen, not a valuation.
+3. **Read days on market and price-cut share.** Rising on either is a leading sign of softening. These are the two signals inside the score that flag repricing first.
+4. **Confirm rent level and rent growth.** Can the market support your rent, and is growth accelerating or flattening.
+5. **Sanity-check supply.** Is new inventory coming online fast enough to cap rent growth over your hold.
+6. **Verify the base layer.** Population and job trends should support demand across the full hold period, not just the entry year.
+7. **Only then, model the property.** If the market clears every gate, build the pro forma. If it does not, move on before you get attached.
+
+The discipline is the order. Screen the market, kill the weak ones, and reserve your modeling hours for metros where the demand is actually moving in your favor. Validated, not vibes.
+
+For markets already clearing these gates, see our roundups of the [best multifamily real estate markets for 2026](/blog/best-multifamily-real-estate-markets-2026) and the [best cash flow real estate markets for 2026](/blog/best-cash-flow-real-estate-markets-2026).
+
+<CTABlock heading="See your market's momentum score" body="Look up the current PropertyIQ Score, price momentum, days on market, and price-cut share for any metro, county, or ZIP code in the country. Free to start." cta="Check a market" href="/signup" />
+
+*Scores, home values, and cap rate estimates as of June 30, 2026. PropertyIQ provides market-level intelligence, not property valuation or investment advice.*
