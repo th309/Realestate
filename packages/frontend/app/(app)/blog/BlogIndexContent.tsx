@@ -3,7 +3,9 @@
 import { useState, useCallback, useMemo } from "react";
 import { Search, MapPin, X, BookOpen } from "lucide-react";
 import { useUniversalSearch } from "@/app/shared/hooks/useUniversalSearch";
+import type { ArchiveYear, StateIndex } from "@/lib/blog/archive";
 import { PostCard, type BlogPostSummary } from "./components/PostCard";
+import { BlogBrowsePanel } from "./components/BlogBrowsePanel";
 
 type BlogGroup = "city" | "roundup" | "comparison" | "strategy";
 
@@ -95,7 +97,15 @@ function PostSection({
   );
 }
 
-export function BlogIndexContent({ posts }: { posts: BlogPostSummary[] }) {
+export function BlogIndexContent({
+  posts,
+  archiveTree,
+  stateIndex,
+}: {
+  posts: BlogPostSummary[];
+  archiveTree: ArchiveYear[];
+  stateIndex: StateIndex;
+}) {
   const [textFilter, setTextFilter] = useState("");
   const [marketFilters, setMarketFilters] = useState<
     { key: string; display: string }[]
@@ -309,6 +319,8 @@ export function BlogIndexContent({ posts }: { posts: BlogPostSummary[] }) {
               ))}
             </div>
           </section>
+
+          <BlogBrowsePanel tree={archiveTree} stateIndex={stateIndex} />
 
           {GROUP_ORDER.map((group) =>
             grouped[group].length > 0 ? (
