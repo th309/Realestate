@@ -30,13 +30,33 @@ function pad(n: number): string {
   return String(n).padStart(2, "0");
 }
 
-/** Default `datetime-local` value (ET wall-clock) for the picker. */
-function defaultLocalValue(post: PlannerPost): string {
-  if (post.scheduled_at) {
-    const t = etTimeParts(post.scheduled_at);
-    return `${etDayKey(post.scheduled_at)}T${pad(t.hour)}:${pad(t.minute)}`;
-  }
-  return `${etTodayKey()}T09:00`;
+/**
+ * Posting times are half-hour granularity by policy — the picker offers only
+ * :00 and :30, matching the auto-scheduler's slot times.
+ */
+const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
+  const hour = Math.floor(i / 2);
+  const minute = i % 2 === 0 ? 0 : 30;
+  const h12 = hour % 12 === 0 ? 12 : hour % 12;
+  return {
+    value: `${pad(hour)}:${pad(minute)}`,
+    label: `${h12}:${pad(minute)} ${hour < 12 ? "AM" : "PM"}`,
+  };
+});
+
+/** Default picker date (ET day key). */
+function defaultDateValue(post: PlannerPost): string {
+  return post.scheduled_at ? etDayKey(post.scheduled_at) : etTodayKey();
+}
+
+/**
+ * Default picker time, floored to its containing half-hour so a legacy
+ * odd-minute schedule still matches one of the select options.
+ */
+function defaultTimeValue(post: PlannerPost): string {
+  if (!post.scheduled_at) return "09:00";
+  const t = etTimeParts(post.scheduled_at);
+  return `${pad(t.hour)}:${t.minute < 30 ? "00" : "30"}`;
 }
 
 export function PostCard({
@@ -49,7 +69,8 @@ export function PostCard({
   onReschedule?: (post: PlannerPost, iso: string) => void;
 }) {
   const [picking, setPicking] = useState(false);
-  const [value, setValue] = useState(() => defaultLocalValue(post));
+  const [dateValue, setDateValue] = useState(() => defaultDateValue(post));
+  const [timeValue, setTimeValue] = useState(() => defaultTimeValue(post));
 
   const chip = postStatusToStatusChip(post.status);
   const time = post.scheduled_at ? formatEtTime(post.scheduled_at) : null;
@@ -60,11 +81,10 @@ export function PostCard({
   const stop = (e: React.SyntheticEvent) => e.stopPropagation();
 
   function submit() {
-    const dayKey = value.slice(0, 10);
-    const hour = Number(value.slice(11, 13));
-    const minute = Number(value.slice(14, 16));
-    if (!dayKey || Number.isNaN(hour) || Number.isNaN(minute)) return;
-    onReschedule?.(post, etWallClockToUtcIso(dayKey, hour, minute));
+    const hour = Number(timeValue.slice(0, 2));
+    const minute = Number(timeValue.slice(3, 5));
+    if (!dateValue || Number.isNaN(hour) || Number.isNaN(minute)) return;
+    onReschedule?.(post, etWallClockToUtcIso(dateValue, hour, minute));
     setPicking(false);
   }
 
@@ -90,6 +110,13 @@ export function PostCard({
             onKeyDown={stop}
             onClick={(e) => {
               stop(e);
+              // Re-seed from the post on open: the card instance survives
+              // reschedules (keyed by post.id) and background refetches, so
+              // mount-time state can be stale by the time the picker opens.
+              if (!picking) {
+                setDateValue(defaultDateValue(post));
+                setTimeValue(defaultTimeValue(post));
+              }
               setPicking((v) => !v);
             }}
             aria-label="Reschedule this post"
@@ -128,15 +155,27 @@ export function PostCard({
       </div>
 
       {picking && onReschedule && (
-        <div className="mt-2" onPointerDown={stop} onKeyDown={stop}>
+        <div className="mt-2 space-y-1.5" onPointerDown={stop} onKeyDown={stop}>
+          <input
+            type="date"
+            value={dateValue}
+            onChange={(e) => setDateValue(e.target.value)}
+            aria-label="New date (ET)"
+            className="w-full rounded border border-outline-variant bg-surface px-1.5 py-1 text-[11px] text-on-surface focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
+          />
           <div className="flex items-center gap-1.5">
-            <input
-              type="datetime-local"
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              aria-label="New date and time (ET)"
+            <select
+              value={timeValue}
+              onChange={(e) => setTimeValue(e.target.value)}
+              aria-label="New time (ET)"
               className="min-w-0 flex-1 rounded border border-outline-variant bg-surface px-1.5 py-1 text-[11px] text-on-surface focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
-            />
+            >
+              {TIME_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
             <button
               type="button"
               onClick={submit}
@@ -145,7 +184,7 @@ export function PostCard({
               Set
             </button>
           </div>
-          <p className="mt-1 text-[10px] text-on-surface-variant">Time in ET</p>
+          <p className="text-[10px] text-on-surface-variant">Time in ET</p>
         </div>
       )}
     </div>
