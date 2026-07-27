@@ -10,18 +10,26 @@ import {
   deleteStyleReference,
   type StyleReference,
 } from "../lib/style-refs-api";
+import {
+  fetchStylePreferences,
+  saveStylePreference,
+  setStyleSignalWeight,
+  unsaveStylePreference,
+} from "../lib/style-preferences-api";
 import { useToast } from "../lib/toast";
 import { DestructiveDialog } from "../components/destructive-dialog";
-import { M3Dialog } from "../components/m3-dialog";
+import { ReferenceCard } from "../components/style-library/ReferenceCard";
+import { AddReferenceDialog } from "../components/style-library/AddReferenceDialog";
+import { StyleSignalPanel } from "../components/style-library/StyleSignalPanel";
 
 const QUERY_KEY = ["content-pipeline-style-references"] as const;
-const KIND_OPTIONS = ["thumbnail", "video", "pdf", "general"] as const;
+const PREFERENCES_KEY = ["content-pipeline-style-preferences"] as const;
 
 /**
- * Style Library — operator-curated reference images that drive the
- * Remotion thumbnail variants (Task 2.28). Each reference goes through
- * Vision extraction on create to produce a palette + typography +
- * layout summary the renderer can read.
+ * Style Library — operator-curated reference images that drive the Remotion
+ * thumbnail variants, and (once saved) the look the post generator is told to
+ * write for. Each reference goes through Vision extraction on create to produce
+ * a palette + typography + layout summary.
  */
 export default function StyleReferencesPage() {
   const qc = useQueryClient();
@@ -30,8 +38,16 @@ export default function StyleReferencesPage() {
     queryKey: QUERY_KEY,
     queryFn: fetchStyleReferences,
   });
+  const { data: preferences } = useQuery({
+    queryKey: PREFERENCES_KEY,
+    queryFn: fetchStylePreferences,
+  });
   const [addOpen, setAddOpen] = useState(false);
   const [deleting, setDeleting] = useState<StyleReference | null>(null);
+
+  const savedIds = new Set(
+    (preferences?.savedStyleRefs ?? []).map((r) => r.style_reference_id),
+  );
 
   const createMut = useMutation({
     mutationFn: createStyleReference,
@@ -70,6 +86,9 @@ export default function StyleReferencesPage() {
     mutationFn: reExtractStyleReference,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEY });
+      // Re-extraction changes the attributes a saved style contributes to the
+      // prompt, so the panel must re-read rather than show the old block.
+      qc.invalidateQueries({ queryKey: PREFERENCES_KEY });
       toast.success("Re-extracted");
     },
     onError: (err: Error) =>
@@ -80,10 +99,31 @@ export default function StyleReferencesPage() {
     mutationFn: (id: string) => deleteStyleReference(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEY });
+      qc.invalidateQueries({ queryKey: PREFERENCES_KEY });
       toast.success("Reference removed");
     },
     onError: (err: Error) =>
       toast.error(`Delete failed: ${err.message.slice(0, 100)}`),
+  });
+
+  const toggleSavedMut = useMutation({
+    mutationFn: ({ id, saved }: { id: string; saved: boolean }) =>
+      saved ? unsaveStylePreference(id) : saveStylePreference(id),
+    onSuccess: (data, { saved }) => {
+      qc.setQueryData(PREFERENCES_KEY, data);
+      toast.success(
+        saved ? "Stopped using this style" : "Now using this style",
+      );
+    },
+    onError: (err: Error) =>
+      toast.error(`Could not update: ${err.message.slice(0, 100)}`),
+  });
+
+  const strengthMut = useMutation({
+    mutationFn: setStyleSignalWeight,
+    onSuccess: (data) => qc.setQueryData(PREFERENCES_KEY, data),
+    onError: (err: Error) =>
+      toast.error(`Could not update strength: ${err.message.slice(0, 100)}`),
   });
 
   return (
@@ -96,7 +136,8 @@ export default function StyleReferencesPage() {
           <p className="text-sm text-on-surface-variant mt-1">
             Reference images we run through Vision to extract palettes that
             drive the Remotion thumbnail variants. Drop in screenshots from
-            channels you want PropertyIQ to look like.
+            channels you want PropertyIQ to look like, then save the ones the
+            post generator should write for.
           </p>
         </div>
         <button
@@ -107,6 +148,12 @@ export default function StyleReferencesPage() {
           + Add reference
         </button>
       </header>
+
+      <StyleSignalPanel
+        preferences={preferences}
+        onChangeStrength={(weight) => strengthMut.mutate(weight)}
+        busy={strengthMut.isPending}
+      />
 
       {isLoading ? (
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -125,9 +172,20 @@ export default function StyleReferencesPage() {
           {data.map((ref) => (
             <ReferenceCard
               key={ref.id}
-              ref_={ref}
+              reference={ref}
+              isSaved={savedIds.has(ref.id)}
+              onToggleSaved={() =>
+                toggleSavedMut.mutate({
+                  id: ref.id,
+                  saved: savedIds.has(ref.id),
+                })
+              }
               onReExtract={() => reExtractMut.mutate(ref.id)}
               onDelete={() => setDeleting(ref)}
+              isSaving={
+                toggleSavedMut.isPending &&
+                toggleSavedMut.variables?.id === ref.id
+              }
               isReExtracting={
                 reExtractMut.isPending && reExtractMut.variables === ref.id
               }
@@ -142,7 +200,11 @@ export default function StyleReferencesPage() {
         onSubmit={(body) => createMut.mutateAsync(body)}
         onIngestVideoUrl={(body) => ingestVideoUrlMut.mutateAsync(body)}
         onUploadVideo={(body) => uploadVideoMut.mutateAsync(body)}
-        busy={createMut.isPending || ingestVideoUrlMut.isPending || uploadVideoMut.isPending}
+        busy={
+          createMut.isPending ||
+          ingestVideoUrlMut.isPending ||
+          uploadVideoMut.isPending
+        }
       />
       <DestructiveDialog
         open={!!deleting}
@@ -157,93 +219,6 @@ export default function StyleReferencesPage() {
         body={<p>Removes this reference from the library. Cannot be undone.</p>}
         confirmLabel="Delete reference"
       />
-    </div>
-  );
-}
-
-function ReferenceCard({
-  ref_,
-  onReExtract,
-  onDelete,
-  isReExtracting,
-}: {
-  ref_: StyleReference;
-  onReExtract: () => void;
-  onDelete: () => void;
-  isReExtracting: boolean;
-}) {
-  const palette = ref_.extracted_attributes.palette ?? [];
-  return (
-    <div className="rounded-2xl bg-surface-container-low overflow-hidden shadow-sm flex flex-col">
-      {ref_.source_url ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={ref_.source_url}
-          alt={ref_.label}
-          className="w-full h-40 object-cover bg-on-surface/10"
-        />
-      ) : (
-        <div className="w-full h-40 bg-surface-container flex items-center justify-center text-on-surface-variant text-xs">
-          (no image)
-        </div>
-      )}
-      <div className="p-4 flex-1 flex flex-col gap-3">
-        <div className="flex items-baseline justify-between gap-2">
-          <h3 className="text-sm font-semibold text-on-surface truncate">
-            {ref_.label}
-          </h3>
-          <span className="text-[10px] font-mono uppercase tracking-wider text-on-surface-variant">
-            {ref_.kind}
-          </span>
-        </div>
-
-        {palette.length > 0 ? (
-          <div className="flex gap-1">
-            {palette.slice(0, 6).map((c, i) => (
-              <span
-                key={i}
-                title={c}
-                className="block flex-1 h-6 rounded-md border border-outline-variant"
-                style={{ backgroundColor: c }}
-              />
-            ))}
-          </div>
-        ) : (
-          <p className="text-[11px] text-on-surface-variant italic">
-            No palette extracted yet. Try Re-extract.
-          </p>
-        )}
-
-        {ref_.extracted_attributes.summary && (
-          <p className="text-xs text-on-surface-variant line-clamp-3">
-            {ref_.extracted_attributes.summary}
-          </p>
-        )}
-
-        <div className="flex items-center justify-between mt-auto pt-2 text-[11px] text-on-surface-variant">
-          <span>
-            ${ref_.vision_cost_usd?.toFixed(4) ?? "0"} ·{" "}
-            {new Date(ref_.created_at).toLocaleDateString()}
-          </span>
-          <div className="flex gap-1">
-            <button
-              type="button"
-              onClick={onReExtract}
-              disabled={isReExtracting}
-              className="text-primary text-xs font-medium hover:bg-primary/8 rounded-full px-2 py-1 disabled:opacity-50 transition-colors duration-200"
-            >
-              {isReExtracting ? "Extracting…" : "Re-extract"}
-            </button>
-            <button
-              type="button"
-              onClick={onDelete}
-              className="text-error text-xs font-medium hover:bg-error/10 rounded-full px-2 py-1 transition-colors duration-200"
-            >
-              Delete
-            </button>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
@@ -265,212 +240,5 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
         + Add the first reference
       </button>
     </div>
-  );
-}
-
-function AddReferenceDialog({
-  open,
-  onClose,
-  onSubmit,
-  onIngestVideoUrl,
-  onUploadVideo,
-  busy,
-}: {
-  open: boolean;
-  onClose: () => void;
-  onSubmit: (body: {
-    label: string;
-    kind: "thumbnail" | "video" | "pdf" | "general";
-    source_url: string;
-  }) => Promise<unknown>;
-  onIngestVideoUrl: (body: { label: string; url: string }) => Promise<unknown>;
-  onUploadVideo: (body: { label: string; file: File }) => Promise<unknown>;
-  busy: boolean;
-}) {
-  const [label, setLabel] = useState("");
-  const [kind, setKind] = useState<(typeof KIND_OPTIONS)[number]>("thumbnail");
-  const [tab, setTab] = useState<"url" | "upload">("url");
-  const [url, setUrl] = useState("");
-  const [file, setFile] = useState<File | null>(null);
-
-  return (
-    <M3Dialog
-      open={open}
-      onClose={busy ? () => {} : onClose}
-      ariaLabel="Add reference"
-      maxWidth="max-w-lg"
-    >
-      <form
-        onSubmit={async (e) => {
-          e.preventDefault();
-          if (!label.trim()) return;
-
-          // Phase 3: "video" kind uses dedicated ingest endpoints.
-          if (kind === "video") {
-            if (tab === "url") {
-              if (!url.trim()) return;
-              await onIngestVideoUrl({ label: label.trim(), url: url.trim() });
-            } else {
-              if (!file) return;
-              await onUploadVideo({ label: label.trim(), file });
-            }
-          } else {
-            if (!url.trim()) return;
-            await onSubmit({ label: label.trim(), kind, source_url: url.trim() });
-          }
-          setLabel("");
-          setUrl("");
-          setFile(null);
-        }}
-      >
-        <div className="p-6 space-y-4">
-          <h2 className="text-xl font-medium text-on-surface">
-            Add a reference
-          </h2>
-          <Field label="Label">
-            <input
-              type="text"
-              value={label}
-              onChange={(e) => setLabel(e.target.value)}
-              placeholder="e.g. MrBeast hot palette"
-              required
-              className="w-full rounded-lg border border-outline bg-surface px-3 py-2 text-sm focus:outline-none focus:border-primary"
-            />
-          </Field>
-          <Field label="Kind">
-            <div className="flex gap-2">
-              {KIND_OPTIONS.map((k) => (
-                <button
-                  key={k}
-                  type="button"
-                  onClick={() => setKind(k)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors duration-200 ${
-                    kind === k
-                      ? "bg-secondary-container text-on-secondary-container border-transparent"
-                      : "bg-surface text-on-surface border-outline hover:bg-surface-container-low"
-                  }`}
-                >
-                  {k}
-                </button>
-              ))}
-            </div>
-          </Field>
-          {kind === "video" ? (
-            <div className="space-y-2">
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setTab("url")}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors duration-200 ${
-                    tab === "url"
-                      ? "bg-secondary-container text-on-secondary-container border-transparent"
-                      : "bg-surface text-on-surface border-outline hover:bg-surface-container-low"
-                  }`}
-                >
-                  Video URL
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setTab("upload")}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors duration-200 ${
-                    tab === "upload"
-                      ? "bg-secondary-container text-on-secondary-container border-transparent"
-                      : "bg-surface text-on-surface border-outline hover:bg-surface-container-low"
-                  }`}
-                >
-                  Upload file
-                </button>
-              </div>
-              {tab === "url" ? (
-                <Field label="Video URL">
-                  <input
-                    type="url"
-                    value={url}
-                    onChange={(e) => setUrl(e.target.value)}
-                    placeholder="https://… (YouTube/TikTok/IG/FB/X)"
-                    required
-                    className="w-full rounded-lg border border-outline bg-surface px-3 py-2 text-sm focus:outline-none focus:border-primary"
-                  />
-                </Field>
-              ) : (
-                <Field label="Video file">
-                  <input
-                    type="file"
-                    accept="video/mp4,video/quicktime"
-                    onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-                    required
-                    className="w-full rounded-lg border border-outline bg-surface px-3 py-2 text-sm focus:outline-none focus:border-primary"
-                  />
-                </Field>
-              )}
-            </div>
-          ) : (
-            <Field label="Image URL">
-              <input
-                type="url"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                placeholder="https://… (PNG/JPG)"
-                required
-                className="w-full rounded-lg border border-outline bg-surface px-3 py-2 text-sm focus:outline-none focus:border-primary"
-              />
-            </Field>
-          )}
-          <p className="text-[11px] text-on-surface-variant">
-            {kind === "video"
-              ? "Video ingest downloads/samples frames and runs Vision analysis. This can take a bit longer than image references."
-              : "Vision extraction runs synchronously on submit (~1 second). The extracted palette appears on the card right after."}
-          </p>
-        </div>
-        <div className="flex justify-end gap-2 px-6 pb-6">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={busy}
-            className="px-5 py-2.5 rounded-full text-sm font-medium text-on-surface hover:bg-on-surface/8 disabled:opacity-50 transition-colors duration-200"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={
-              busy ||
-              !label.trim() ||
-              (kind === "video"
-                ? tab === "url"
-                  ? !url.trim()
-                  : !file
-                : !url.trim())
-            }
-            className="px-5 py-2.5 rounded-full text-sm font-medium bg-primary text-on-primary hover:bg-primary/90 disabled:opacity-50 inline-flex items-center gap-2 transition-colors duration-200"
-          >
-            {busy && (
-              <span
-                className="inline-block h-3.5 w-3.5 rounded-full border-2 border-on-primary/30 border-t-on-primary animate-spin"
-                aria-hidden
-              />
-            )}
-            Add + extract
-          </button>
-        </div>
-      </form>
-    </M3Dialog>
-  );
-}
-
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className="block">
-      <span className="text-[11px] font-mono uppercase tracking-wider text-on-surface-variant mb-1.5 block">
-        {label}
-      </span>
-      {children}
-    </label>
   );
 }

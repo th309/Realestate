@@ -188,9 +188,26 @@ export class LateClientService {
   /**
    * Publish or schedule a post through Late. Grounded in POST /v1/posts.
    *
-   * ASSUMPTION (docs did not pin the exact media field name): media is sent as
-   * `mediaItems: [{ type, url }]`. Verify against the live API once the account
-   * exists; the shape is isolated here so it is a one-line change.
+   * Media shape VERIFIED against Late/Zernio docs 2026-07-25
+   * (docs.zernio.com/api-reference/posts + /platforms/*): media attaches as
+   * `mediaItems: [{ type: 'image', url }]` and the array ORDER is the carousel
+   * order. No per-platform `contentType` is needed for a multi-image feed post;
+   * Late auto-detects a carousel from >1 item. Per-platform passthrough (all via
+   * the same `mediaItems` array — Late enforces the caps server-side and rejects
+   * over-limit posts, which we surface as a visible publish failure):
+   *
+   *   | Platform      | Multi-image        | Max | Notes                          |
+   *   |---------------|--------------------|-----|--------------------------------|
+   *   | facebook      | multi-image (auto) | 10  | no image+video mix             |
+   *   | instagram     | carousel (auto)    | 10  | 1st item sets the aspect ratio |
+   *   | linkedin      | multi-image (auto) | 20  | no image+video/doc mix         |
+   *   | x (twitter)   | up to 4 images     | 4   | —                              |
+   *   | tiktok        | photo carousel     | 35  | needs top-level `tiktokSettings`
+   *   |               |                    |     | (media_type:'photo' + legally- |
+   *   |               |                    |     | required consent flags) — NOT  |
+   *   |               |                    |     | sent here; the publisher fails |
+   *   |               |                    |     | TikTok image posts visibly     |
+   *   |               |                    |     | instead of asserting consent.  |
    */
   async publishPost(params: LatePublishParams): Promise<LatePublishResult> {
     const body: Record<string, unknown> = {
@@ -199,9 +216,10 @@ export class LateClientService {
     };
     if (params.mediaUrls?.length) {
       // Phase 5 scope: feed posts carry IMAGES only (video publishes via the
-      // video pipeline, Decision 2), so every media item is type:'image'. Before
-      // any video URL can route here, mediaUrls must become a typed
-      // { url, type } union so this mapping stops mislabeling videos as images.
+      // video pipeline, Decision 2), so every media item is type:'image'. Order
+      // is preserved = carousel order. Before any video URL can route here,
+      // mediaUrls must become a typed { url, type } union so this mapping stops
+      // mislabeling videos as images.
       body.mediaItems = params.mediaUrls.map((url) => ({ type: 'image', url }));
     }
     if (params.scheduledAt) {

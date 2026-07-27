@@ -1,16 +1,33 @@
-import { IsBoolean, IsIn, IsObject, IsOptional, IsString } from 'class-validator';
+import {
+  IsBoolean,
+  IsIn,
+  IsOptional,
+  IsString,
+  MaxLength,
+  Validate,
+  ValidateNested,
+} from 'class-validator';
+import { Type } from 'class-transformer';
+import { CONTENT_FORMATS } from './content-format';
+import {
+  TriggerConfigDto,
+  TriggerConfigMatchesType,
+} from './trigger-config.dto';
 
 export class UpdateTriggerRuleDto {
   @IsOptional()
   @IsString()
+  @MaxLength(120)
   rule_name?: string;
 
   @IsOptional()
-  @IsObject()
-  trigger_config?: Record<string, any>;
+  @ValidateNested()
+  @Type(() => TriggerConfigDto)
+  @Validate(TriggerConfigMatchesType)
+  trigger_config?: TriggerConfigDto;
 
   @IsOptional()
-  @IsString()
+  @IsIn(CONTENT_FORMATS as unknown as string[])
   target_format?: string;
 
   @IsOptional()
@@ -21,4 +38,3 @@ export class UpdateTriggerRuleDto {
   @IsBoolean()
   enabled?: boolean;
 }
-

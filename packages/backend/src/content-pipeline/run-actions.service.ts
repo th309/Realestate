@@ -7,6 +7,7 @@ import {
 import { SupabaseService } from '../supabase/supabase.service';
 import { RunOrchestratorService } from './orchestrator/run-orchestrator.service';
 import type { PipelineStatus } from './types';
+import { resolveNextPipelineStepAfterReview } from './next-pipeline-step-after-review';
 
 const IN_FLIGHT_STATES: ReadonlySet<PipelineStatus> = new Set([
   'queued',
@@ -66,26 +67,15 @@ export class RunActionsService {
     });
   }
 
-  /**
-   * After human review (`ready_for_review`), whether the next automated step
-   * should re-run Gate A or proceed to voice lint — keyed off the latest
-   * data_verifier outcome (not `status_reason`, which changes on later edits).
-   */
-  private async nextPipelineStepAfterReview(
+  private nextPipelineStepAfterReview(
     runId: string,
+    options?: { mode?: 'resume' | 'edit_script' },
   ): Promise<'verifying_data' | 'linting_voice'> {
-    const client = this.supabase.getClient();
-    const { data: lastVerifier } = await client
-      .from('content_run_gates')
-      .select('result')
-      .eq('run_id', runId)
-      .eq('gate', 'data_verifier')
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    return lastVerifier?.result === 'failed'
-      ? 'verifying_data'
-      : 'linting_voice';
+    return resolveNextPipelineStepAfterReview(
+      this.supabase.getClient(),
+      runId,
+      options,
+    );
   }
 
   /**
@@ -107,7 +97,9 @@ export class RunActionsService {
         `resume_pipeline_invalid_state: status is ${run.status}, expected ready_for_review`,
       );
     }
-    const next = await this.nextPipelineStepAfterReview(runId);
+    const next = await this.nextPipelineStepAfterReview(runId, {
+      mode: 'resume',
+    });
     await this.orchestrator.transitionTo(runId, next, {
       reason: 'operator_resume',
       enqueueNext: true,
@@ -122,7 +114,9 @@ export class RunActionsService {
     newFullText: string,
   ): Promise<{ nextStatus: PipelineStatus }> {
     const client = this.supabase.getClient();
-    const nextStatus = await this.nextPipelineStepAfterReview(runId);
+    const nextStatus = await this.nextPipelineStepAfterReview(runId, {
+      mode: 'edit_script',
+    });
 
     const { data: scriptAsset, error } = await client
       .from('content_assets')

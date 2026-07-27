@@ -237,3 +237,88 @@
 **Rule:** On a trunk being edited by multiple concurrent agents, an intermediate hazardous state is NOT temporary — someone will build against it within minutes. Any restructure with a known collision risk (case-insensitive dir/file overlap, renamed exports, moved barrels) must land the final safe name/shape in its first commit. Never sequence "create hazardous state → fix → clean up" as separate commits on a live shared branch.
 
 **Related pipeline gap (ticket):** `ignoreBuildErrors: true` in next.config + eslint-only frontend CI + Linux CI runners = NO pipeline stage catches TypeScript errors at all (including case collisions). Only local tsc/IDE does.
+
+## One Owner Per Module; Only the Lead Assigns Tasks
+
+**Date:** 2026-07-25
+**Context:** During the content-pipeline completion round, task #13 was assigned by one agent (backend-foundation-2) to another (backend-foundation) — and then the delegating agent ALSO built the entire task itself in parallel. Both agents edited the same content-pipeline files in the shared working tree, clobbering each other's edits. Separately, an agent-to-agent assignment of task #14 landed in the wrong agent's inbox and stalled work until ownership was resolved. This also explains why ordered fixes (e.g. the getBrowser launch-race guard) repeatedly appeared "not landed" on disk after being reported complete — parallel same-file edits were overwriting each other.
+
+**Rules:**
+
+- Only the team lead assigns, transfers, or reassigns tasks. Agents who think work should move propose it to the lead; they never task each other directly.
+- One owner per backend module per round. Parallelism runs ACROSS modules (content-pipeline vs social-connect vs frontend), never within one module's files.
+- A delegating agent must never also build the delegated work. Delegate OR build, never both.
+- Lead verifies "complete" reports against disk (grep the actual fix) before accepting — completion messages routinely cross in-flight fix orders.
+
+## Deliverables Beat Ceremony — Review Post-Hoc on Sample/Demo Work
+
+**Date:** 2026-07-26
+**Context:** User waited over an hour for 5 sample images while the lead ran a per-batch review-relay loop (every stop-hook → reviewer → findings → relay → fix → re-verify) on a SAMPLES pipeline. Reviews caught real bugs (fabricated as-of date, missing timeouts) but most findings were polish (doc comments, consolidation, style) that gated pixels the user was actively waiting for. User: "what in the ever loving fuck are you doing?"
+
+**Rule:** When the user is waiting on a visible artifact (samples, demos, previews — anything not shipping to production), the ONLY pre-ship gates are factual correctness (real data, no wrong-subject media, no fabricated numbers/dates/claims). Everything else — style, dedup, docs, hygiene — accumulates into ONE post-hoc cleanup pass after the artifact is in the user's hands. Per-batch review relays are for production-bound code only. Ship increments the moment they exist; never batch deliverables behind polish.
+
+## Waiting Is Work to Delegate — One Agent Per Independent Artifact
+
+**Date:** 2026-07-26
+**Context:** Five NotebookLM infographics were generating concurrently. The lead sat in a foreground PowerShell poll loop watching all five statuses. User interrupted: "USE multiple agents whenever practical." The 2026-07-12 fan-out lesson covered parallel verification after edits; this extends it to waits: polling, downloading, delivering, and fact-checking N independent artifacts is N independent pipelines, not one loop.
+
+**Rule:** Whenever 2+ independent work items exist — including "just waiting" chores like polling generation jobs, downloading artifacts, or per-file checks — dispatch one agent per item in a single message, each owning its item's full chain (poll → download → deliver → verify). The main session orchestrates and does other useful work (memory, docs, next steps) while they run. Verify each agent's "done" report against disk before accepting.
+
+**Wrong behavior:** foreground `Start-Sleep` poll loop over five artifact ids, then serial download + fact-check of each.
+
+**Correct behavior:** five parallel agents, each polling only its artifact and carrying it through delivery and fact-check; lead integrates verdicts and spot-checks the files on disk.
+
+## Generated Media Must Match the User's Approved Reference Styles — a Style Flag Is Not a Style
+
+**Date:** 2026-07-26
+**Context:** Generated six NotebookLM infographics with `--style editorial` and no visual descriptor. NotebookLM freestyled steampunk/Victorian sketch scenes. Troy: "WHY ARE YOU IGNORING THE SAMPLE INFOGRAPHIC STYLES I have give? you are making up your own style." He maintains specific approved reference samples (cartoon-mascot explainer, sketch-note, flat editorial cream/slate/rust, clean modern flat, flat editorial with map, glassmorphic bento).
+
+**Rule:** For any generated visual media, the prompt must pin the approved reference style explicitly: a VISUAL STYLE paragraph (background, palette, illustration mode, typography feel) plus a NO-list of failure modes (no steampunk, no cartoon unless mascot style, no photorealism), paired with the closest generator style flag (`sketch_note`, `editorial`, `professional`, `bento_grid`, `instructional`). The fact-check pass gets a STYLE GATE: verify the render matches the descriptor, not just the facts. Reference styles live with Troy's samples; the memory file `feedback_use-approved-infographic-styles.md` carries the six descriptors.
+
+**Wrong behavior:** `--style editorial` alone, then fact-checking only text content.
+
+**Correct behavior:** style flag + explicit descriptor + NO-list in every generation prompt; style compliance verified alongside facts before delivery.
+
+## A Component Existing Is Not a Component Shipping — Check Who Imports It
+
+**Date:** 2026-07-26
+**Context:** Two of five infographic topic docs documented dead code as live features: how-to-reports.md described the five-template picker (`TEMPLATE_INFO` + wizard steps — referenced only by other dead wizard code) and how-to-map.md described "benchmark position" (`BenchmarkPanel` — exported from a barrel, rendered nowhere). Both components exist, compile, and grep fine; neither is reachable by a user. Fixed in a0643fe1.
+
+**Rule:** Before documenting (or building on) a UI feature, verify REACHABILITY, not existence: "who imports this, outside its own folder?" A definition + barrel re-export proves nothing — trace to a rendered page/route. This is the inverse of the audit-follows-composition rule (don't claim a feature is MISSING without reading child components); together: presence in the tree ≠ presence in the product, in both directions. Frontends with dead-code tolerance (this repo has wizard remnants, dead panels, unmounted selectors) make this check mandatory for docs, marketing copy, and topic docs that feed generated content.
+
+## A Test That Cannot Fail Is Worse Than No Test — Prove It Can Go Red
+
+**Date:** 2026-07-26
+**Context:** Guarding a payload-key rename (`params` → `infographicParams`), an agent wrote a runtime spec asserting the wire key — and it PASSED against the broken code. `createRun` does `JSON.stringify(payload)` and forwards whatever keys the caller supplies, so no assertion inside the helper can ever fail on a caller's key choice. The real guard is TypeScript's excess-property check on the object literal at the call site. The agent verified this by reverting the caller and watching tsc reject it, then deleted the un-failable assertion and kept only what types can't see (endpoint string, error propagation).
+
+**Rule:** Before trusting a new test, make it fail once — revert the fix, introduce the bug, or mutate the code — and watch it go red. A test that stays green against the defect it claims to guard is a false safety signal that actively misleads future readers. Corollary: know WHICH layer actually enforces a contract (compiler vs runtime vs review) and put the guard there; runtime tests cannot police what serialization forwards transparently, and type-level guards need a call-site literal to bite.
+
+## Never Build a Text Excerpt by Joining Global-Regex Matches — They Do Not Tile the String
+
+**Date:** 2026-07-26
+**Context:** Rendered post images silently dropped an interior run of body copy and resumed mid-number, so a graphic stated a different statistic than its own caption ("The median home value dropped 22.6% year over year" rendered as "6% year over year"). Root cause in `post-images/post-image-shared.ts` `leadingSentences()`: the excerpt was assembled by iterating `t.match(/[^.!?]+[.!?]+(?:\s|$)/g)` and concatenating the matches. `String.match` with `/g` returns only what the pattern matched — anything the engine skips is discarded, and the join makes the gap invisible. The pattern was CORRECT (it refuses to treat the "." in "22.6" as a terminator because a digit follows), which is exactly why no match could begin at index 0: the engine advanced until it could, starting at "6%". Fixed by finding the last sentence-boundary INDEX within budget and `slice(0, end)` — a prefix by construction.
+
+**Rule:** Never reconstruct a substring by concatenating global-match results. A global regex is a finder, not a partition — the matched spans need not be contiguous or start at 0, so a join silently deletes whatever fell between them. To extract a leading portion, compute an INDEX and slice; the result is then provably a prefix. This class of bug is invisible in code review (the regex looks right, and it IS right) and only surfaces in output, so any "excerpt/summary/truncate" helper deserves a test asserting the invariant `output is a prefix of input` (modulo an explicit ellipsis) rather than testing sample strings.
+
+**Wider rule for anything rendering numbers:** silent shortening is never acceptable where a figure can be cut mid-value — refusing to render (and leaving a draft for a human) always beats emitting a wrong number. Prefer making the bad state unrepresentable (prefix-by-construction) over adding a runtime guard that can itself be bypassed.
+
+## When a Server Won't Boot, READ ITS LOG First — Never Infer From CPU/Process Counters
+
+**Date:** 2026-07-26
+**Context:** Backend wouldn't bind `:3001` across ~6 nuclear restarts. I inferred "AV-throttled slow cold compile" from a slowly-climbing `nest` CPU counter and `dist/main.js` being absent, and kept restarting. Wrong on every axis: the backend compiled in **19s with 0 errors**, then crash-looped at bootstrap on an ENOENT the log stated verbatim. The instant I captured `nest`'s stdout to a file and read it (`npm run start:dev -w backend > /tmp/piq-backend.log 2>&1` — the `scripts/watchdog.sh` pattern), the cause was obvious. User: "look at the logs and identify the problem… that's what the local-dev-server skill is supposed to do."
+
+**Rule:** A won't-bind server's FIRST diagnostic is reading its actual stdout/stderr, not restarting. Process CPU, working-set, `dist/` file counts, and `netstat` prove a process exists — never why it isn't serving. The `dev:fresh` console lives in an unreadable detached window, so run the failing server alone with a redirect and read the file. `tsc`/`nest build` exiting 0 proves types compile, NOT that the app boots — Nest runs constructors + DI at runtime, so a bad path/missing provider crashes boot with a clean compile (distinguish by whether `dist/main.js` emitted and what the log's last lines say). Two blind restarts is already too many.
+
+## A `.ts` File Outside `packages/backend/src/` Silently Corrupts the App's dist Layout
+
+**Date:** 2026-07-26
+**Context:** The ENOENT above was `dist/src/content-pipeline/prompts/_system.md`. `tsconfig.build.json` had no `rootDir`/`include`, so TS auto-computes `rootDir` as the common ancestor of all compiled `.ts`. Someone added `.ts` under `packages/backend/scripts/` (infographic worker), pulling the root from `src/` up to the package root — shifting ALL output from `dist/content-pipeline/...` to `dist/src/content-pipeline/...`, while `nest-cli.json` assets still copy to `dist/content-pipeline/...`. Every `join(__dirname, '..', 'prompts'|'data'|'assets')` read then missed by exactly the `src/` segment → boot ENOENT. Compiles clean; crashes in DI. Breaks production/Railway identically.
+
+**Rule:** Keep the app build pinned to `src/` — `tsconfig.build.json` → `"compilerOptions": { "rootDir": "./src" }`, `"include": ["src/**/*"]`. Standalone scripts under `packages/backend/scripts/` run via `npx ts-node --transpile-only` and must NEVER enter the nest build (nothing in `src/` imports them). Tell-tale of the regression: `dist/src/` and `dist/scripts/` exist alongside `dist/content-pipeline/`. Verify after: compiled JS lands in `dist/content-pipeline/...` (not `dist/src/...`) and `dist/src` is absent.
+
+## A New Provider Registered in the Wrong Module Is a `tsc`-Clean, Test-Suite-Green Runtime Crash
+
+**Date:** 2026-07-26
+**Context:** Built the content auto-scheduler. `PostAutoSchedulerService` was registered in `ContentPipelineModule`'s providers, then injected into `PostsController` — which actually lives in `PostsBrandKitModule`, a sibling module that `ContentPipelineModule` merely _imports_. `npx tsc --noEmit` was clean (TypeScript only checks the constructor's parameter TYPE matches, not which Nest module can supply it) and all 653 existing content-pipeline unit tests passed (every one of them instantiates the class under test directly with hand-built fake dependencies — none of them go through Nest's actual DI container). Only a real `Test.createTestingModule({ imports: [AppModule] }).compile()` surfaced it: `"Nest can't resolve dependencies of PostsController (PostsService, ?). Please make sure PostAutoSchedulerService is available in the PostsBrandKitModule context."` Nest's module encapsulation is directional — a module that imports another does NOT hand its own providers down to it; a provider must be registered (or exported-and-imported) in the SAME module as anything that injects it.
+
+**Rule:** After registering a new provider AND injecting it somewhere, ask "which `@Module` decorator's `providers` array is this class actually listed in, and is that the SAME module (or an ancestor via imports+exports) as every class that injects it?" — don't just add the import statement and the providers-array line and assume it resolves. This is invisible to `tsc` and invisible to unit tests that construct classes by hand (this repo's near-universal pattern per `feedback_no-mock-tests-use-live-data.md`'s sibling concern). Confirm wiring on any multi-module DI change with an actual `Test.createTestingModule({ imports: [AppModule] }).compile()` (or the smallest module that contains everything touched) — load real env vars via `dotenv` from `.env.local`/`.env` first, since constructors that fail-fast on a missing secret (correctly, per §1.2) will otherwise mask the DI question behind an unrelated env error. Delete the scratch spec file afterward rather than committing it — it depends on real local secrets being present, which would make it flaky in CI. The fix, once found, is usually to move the provider to the module the injecting class actually lives in and export it, not to add more imports to the wrong module.

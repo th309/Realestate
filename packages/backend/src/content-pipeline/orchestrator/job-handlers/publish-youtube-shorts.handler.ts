@@ -3,15 +3,13 @@ import { SupabaseService } from '../../../supabase/supabase.service';
 import { RunOrchestratorService } from '../run-orchestrator.service';
 import { YouTubeShortsPublisher } from '../../drivers/youtube-shorts-publisher';
 import { YouTubeLongFormPublisher } from '../../drivers/youtube-longform-publisher';
-import { buildYouTubeShortsMeta } from '../youtube-tags';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { writeFileSync } from 'fs';
 import type { Platform } from '../../types';
-
-function resolveShortLink(text: string): string {
-  return text.replace(/\{\{SHORT_LINK\}\}/g, 'propertyiq.app');
-}
+import { downloadVideoToTempFile } from './youtube-publish-assets';
+import { createShortLinkForRun } from './youtube-publish-short-link';
+import { buildYouTubePublishMetadata } from './youtube-publish-metadata';
 
 @Injectable()
 export class PublishYouTubeShortsHandler {
@@ -51,7 +49,10 @@ export class PublishYouTubeShortsHandler {
         .single();
       if (!video) throw new Error('video_master asset not found');
 
-      const videoPath = await this.downloadFromStorage(video.storage_url);
+      const videoPath = await downloadVideoToTempFile(
+        client,
+        video.storage_url,
+      );
       const script = (run.hook_variants as any[])[0];
 
       const { data: payload } = await client
@@ -64,19 +65,13 @@ export class PublishYouTubeShortsHandler {
         | number
         | undefined;
 
-      const { hashtags, tags } = buildYouTubeShortsMeta({
+      const { title, description, tags } = buildYouTubePublishMetadata({
         runId,
-        resolvedMarket: { canonical_name: run.resolved_geo.canonical_name },
+        canonicalName: run.resolved_geo.canonical_name,
         score,
+        script,
+        lane: 'shorts',
       });
-
-      const title = `${run.resolved_geo.canonical_name} PropertyIQ Score`;
-      const descriptionBody = [
-        resolveShortLink(script.hook),
-        resolveShortLink(script.body),
-        resolveShortLink(script.cta),
-      ].join('\n\n');
-      const description = `${descriptionBody}\n\n${hashtags.join(' ')}`;
 
       const result = await this.publisher.publish({
         runId,
@@ -102,9 +97,9 @@ export class PublishYouTubeShortsHandler {
         .single();
       if (!postRow) throw new Error('failed to insert platform_posts row');
 
-      const shortLinkId = await this.createShortLink(
+      const shortLinkId = await createShortLinkForRun(
+        client,
         runId,
-        postRow.id,
         run.format,
         'youtube_shorts',
       );
@@ -161,7 +156,10 @@ export class PublishYouTubeShortsHandler {
         .single();
       if (!video) throw new Error('video_master asset not found');
 
-      const videoPath = await this.downloadFromStorage(video.storage_url);
+      const videoPath = await downloadVideoToTempFile(
+        client,
+        video.storage_url,
+      );
       const script = (run.hook_variants as any[])[0];
 
       const { data: payload } = await client
@@ -174,20 +172,13 @@ export class PublishYouTubeShortsHandler {
         | number
         | undefined;
 
-      const { hashtags, tags } = buildYouTubeShortsMeta({
+      const { title, description, tags } = buildYouTubePublishMetadata({
         runId,
-        resolvedMarket: { canonical_name: run.resolved_geo.canonical_name },
+        canonicalName: run.resolved_geo.canonical_name,
         score,
+        script,
+        lane: 'long',
       });
-      const longHashtags = hashtags.filter((h) => h !== '#Shorts');
-
-      const title = `${run.resolved_geo.canonical_name} Market Deep Dive | PropertyIQ`;
-      const descriptionBody = [
-        resolveShortLink(script.hook),
-        resolveShortLink(script.body),
-        resolveShortLink(script.cta),
-      ].join('\n\n');
-      const description = `${descriptionBody}\n\n${longHashtags.join(' ')}`;
 
       const { data: srtRow } = await client
         .from('content_assets')
@@ -227,9 +218,9 @@ export class PublishYouTubeShortsHandler {
         .single();
       if (!postRow) throw new Error('failed to insert platform_posts row');
 
-      const shortLinkId = await this.createShortLink(
+      const shortLinkId = await createShortLinkForRun(
+        client,
         runId,
-        postRow.id,
         run.format,
         'youtube_long',
       );
@@ -266,56 +257,5 @@ export class PublishYouTubeShortsHandler {
         `publish-youtube-long: ${(err as Error).message}`,
       );
     }
-  }
-
-  private async downloadFromStorage(supabaseUrl: string): Promise<string> {
-    const match = supabaseUrl.match(/^supabase:\/\/([^/]+)\/(.+)$/);
-    if (!match) throw new Error(`invalid supabase url: ${supabaseUrl}`);
-    const [, bucket, path] = match;
-    const { data } = await this.supabase
-      .getClient()
-      .storage.from(bucket)
-      .download(path);
-    if (!data) throw new Error(`no data downloaded from ${supabaseUrl}`);
-    const localPath = join(tmpdir(), `pub-${Date.now()}.mp4`);
-    writeFileSync(localPath, Buffer.from(await data.arrayBuffer()));
-    return localPath;
-  }
-
-  private async createShortLink(
-    runId: string,
-    _platformPostId: string,
-    format: string,
-    platform: string,
-  ): Promise<string> {
-    const client = this.supabase.getClient();
-    const { randomBytes } = await import('crypto');
-    const slug = randomBytes(5).toString('base64url').slice(0, 8);
-    const { data: binding } = await client
-      .from('format_magnet_bindings')
-      .select('magnet_kind')
-      .eq('format', format)
-      .eq('enabled', true)
-      .single();
-    const { data: magnet } = await client
-      .from('lead_magnet_definitions')
-      .select('landing_page_path')
-      .eq('kind', binding?.magnet_kind ?? 'market_snapshot_pdf')
-      .single();
-    const targetUrl = `https://propertyiq.app${magnet?.landing_page_path ?? '/grade-reveal-signup'}?run=${runId}`;
-
-    const { data: linkRow } = await client
-      .from('short_links')
-      .insert({
-        slug,
-        run_id: runId,
-        format,
-        platform,
-        target_url: targetUrl,
-      })
-      .select()
-      .single();
-    if (!linkRow) throw new Error('failed to insert short_links row');
-    return linkRow.id;
   }
 }

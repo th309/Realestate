@@ -9,6 +9,7 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { POST_STATUSES, PostStatus } from '../post.types';
+import { FEED_POST_TYPES, FeedPostType } from '../../feed/feed.types';
 
 /** Columns the posts list may be ordered by (frozen contract with the planner). */
 export const POST_ORDER_BY = ['created_at', 'scheduled_at'] as const;
@@ -19,6 +20,11 @@ export class ListPostsQueryDto {
   @IsOptional()
   @IsIn(POST_STATUSES as unknown as string[])
   status?: PostStatus;
+
+  /** Filter by post type (e.g. the Video Scripts page requests video_script). */
+  @IsOptional()
+  @IsIn(FEED_POST_TYPES as unknown as string[])
+  postType?: FeedPostType;
 
   @IsOptional()
   @IsUUID('4')

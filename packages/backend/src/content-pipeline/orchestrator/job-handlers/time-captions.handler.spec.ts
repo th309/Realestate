@@ -3,6 +3,7 @@ import { TimeCaptionsHandler } from './time-captions.handler';
 import { CAPTION_TIMER } from '../../drivers/caption-timer.interface';
 import { SupabaseService } from '../../../supabase/supabase.service';
 import { RunOrchestratorService } from '../run-orchestrator.service';
+import { CostCapService } from '../../auto-ideation/cost-cap.service';
 
 jest.mock('fs', () => ({
   ...jest.requireActual('fs'),
@@ -17,6 +18,7 @@ describe('TimeCaptionsHandler', () => {
     handleStepSuccess: jest.Mock;
     handleStepFailure: jest.Mock;
   };
+  let costCap: { recordSpend: jest.Mock };
   let storageDownload: jest.Mock;
   let inserts: unknown[][];
 
@@ -80,6 +82,7 @@ describe('TimeCaptionsHandler', () => {
       handleStepSuccess: jest.fn().mockResolvedValue(undefined),
       handleStepFailure: jest.fn().mockResolvedValue(undefined),
     };
+    costCap = { recordSpend: jest.fn().mockResolvedValue(undefined) };
 
     const moduleRef = await Test.createTestingModule({
       providers: [
@@ -87,6 +90,7 @@ describe('TimeCaptionsHandler', () => {
         { provide: CAPTION_TIMER, useValue: timer },
         { provide: SupabaseService, useValue: supabase },
         { provide: RunOrchestratorService, useValue: orchestrator },
+        { provide: CostCapService, useValue: costCap },
       ],
     }).compile();
     handler = moduleRef.get(TimeCaptionsHandler);
@@ -107,6 +111,25 @@ describe('TimeCaptionsHandler', () => {
     ]);
   });
 
+  it('charges the Whisper call against the daily cost cap', async () => {
+    await handler.handle('r1');
+    expect(costCap.recordSpend).toHaveBeenCalledWith([
+      {
+        provider: 'openai-whisper',
+        amount_usd: 0.006,
+        units: 1,
+        unit_type: 'minutes',
+      },
+    ]);
+  });
+
+  it('still completes the run when the cost-cap write fails', async () => {
+    costCap.recordSpend.mockRejectedValueOnce(new Error('ledger unavailable'));
+    await handler.handle('r1');
+    expect(orchestrator.handleStepSuccess).toHaveBeenCalledWith('r1');
+    expect(orchestrator.handleStepFailure).not.toHaveBeenCalled();
+  });
+
   it('routes failure through orchestrator on timer error', async () => {
     timer.time.mockRejectedValueOnce(new Error('whisper api 500'));
     await handler.handle('r1');
@@ -115,5 +138,6 @@ describe('TimeCaptionsHandler', () => {
       expect.stringContaining('timing_captions: whisper api 500'),
     );
     expect(orchestrator.handleStepSuccess).not.toHaveBeenCalled();
+    expect(costCap.recordSpend).not.toHaveBeenCalled();
   });
 });

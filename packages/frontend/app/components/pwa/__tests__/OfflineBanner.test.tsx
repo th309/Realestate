@@ -1,5 +1,5 @@
-import { describe, it, expect, afterEach } from "vitest";
-import { render, screen, act } from "@testing-library/react";
+import { describe, it, expect, afterEach, vi } from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
 import { OfflineBanner } from "../OfflineBanner";
 
 function setNavigatorOnline(value: boolean) {
@@ -9,42 +9,41 @@ function setNavigatorOnline(value: boolean) {
   });
 }
 
+afterEach(() => {
+  setNavigatorOnline(true);
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
+
 describe("OfflineBanner", () => {
-  afterEach(() => {
-    setNavigatorOnline(true);
-  });
-
-  it("renders the offline copy once the browser goes offline", () => {
+  it("stays hidden (slid off-screen) while the browser is online", () => {
     setNavigatorOnline(true);
     render(<OfflineBanner />);
-
-    act(() => {
-      setNavigatorOnline(false);
-      window.dispatchEvent(new Event("offline"));
-    });
-
-    expect(
-      screen.getByText(/you.re offline — showing saved data/i),
-    ).toBeInTheDocument();
-  });
-
-  it("is slid off-screen while online", () => {
-    setNavigatorOnline(true);
-    render(<OfflineBanner />);
-
     expect(screen.getByRole("status")).toHaveClass("-translate-y-full");
   });
 
-  it("slides back on reconnect", () => {
+  it("shows only after a real same-origin request fails", async () => {
     setNavigatorOnline(false);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockRejectedValue(new TypeError("Failed to fetch")),
+    );
     render(<OfflineBanner />);
-    expect(screen.getByRole("status")).toHaveClass("translate-y-0");
 
-    act(() => {
-      setNavigatorOnline(true);
-      window.dispatchEvent(new Event("online"));
-    });
+    await waitFor(() =>
+      expect(screen.getByRole("status")).toHaveClass("translate-y-0"),
+    );
+    expect(screen.getByText(/you.re offline/i)).toBeInTheDocument();
+  });
 
+  it("stays hidden when navigator says offline but the network works", async () => {
+    // The bug we're fixing: a false `offline` signal must NOT strand the banner.
+    setNavigatorOnline(false);
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<OfflineBanner />);
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
     expect(screen.getByRole("status")).toHaveClass("-translate-y-full");
   });
 });

@@ -6,6 +6,13 @@
  */
 import { fetchAPI, fetchAPIRaw } from "@/lib/data/fetchers/base";
 
+/**
+ * Publish attempts the backend publisher spends before it stops retrying a
+ * post. Mirrors MAX_PUBLISH_ATTEMPTS in the backend's post-publisher helpers —
+ * the frontend can't import across packages, so this is a deliberate copy.
+ */
+export const MAX_PUBLISH_ATTEMPTS = 3;
+
 export type PostStatus =
   | "draft"
   | "pending_review"
@@ -23,6 +30,18 @@ export interface PostCopy {
   hashtags?: string[];
   /** Carousel slides / multi-part copy. */
   slides?: Array<{ heading?: string; body?: string }>;
+  /**
+   * Structured video_script fields (backend adds these to video_script copy).
+   * Older rows only have hook/body/cta — the Video Scripts page falls back
+   * (title ← hook, no scene-direction block). See `video-script-copy.ts`.
+   */
+  title?: string;
+  close?: string;
+  sceneDirection?: string;
+  durationSeconds?: number;
+  /** Prefill for the "Make this video" handoff into the run wizard. */
+  suggestedFormat?: string;
+  suggestedMarketQuery?: string;
   [key: string]: unknown;
 }
 
@@ -30,6 +49,12 @@ export interface PostMediaRef {
   kind: string;
   url?: string;
   storage_path?: string;
+  bucket?: string;
+  /** Intrinsic pixel size — used to reserve aspect-ratio boxes (no layout shift). */
+  width?: number;
+  height?: number;
+  /** Carousel sequence index. */
+  order?: number;
   [key: string]: unknown;
 }
 
@@ -46,8 +71,17 @@ export interface PlannerPost {
   published_at: string | null;
   platform_post_id: string | null;
   source: string;
+  /**
+   * Server-resolved signed URLs (1h TTL) for this post's rendered media, in
+   * slide order — `mediaUrls[0]` is the cover/first slide. Absent on posts with
+   * no rendered image (e.g. copy-only drafts). Distinct from `media_refs`,
+   * which are the raw storage references the server signs from.
+   */
+  mediaUrls?: string[];
   /** Failure reason — present for the `failed` status the planner renders. */
   error: string | null;
+  /** Publish attempts spent so far. The publisher stops at MAX_PUBLISH_ATTEMPTS. */
+  attempts: number;
   created_at: string;
   updated_at: string;
 }
@@ -90,6 +124,106 @@ export async function fetchPosts(
   return res.data;
 }
 
+// Post generation lives in `generate-post-api.ts` (extracted to keep this file
+// under the 300-line hard limit) and is re-exported at the bottom of this file.
+
+/**
+ * POST a lifecycle action to a post's dedicated endpoint and return the updated
+ * row. Shared idiom: fetchAPIRaw + { success, data }.
+ */
+async function postLifecycleAction(
+  id: string,
+  action: "approve" | "skip",
+): Promise<PlannerPost> {
+  const res = await fetchAPIRaw(
+    `/api/admin/content-pipeline/posts/${id}/${action}`,
+    { method: "POST" },
+  );
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`post ${action} failed: ${res.status} ${body}`);
+  }
+  const json = (await res.json()) as {
+    success?: boolean;
+    data: PlannerPost;
+    error?: string;
+  };
+  if (json.success === false) {
+    throw new Error(json.error ?? `post ${action} failed`);
+  }
+  return json.data;
+}
+
+/** Approve a pending post (pending_review -> approved). */
+export function approvePost(id: string): Promise<PlannerPost> {
+  return postLifecycleAction(id, "approve");
+}
+
+/**
+ * Skip a post (any non-terminal state -> skipped). Dismisses a draft or
+ * suggestion from the review feed / Video Scripts page.
+ */
+export function skipPost(id: string): Promise<PlannerPost> {
+  return postLifecycleAction(id, "skip");
+}
+
+/**
+ * The copy fields the backend's edit endpoint accepts. Anything outside this
+ * list is dropped by the validation whitelist — and because the PATCH replaces
+ * the whole `copy` JSONB rather than merging, a dropped key is gone from the
+ * row. So a save always sends this exact surface, carrying through the fields
+ * the editor doesn't expose.
+ */
+const EDITABLE_COPY_KEYS = [
+  "hook",
+  "body",
+  "cta",
+  "hashtags",
+  "slides",
+  "title",
+  "close",
+  "sceneDirection",
+  "durationSeconds",
+  "suggestedFormat",
+  "suggestedMarketQuery",
+] as const;
+
+/** Narrow a post's copy to the fields the edit endpoint will keep. */
+export function toEditableCopy(copy: PostCopy): PostCopy {
+  const out: Record<string, unknown> = {};
+  for (const key of EDITABLE_COPY_KEYS) {
+    const value = copy[key];
+    if (value !== undefined) out[key] = value;
+  }
+  return out as PostCopy;
+}
+
+/** Save edited copy. The backend rejects edits once a post is published. */
+export async function updatePostCopy(
+  id: string,
+  copy: PostCopy,
+): Promise<PlannerPost> {
+  const res = await fetchAPIRaw(
+    `/api/admin/content-pipeline/posts/${id}/copy`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ copy: toEditableCopy(copy) }),
+    },
+  );
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`copy edit failed: ${res.status} ${body}`);
+  }
+  const json = (await res.json()) as {
+    success?: boolean;
+    data: PlannerPost;
+    error?: string;
+  };
+  if (json.success === false) throw new Error(json.error ?? "copy edit failed");
+  return json.data;
+}
+
 /**
  * Reschedule a post to a new instant. Sends the canonical scheduled state so
  * this both reschedules an already-scheduled post and schedules an approved
@@ -125,3 +259,12 @@ export async function reschedulePost(
   }
   return json.data;
 }
+
+// Generation fetchers live in `generate-post-api.ts` (extracted to keep this
+// file under the 300-line hard limit).
+export {
+  type GeneratePostType,
+  type GeneratePostPlatform,
+  type GeneratePostInput,
+  generatePost,
+} from "./generate-post-api";

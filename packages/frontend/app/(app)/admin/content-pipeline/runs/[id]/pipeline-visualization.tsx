@@ -1,10 +1,27 @@
 import { ReactNode } from "react";
 import { PipelineStatus } from "../../lib/content-pipeline-api";
 
-const STAGES: Array<{
+interface Stage {
   label: string;
   matchesStatus: (s: PipelineStatus) => boolean;
-}> = [
+}
+
+/**
+ * The infographic lane is a different pipeline, not a shorter video one: no
+ * script, no voice, no render, and it ends on the local worker rather than at a
+ * platform. Given the video stages it would draw seven inert dots and read as a
+ * run stalled before "Writing script", so it gets its own track.
+ */
+const INFOGRAPHIC_STAGES: Stage[] = [
+  { label: "Starting up", matchesStatus: (s) => s === "queued" },
+  {
+    label: "Generating graphic",
+    matchesStatus: (s) => s === "generating_infographic",
+  },
+  { label: "Graphic ready", matchesStatus: (s) => s === "infographic_ready" },
+];
+
+const VIDEO_STAGES: Stage[] = [
   {
     label: "Starting up",
     matchesStatus: (s) => s === "queued" || s === "fetching_data",
@@ -26,19 +43,36 @@ const STAGES: Array<{
   },
 ];
 
+/**
+ * Which track a run is on. Format decides it rather than status, so a queued
+ * infographic run shows its own lane from the first paint instead of starting
+ * on the video track and jumping across once the worker picks it up.
+ */
+function stagesForRun(format: string | undefined, status: PipelineStatus) {
+  if (format === "infographic") return INFOGRAPHIC_STAGES;
+  return INFOGRAPHIC_STAGES.some((stage) => stage.matchesStatus(status)) &&
+    status !== "queued"
+    ? INFOGRAPHIC_STAGES
+    : VIDEO_STAGES;
+}
+
 export function PipelineVisualization({
   status,
+  format,
   eventsByType,
   trailing,
 }: {
   status: PipelineStatus;
+  /** Run format — picks the stage track. */
+  format?: string;
   eventsByType: Map<string, string>;
   trailing?: ReactNode;
 }) {
-  const currentIdx = STAGES.findIndex((st) => st.matchesStatus(status));
+  const stages = stagesForRun(format, status);
+  const currentIdx = stages.findIndex((st) => st.matchesStatus(status));
   return (
     <div className="flex items-center gap-3 overflow-x-auto py-6">
-      {STAGES.map((stage, idx) => {
+      {stages.map((stage, idx) => {
         const done = idx < currentIdx;
         const active = idx === currentIdx;
         return (
@@ -54,7 +88,7 @@ export function PipelineVisualization({
                 {eventsByType.get(stage.label) ?? ""}
               </div>
             </div>
-            {idx < STAGES.length - 1 && (
+            {idx < stages.length - 1 && (
               <div
                 className={`w-16 h-0.5 ${done ? "bg-accent" : "bg-outline"}`}
               />

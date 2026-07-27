@@ -2,11 +2,15 @@ import { Injectable, Logger } from '@nestjs/common';
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { SupabaseService } from '../supabase/supabase.service';
+import {
+  downloadImageBytes,
+  imageExt,
+  imageMime,
+  sanitizeStorageSegment,
+} from './media/download-image';
 
 const BUCKET = 'content-pipeline';
 const SIGN_SEC = 7200;
-const FETCH_TIMEOUT_MS = 30_000;
-const MAX_BYTES = 15 * 1024 * 1024;
 
 /** Curated skyline option surfaced to operators and matched to downloads. */
 export interface MetroHeroOptionPublic {
@@ -17,17 +21,20 @@ export interface MetroHeroOptionPublic {
   preview_url: string;
 }
 
-interface MetroHeroOptionBundle {
+export interface MetroHeroOptionBundle {
   id: string;
   label: string;
   license_note?: string;
   source_url: string;
 }
 
-let bundledOptionsByCbsa: Record<string, MetroHeroOptionBundle[]> | null =
-  null;
+let bundledOptionsByCbsa: Record<string, MetroHeroOptionBundle[]> | null = null;
 
-function loadBundledHeroOptions(): Record<string, MetroHeroOptionBundle[]> {
+/** Curated (Wikimedia) skyline options keyed by CBSA — shared with the photo chain. */
+export function loadBundledHeroOptions(): Record<
+  string,
+  MetroHeroOptionBundle[]
+> {
   if (bundledOptionsByCbsa) return bundledOptionsByCbsa;
   const pathOpts = join(__dirname, 'data', 'metro-hero-options.json');
   const pathLegacy = join(__dirname, 'data', 'metro-hero-source-urls.json');
@@ -47,9 +54,10 @@ function loadBundledHeroOptions(): Record<string, MetroHeroOptionBundle[]> {
 
   if (existsSync(pathLegacy)) {
     try {
-      const legacy = JSON.parse(
-        readFileSync(pathLegacy, 'utf-8'),
-      ) as Record<string, string>;
+      const legacy = JSON.parse(readFileSync(pathLegacy, 'utf-8')) as Record<
+        string,
+        string
+      >;
       for (const [cbsa, url] of Object.entries(legacy)) {
         if (!merged[cbsa]?.length && url?.trim()) {
           merged[cbsa] = [
@@ -68,16 +76,6 @@ function loadBundledHeroOptions(): Record<string, MetroHeroOptionBundle[]> {
 
   bundledOptionsByCbsa = merged;
   return bundledOptionsByCbsa;
-}
-
-function sanitizeOptionIdForPath(id: string): string {
-  const s = String(id ?? '')
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9_-]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 80);
-  return s.length > 0 ? s : 'option';
 }
 
 /**
@@ -123,8 +121,7 @@ export class MetroHeroImageService {
     if (!options?.length) return null;
 
     const wanted = optionId?.trim();
-    let selected =
-      wanted ? options.find((o) => o.id === wanted) : undefined;
+    let selected = wanted ? options.find((o) => o.id === wanted) : undefined;
     if (wanted && !selected) {
       this.logger.warn(
         `[metro-hero] unknown option_id=${wanted} for CBSA=${cbsa} — using first option`,
@@ -137,7 +134,7 @@ export class MetroHeroImageService {
     const sourceUrl = selected.source_url?.trim();
     if (!sourceUrl) return null;
 
-    const optionKey = sanitizeOptionIdForPath(selected.id);
+    const optionKey = sanitizeStorageSegment(selected.id);
     const client = this.supabase.getClient();
 
     const { data: existing } = await client
@@ -150,24 +147,26 @@ export class MetroHeroImageService {
     let storagePath = existing?.storage_path as string | undefined;
 
     if (!storagePath) {
-      const buffer = await this.downloadRemoteImage(sourceUrl);
-      storagePath = `metro-heroes/${cbsa}/${optionKey}.jpg`;
+      const img = await downloadImageBytes(sourceUrl);
+      storagePath = `metro-heroes/${cbsa}/${optionKey}.${imageExt(img.contentType)}`;
       const { error: uploadErr } = await client.storage
         .from(BUCKET)
-        .upload(storagePath, buffer, {
-          contentType: 'image/jpeg',
+        .upload(storagePath, img.bytes, {
+          contentType: imageMime(img.contentType),
           upsert: true,
         });
       if (uploadErr) {
         throw new Error(`metro hero upload: ${uploadErr.message}`);
       }
 
-      const { error: insertErr } = await client.from('metro_hero_images').insert({
-        cbsa_code: cbsa,
-        option_id: selected.id,
-        storage_path: storagePath,
-        source_url: sourceUrl,
-      });
+      const { error: insertErr } = await client
+        .from('metro_hero_images')
+        .insert({
+          cbsa_code: cbsa,
+          option_id: selected.id,
+          storage_path: storagePath,
+          source_url: sourceUrl,
+        });
       if (insertErr?.code === '23505') {
         const { data: row } = await client
           .from('metro_hero_images')
@@ -189,37 +188,10 @@ export class MetroHeroImageService {
 
     const { data: signed, error: signErr } = await client.storage
       .from(BUCKET)
-      .createSignedUrl(storagePath!, SIGN_SEC);
+      .createSignedUrl(storagePath, SIGN_SEC);
     if (signErr || !signed?.signedUrl) {
       throw new Error(signErr?.message ?? 'metro hero signed URL failed');
     }
     return signed.signedUrl;
-  }
-
-  private async downloadRemoteImage(url: string): Promise<Buffer> {
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
-    try {
-      const res = await fetch(url, {
-        redirect: 'follow',
-        signal: ctrl.signal,
-        headers: { Accept: 'image/*' },
-      });
-      clearTimeout(timer);
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}`);
-      }
-      const ct = res.headers.get('content-type') ?? '';
-      if (!ct.startsWith('image/')) {
-        throw new Error(`unexpected content-type: ${ct}`);
-      }
-      const buf = Buffer.from(await res.arrayBuffer());
-      if (buf.length > MAX_BYTES) {
-        throw new Error('image exceeds max size');
-      }
-      return buf;
-    } finally {
-      clearTimeout(timer);
-    }
   }
 }

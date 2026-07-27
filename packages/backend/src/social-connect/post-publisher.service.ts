@@ -10,12 +10,13 @@ import {
   MAX_PUBLISH_ATTEMPTS,
   SCHEDULER_BATCH,
   STUCK_PUBLISHING_MIN,
+  TIKTOK_IMAGE_UNSUPPORTED_MESSAGE,
   YOUTUBE_FAILURE_MESSAGE,
-  extractHttpsMediaUrls,
   isPermanentPublishError,
   renderPostCopy,
   toPostError,
 } from './post-publisher.helpers';
+import { resolvePostMediaUrls } from './post-media-signing';
 
 const TABLE = 'posts';
 
@@ -176,14 +177,30 @@ export class PostPublisherService {
     }
 
     const platform = post.platform as SocialPlatform;
-    const input: PublishViaConnectionDto = {
-      brandId: post.brand_id,
-      platform,
-      copy: renderPostCopy(post.copy),
-      mediaUrls: extractHttpsMediaUrls(post.media_refs),
-    };
 
     try {
+      // Sign image refs FRESH on every attempt (never cached), so a crash-
+      // recovery re-attempt never carries an expired link; ordered by the ref
+      // `order` field so a carousel keeps its authored sequence. A storage
+      // signing failure throws here → caught below → retried/failed visibly,
+      // never a silent text-only downgrade.
+      const mediaUrls = await resolvePostMediaUrls(
+        this.supabase.getClient(),
+        post.media_refs,
+      );
+      // TikTok photo posts require consent flags we won't fabricate for an
+      // unattended publisher (see TIKTOK_IMAGE_UNSUPPORTED_MESSAGE). Fail
+      // rather than strip the images and silently post text-only.
+      if (platform === 'tiktok' && mediaUrls.length > 0) {
+        await this.fail(post, TIKTOK_IMAGE_UNSUPPORTED_MESSAGE);
+        return 'failed';
+      }
+      const input: PublishViaConnectionDto = {
+        brandId: post.brand_id,
+        platform,
+        copy: renderPostCopy(post.copy),
+        mediaUrls,
+      };
       const result = await this.socialConnect.publishForBrandPlatform(
         post.brand_id,
         platform,

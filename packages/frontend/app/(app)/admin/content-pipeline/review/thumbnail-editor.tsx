@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { M3Dialog } from "../components/m3-dialog";
-import { useKeybindingScopeFrame } from "../lib/queue-navigator";
+import { useKeybindingScopeFrame } from "../lib/keybinding-scope";
 import { ThumbnailFramePicker } from "./thumbnail-frame-picker";
 import { ThumbnailUploadPane } from "./thumbnail-upload-pane";
 

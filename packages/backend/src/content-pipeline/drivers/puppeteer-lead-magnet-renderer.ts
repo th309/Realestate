@@ -31,7 +31,11 @@ function resolveRepoPath(repoRelative: string): string {
 
 @Injectable()
 export class PuppeteerLeadMagnetRenderer implements LeadMagnetRenderer {
-  private browser: Browser | null = null;
+  // The LAUNCH PROMISE (not the browser) is the shared state, set synchronously
+  // before any await — otherwise two concurrent renders both see null and each
+  // launch a Chromium, leaking one. Cleared on failed launch or disconnect so a
+  // later call relaunches instead of handing back a dead browser.
+  private browserPromise: Promise<Browser> | null = null;
 
   async render(req: LeadMagnetRenderRequest): Promise<LeadMagnetRenderResult> {
     const start = Date.now();
@@ -62,13 +66,8 @@ export class PuppeteerLeadMagnetRenderer implements LeadMagnetRenderer {
       content,
     });
 
-    if (!this.browser) {
-      this.browser = await puppeteer.launch({
-        args: ['--no-sandbox'],
-        headless: true,
-      });
-    }
-    const page = await this.browser.newPage();
+    const browser = await this.getBrowser();
+    const page = await browser.newPage();
     await page.setContent(html, { waitUntil: 'networkidle0' });
     await page.pdf({
       path: req.outputPath,
@@ -91,7 +90,33 @@ export class PuppeteerLeadMagnetRenderer implements LeadMagnetRenderer {
     };
   }
 
+  private getBrowser(): Promise<Browser> {
+    if (!this.browserPromise) {
+      const launch = puppeteer
+        .launch({
+          args: ['--no-sandbox'],
+          headless: true,
+        })
+        .then((browser) => {
+          browser.on('disconnected', () => {
+            if (this.browserPromise === launch) this.browserPromise = null;
+          });
+          return browser;
+        })
+        .catch((err) => {
+          if (this.browserPromise === launch) this.browserPromise = null;
+          throw err;
+        });
+      this.browserPromise = launch;
+    }
+    return this.browserPromise;
+  }
+
   async onModuleDestroy() {
-    if (this.browser) await this.browser.close();
+    const pending = this.browserPromise;
+    if (!pending) return;
+    this.browserPromise = null;
+    const browser = await pending.catch(() => null);
+    if (browser) await browser.close().catch(() => {});
   }
 }

@@ -1,7 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '../../supabase/supabase.service';
 import { TriggerRuleEvaluatorService } from './trigger-rule-evaluator.service';
-import type { AutoIdeationRule, TriggerMatch, TriggerType } from './trigger-rule.types';
+import type {
+  AutoIdeationRule,
+  TriggerMatch,
+  TriggerType,
+} from './trigger-rule.types';
 import { ContentRunsService } from '../content-runs.service';
 import { randomUUID } from 'crypto';
 
@@ -22,7 +26,7 @@ export class AutoIdeationService {
     const { data: rules, error } = await q;
     if (error) throw error;
 
-    for (const rule of (rules ?? []) as any[]) {
+    for (const rule of rules ?? []) {
       try {
         await this.evaluateAndEnqueue(rule as AutoIdeationRule);
         await client
@@ -52,7 +56,7 @@ export class AutoIdeationService {
       format: string;
       matches: TriggerMatch[];
     }> = [];
-    for (const rule of (rules ?? []) as any[]) {
+    for (const rule of rules ?? []) {
       const matches = await this.evaluator.evaluate(rule as AutoIdeationRule);
       results.push({
         rule_name: String(rule.rule_name),
@@ -63,12 +67,13 @@ export class AutoIdeationService {
     return results;
   }
 
-  async evaluateAndEnqueue(rule: AutoIdeationRule): Promise<void> {
+  async evaluateAndEnqueue(
+    rule: AutoIdeationRule,
+  ): Promise<{ matches: number; runsCreated: number }> {
     const matches = await this.evaluator.evaluate(rule);
-    this.logger.log(
-      `rule ${rule.rule_name} matched ${matches.length} markets`,
-    );
+    this.logger.log(`rule ${rule.rule_name} matched ${matches.length} markets`);
 
+    let runsCreated = 0;
     for (const match of matches) {
       const result = await this.runs.createRun({
         format: rule.target_format as any,
@@ -86,7 +91,8 @@ export class AutoIdeationService {
         );
         break;
       }
+      runsCreated++;
     }
+    return { matches: matches.length, runsCreated };
   }
 }
-

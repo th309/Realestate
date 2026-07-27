@@ -99,7 +99,28 @@ function makePostsFake(seed: Record<string, unknown>[] = []) {
   }
 
   const supabase = {
-    getClient: () => ({ from: (t: 'posts') => builder(t) }),
+    getClient: () => ({
+      from: (t: 'posts') => builder(t),
+      storage: {
+        from: () => ({
+          createSignedUrl: (path: string) =>
+            Promise.resolve({
+              data: { signedUrl: `https://signed.example/${path}` },
+              error: null,
+            }),
+          download: (path: string) =>
+            Promise.resolve({
+              data: {
+                arrayBuffer: () =>
+                  Promise.resolve(
+                    Uint8Array.from(Buffer.from(`png:${path}`)).buffer,
+                  ),
+              },
+              error: null,
+            }),
+        }),
+      },
+    }),
   } as unknown as SupabaseService;
   return { supabase, store };
 }
@@ -239,5 +260,85 @@ describe('PostsService.listPosts calendar range filter (planner contract)', () =
 
     const rows = await service.listPosts({});
     expect(rows.map((r) => r.id)).toEqual(['new', 'old']);
+  });
+});
+
+describe('PostsService media refs (render output + signing)', () => {
+  const imageRef = {
+    kind: 'image' as const,
+    bucket: 'content-pipeline',
+    storage_path: 'posts/post-1/0.png',
+    width: 1080,
+    height: 1350,
+    order: 0,
+  };
+
+  it('persists rendered media_refs', async () => {
+    const { supabase, store } = makePostsFake([seedPost('pending_review')]);
+    const service = new PostsService(supabase);
+    const row = await service.updateMediaRefs('post-1', [imageRef]);
+    expect(row.media_refs).toEqual([imageRef]);
+    expect(store.posts[0].media_refs).toEqual([imageRef]);
+  });
+
+  it('attaches SAME-ORIGIN media URLs as a plain string[] in slide order on read', async () => {
+    const secondRef = {
+      ...imageRef,
+      storage_path: 'posts/post-1/1.png',
+      order: 1,
+    };
+    const post = {
+      ...seedPost('pending_review'),
+      media_refs: [secondRef, imageRef], // out of order on purpose
+    };
+    const { supabase } = makePostsFake([post]);
+    const service = new PostsService(supabase);
+    const withMedia = await service.withSignedMedia(
+      (await service.getById('post-1')) as never,
+    );
+    // same-origin streaming endpoint, sorted by order, NOT a supabase URL
+    expect(withMedia.mediaUrls).toEqual([
+      '/api/admin/content-pipeline/posts/post-1/media/0',
+      '/api/admin/content-pipeline/posts/post-1/media/1',
+    ]);
+  });
+
+  it('downloadMedia returns the stored bytes; 404 when the order is absent', async () => {
+    const post = { ...seedPost('pending_review'), media_refs: [imageRef] };
+    const { supabase } = makePostsFake([post]);
+    const service = new PostsService(supabase);
+    const { bytes, contentType } = await service.downloadMedia('post-1', 0);
+    expect(Buffer.isBuffer(bytes)).toBe(true);
+    expect(bytes.length).toBeGreaterThan(0);
+    expect(contentType).toBe('image/png');
+    await expect(service.downloadMedia('post-1', 9)).rejects.toMatchObject({
+      status: 404,
+    });
+  });
+
+  it('streams a video ref as video/mp4 and exposes it as a media url', async () => {
+    const videoRef = {
+      kind: 'video',
+      bucket: 'content-pipeline',
+      storage_path: 'posts/post-1/card.mp4',
+      width: 1080,
+      height: 1350,
+      duration_sec: 8,
+      order: 0,
+    };
+    const post = { ...seedPost('pending_review'), media_refs: [videoRef] };
+    const { supabase } = makePostsFake([post]);
+    const service = new PostsService(supabase);
+
+    const { contentType } = await service.downloadMedia('post-1', 0);
+    // An MP4 labelled image/png does not play.
+    expect(contentType).toBe('video/mp4');
+
+    const withMedia = await service.withSignedMedia(
+      (await service.getById('post-1')) as never,
+    );
+    expect(withMedia.mediaUrls).toEqual([
+      '/api/admin/content-pipeline/posts/post-1/media/0',
+    ]);
   });
 });

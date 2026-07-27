@@ -164,6 +164,21 @@ const backendSwrAllowlist: RuntimeCaching = {
   }),
 };
 
+// Supabase Storage signed URLs (post images, metro-hero skylines, brand assets)
+// load cross-origin via <img>, so the browser returns OPAQUE responses.
+// defaultCache's generic cross-origin route runs Serwist's copyResponse on them,
+// which throws `cross-origin-copy-response` on an opaque body — the handler then
+// synthesizes a 503, so those images fail even though the URL is fine (direct
+// curl 200), and the app flips to its offline banner. Serve these straight from
+// the network with no plugins and no copying. Signed URLs are unique per mint,
+// so caching them would be pure waste anyway. MUST stay before `...defaultCache`.
+const supabaseStorageNetworkOnly: RuntimeCaching = {
+  matcher: ({ url }) =>
+    url.hostname.endsWith(".supabase.co") &&
+    url.pathname.startsWith("/storage/"),
+  handler: new NetworkOnly(),
+};
+
 // `/backend/*` is this app's same-origin API proxy
 // (app/backend/[[...path]]/route.ts). defaultCache's same-origin "others"
 // NetworkFirst catch-all would otherwise cache its GETs — its own `/api/`
@@ -209,6 +224,7 @@ const serwist = new Serwist({
   clientsClaim: true,
   navigationPreload: true,
   runtimeCaching: [
+    supabaseStorageNetworkOnly,
     backendSwrAllowlist,
     backendNetworkOnly,
     geojsonCacheFirst,

@@ -1,7 +1,11 @@
 "use client";
 import { useEffect, useRef } from "react";
 import { useQueueNavigator } from "../lib/queue-navigator";
-import { pipelineStateToStatusChip } from "../components/home/StatusChip";
+import {
+  pipelineStateToStatusChip,
+  postStatusToStatusChip,
+} from "../components/home/StatusChip";
+import { PostMediaThumb } from "../components/PostMediaThumb";
 
 /**
  * Horizontal film-strip of every run in the review queue. Current run is
@@ -36,7 +40,14 @@ export function QueueRibbon() {
     >
       {nav.items.map((item, idx) => {
         const active = item.id === nav.currentId;
-        const isReady = item.status === "ready_for_review";
+        const isPost = item.kind === "post";
+        const statusChip = isPost
+          ? postStatusToStatusChip(item.status)
+          : pipelineStateToStatusChip(item.status);
+        // Hide the label for each kind's default "waiting on you" state.
+        const isDefaultWaiting = isPost
+          ? item.status === "pending_review"
+          : item.status === "ready_for_review";
         return (
           <button
             key={item.id}
@@ -49,9 +60,15 @@ export function QueueRibbon() {
                 : "ring-1 ring-outline-variant scale-95 opacity-70 hover:opacity-100 hover:scale-100"
             }`}
             aria-current={active ? "true" : undefined}
-            aria-label={`Run ${idx + 1} of ${nav.totalCount}: ${item.market_query ?? item.id}`}
+            aria-label={`Item ${idx + 1} of ${nav.totalCount}: ${item.market_query ?? item.copy?.hook ?? item.post_type ?? item.id}`}
           >
-            {item.thumbnail_url ? (
+            {item.mediaUrls?.[0] ? (
+              <PostMediaThumb
+                urls={item.mediaUrls}
+                className="h-full w-full"
+                rounded="rounded-none"
+              />
+            ) : item.thumbnail_url ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={item.thumbnail_url}
@@ -67,7 +84,14 @@ export function QueueRibbon() {
                 }`}
               >
                 <span className="text-[10px] font-medium leading-tight">
-                  {(item.market_query ?? "—").split(",")[0]}
+                  {
+                    (
+                      item.market_query ??
+                      item.copy?.hook ??
+                      item.post_type ??
+                      "—"
+                    ).split(",")[0]
+                  }
                 </span>
               </div>
             )}
@@ -76,12 +100,12 @@ export function QueueRibbon() {
                 <span className="text-[9px] font-mono text-surface">
                   {idx + 1}
                 </span>
-                {!isReady && (
+                {!isDefaultWaiting && (
                   <span
                     className="text-[8px] font-medium text-surface/80 truncate"
-                    title={pipelineStateToStatusChip(item.status).label}
+                    title={statusChip.label}
                   >
-                    {pipelineStateToStatusChip(item.status).label}
+                    {statusChip.label}
                   </span>
                 )}
               </div>

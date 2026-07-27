@@ -12,6 +12,10 @@
       {
         "include": "content-pipeline/data/**/*.json",
         "outDir": "dist"
+      },
+      {
+        "include": "content-pipeline/post-images/assets/**/*",
+        "outDir": "dist"
       }
     ],
     "watchAssets": true

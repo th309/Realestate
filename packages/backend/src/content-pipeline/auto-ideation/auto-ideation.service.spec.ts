@@ -26,7 +26,9 @@ describe('AutoIdeationService', () => {
         if (tbl === 'auto_ideation_rules') {
           return {
             select: () => rulesQuery,
-            update: () => ({ eq: jest.fn().mockResolvedValue({ error: null }) }),
+            update: () => ({
+              eq: jest.fn().mockResolvedValue({ error: null }),
+            }),
           };
         }
         throw new Error(`unexpected table ${tbl}`);
@@ -34,10 +36,12 @@ describe('AutoIdeationService', () => {
     };
 
     const evaluator = {
-      evaluate: jest.fn().mockResolvedValue([
-        { geo: { canonical_name: 'Cleveland, OH' } },
-        { geo: { canonical_name: 'Boise, ID' } },
-      ]),
+      evaluate: jest
+        .fn()
+        .mockResolvedValue([
+          { geo: { canonical_name: 'Cleveland, OH' } },
+          { geo: { canonical_name: 'Boise, ID' } },
+        ]),
     };
 
     const createRun = jest.fn().mockResolvedValue({
@@ -93,7 +97,9 @@ describe('AutoIdeationService', () => {
         if (tbl === 'auto_ideation_rules') {
           return {
             select: () => rulesQuery,
-            update: () => ({ eq: jest.fn().mockResolvedValue({ error: null }) }),
+            update: () => ({
+              eq: jest.fn().mockResolvedValue({ error: null }),
+            }),
           };
         }
         throw new Error(`unexpected table ${tbl}`);
@@ -101,10 +107,12 @@ describe('AutoIdeationService', () => {
     };
 
     const evaluator = {
-      evaluate: jest.fn().mockResolvedValue([
-        { geo: { canonical_name: 'Cleveland, OH' } },
-        { geo: { canonical_name: 'Boise, ID' } },
-      ]),
+      evaluate: jest
+        .fn()
+        .mockResolvedValue([
+          { geo: { canonical_name: 'Cleveland, OH' } },
+          { geo: { canonical_name: 'Boise, ID' } },
+        ]),
     };
 
     const createRun = jest
@@ -126,5 +134,40 @@ describe('AutoIdeationService', () => {
 
     expect(createRun).toHaveBeenCalledTimes(1);
   });
-});
 
+  it('returns honest {matches, runsCreated} counts (capped runs not counted)', async () => {
+    const evaluator = {
+      evaluate: jest
+        .fn()
+        .mockResolvedValue([
+          { geo: { canonical_name: 'Cleveland, OH' } },
+          { geo: { canonical_name: 'Boise, ID' } },
+          { geo: { canonical_name: 'Akron, OH' } },
+        ]),
+    };
+    const createRun = jest
+      .fn()
+      .mockResolvedValueOnce({ status: 'queued' })
+      .mockResolvedValueOnce({ status: 'queued' })
+      .mockResolvedValueOnce({ status: 'capped' });
+
+    const moduleRef = await Test.createTestingModule({
+      providers: [
+        AutoIdeationService,
+        { provide: SupabaseService, useValue: { getClient: () => ({}) } },
+        { provide: TriggerRuleEvaluatorService, useValue: evaluator },
+        { provide: ContentRunsService, useValue: { createRun } },
+      ],
+    }).compile();
+
+    const svc = moduleRef.get(AutoIdeationService);
+    const result = await svc.evaluateAndEnqueue({
+      id: 'r1',
+      rule_name: 'R',
+      target_format: 'score_mover',
+    } as any);
+
+    // 3 matched, 3rd was capped → only 2 runs created.
+    expect(result).toEqual({ matches: 3, runsCreated: 2 });
+  });
+});

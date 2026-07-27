@@ -18,9 +18,35 @@ export const FORMAT_PREVIEWS: Record<string, string> = {
 export interface FormatMeta {
   displayName: string;
   audience: string;
+  /** Seconds of finished video. Ignored (and 0) for still-graphic formats. */
   duration: number;
   aspect: string;
   purpose: string;
+  /** What a run produces. Absent means "video" — the original default. */
+  medium?: "video" | "image";
+}
+
+/**
+ * The one-line spec under a format's name. Still graphics have no runtime, so
+ * showing "0s" would be a lie — they get their medium named instead.
+ */
+export function formatSpecLine(meta: FormatMeta): string {
+  return meta.medium === "image"
+    ? `${meta.audience} · Still graphic · ${meta.aspect}`
+    : `${meta.audience} · ${meta.duration}s · ${meta.aspect}`;
+}
+
+/**
+ * Whether a string is one of the wizard's run formats (the FORMAT_META keys are
+ * the single source of truth). Shared by the create-a-run prefill and the video
+ * script "Make this video" handoff so the membership check lives in one place.
+ */
+export function isValidRunFormat(
+  format: string | null | undefined,
+): format is string {
+  return (
+    format != null && Object.prototype.hasOwnProperty.call(FORMAT_META, format)
+  );
 }
 
 export const FORMAT_META: Record<string, FormatMeta> = {
@@ -87,5 +113,14 @@ export const FORMAT_META: Record<string, FormatMeta> = {
     duration: 90,
     aspect: "9:16",
     purpose: "LinkedIn-first recruiting pitch backed by data.",
+  },
+  infographic: {
+    displayName: "Infographic",
+    audience: "Mixed",
+    duration: 0,
+    aspect: "Portrait",
+    purpose:
+      "One educational graphic that teaches a single task, drawn from a vetted topic doc.",
+    medium: "image",
   },
 };

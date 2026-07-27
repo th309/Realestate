@@ -6,12 +6,14 @@ import {
   IsUUID,
   IsObject,
   MinLength,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ContentFormat, Platform, ApprovalMode } from '../types';
 import { FormatOptionsDto } from './format-options.dto';
 import { CONTENT_FORMATS } from './content-format';
+import { InfographicRunParamsDto } from '../infographics/infographic-params.dto';
 
 /**
  * Snapshot of ranking resolution params submitted by the operator at
@@ -36,6 +38,17 @@ export class CreateRunDto {
   @IsIn(CONTENT_FORMATS)
   format!: ContentFormat;
 
+  /**
+   * Market-scoped formats resolve this against the market resolver in
+   * fetch-data. Infographic runs never reach that handler, so for them this is
+   * just a human-readable label the admin UI supplies ("<topic> — <task>") and
+   * it may be any non-empty string, or omitted entirely (the service derives
+   * one from the topic and task).
+   */
+  @ValidateIf(
+    (o: CreateRunDto) =>
+      o.format !== 'infographic' || o.marketQuery !== undefined,
+  )
   @IsString()
   @MinLength(2)
   marketQuery!: string;
@@ -72,6 +85,20 @@ export class CreateRunDto {
   @ValidateNested()
   @Type(() => FormatOptionsDto)
   formatOptions?: FormatOptionsDto;
+
+  /**
+   * Required when format is `infographic`: which vetted topic doc, which single
+   * task within it, and which approved visual style. Follows the house
+   * `rankingParams` precedent, and is sent top-level by the admin composer.
+   *
+   * Declared on the DTO (rather than read off the raw body) so a global
+   * validation whitelist cannot strip it before the service sees it. Persisted
+   * into content_runs.format_options.infographic.
+   */
+  @ValidateIf((o: CreateRunDto) => o.format === 'infographic')
+  @ValidateNested()
+  @Type(() => InfographicRunParamsDto)
+  infographicParams?: InfographicRunParamsDto;
 
   /**
    * Internal-only usage: auto-ideation cron can enqueue runs without human action.

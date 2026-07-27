@@ -7,6 +7,7 @@ import {
 } from './asset-signing';
 import { AutoIdeationService } from './auto-ideation/auto-ideation.service';
 import { CostCapService } from './auto-ideation/cost-cap.service';
+import { PostsService } from './posts/posts.service';
 
 /**
  * Read-only queries that power the admin UI: dashboard rollups, run
@@ -25,6 +26,7 @@ export class ContentPipelineQueriesService {
     // this class reads the underlying table directly for dashboard status.
     // (Also useful for future spend recording from handlers.)
     private readonly costCap: CostCapService,
+    private readonly posts: PostsService,
   ) {}
 
   /**
@@ -242,21 +244,52 @@ export class ContentPipelineQueriesService {
     return getAssetSignedUrlFn(this.supabase.getClient(), runId, kind);
   }
 
+  /**
+   * The unified review queue: video RUNS ready_for_review AND generalized POSTS
+   * pending_review (the create-flow drafts), merged and sorted created_at
+   * ascending, 50 total. Runs get `kind: 'run'` (row shape otherwise unchanged);
+   * posts get `kind: 'post'` with signed image mediaUrls. NEVER early-returns on
+   * empty runs — posts must flow regardless (that was the bug: 3 pending posts
+   * showed nothing because the queue only looked at content_runs).
+   */
   async getReviewQueue() {
     const client = this.supabase.getClient();
-    const { data: runs } = await client
-      .from('content_runs')
-      .select('*')
-      .eq('status', 'ready_for_review')
-      .order('created_at', { ascending: true })
-      .limit(50);
+    const [{ data: runs }, posts] = await Promise.all([
+      client
+        .from('content_runs')
+        .select('*')
+        .eq('status', 'ready_for_review')
+        .order('created_at', { ascending: true })
+        .limit(50),
+      this.posts.listPosts({ status: 'pending_review', limit: 50 }),
+    ]);
 
-    if ((runs ?? []).length === 0) return { items: [], cursor: null };
+    // Runs: post-render (has video) and pre-render (e.g. gate_a_drift) both
+    // belong; ReviewCard handles a missing video_master.
+    const runItems = (runs ?? []).map((run) => ({
+      ...run,
+      kind: 'run' as const,
+    }));
 
-    // Include all ready_for_review runs: post-render (has video) and
-    // pre-render (e.g. gate_a_drift after verify_data) so operators can fix
-    // script and re-verify from the same queue UI. ReviewCard already handles
-    // a missing video_master.
-    return { items: runs ?? [], cursor: null };
+    const postItems = await Promise.all(
+      posts.map(async (post) => {
+        const { mediaUrls } = await this.posts.withSignedMedia(post);
+        return {
+          kind: 'post' as const,
+          id: post.id,
+          post_type: post.post_type,
+          platform: post.platform,
+          status: post.status,
+          copy: post.copy,
+          mediaUrls,
+          created_at: post.created_at,
+        };
+      }),
+    );
+
+    const items = [...runItems, ...postItems]
+      .sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)))
+      .slice(0, 50);
+    return { items, cursor: null };
   }
 }

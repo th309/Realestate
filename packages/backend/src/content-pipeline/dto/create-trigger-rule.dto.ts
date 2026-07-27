@@ -1,16 +1,33 @@
-import { IsBoolean, IsIn, IsObject, IsOptional, IsString } from 'class-validator';
+import {
+  IsBoolean,
+  IsIn,
+  IsOptional,
+  IsString,
+  MaxLength,
+  Validate,
+  ValidateNested,
+} from 'class-validator';
+import { Type } from 'class-transformer';
+import { CONTENT_FORMATS } from './content-format';
+import {
+  TriggerConfigDto,
+  TriggerConfigMatchesType,
+} from './trigger-config.dto';
 
 export class CreateTriggerRuleDto {
   @IsString()
+  @MaxLength(120)
   rule_name!: string;
 
   @IsIn(['score_movement', 'rank_change', 'threshold_cross'])
   trigger_type!: string;
 
-  @IsObject()
-  trigger_config!: Record<string, any>;
+  @ValidateNested()
+  @Type(() => TriggerConfigDto)
+  @Validate(TriggerConfigMatchesType)
+  trigger_config!: TriggerConfigDto;
 
-  @IsString()
+  @IsIn(CONTENT_FORMATS as unknown as string[])
   target_format!: string;
 
   @IsOptional()
@@ -21,4 +38,3 @@ export class CreateTriggerRuleDto {
   @IsBoolean()
   enabled?: boolean;
 }
-

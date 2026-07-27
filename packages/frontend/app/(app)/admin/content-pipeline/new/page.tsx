@@ -1,11 +1,18 @@
 "use client";
-import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { resolvePrefill } from "./helpers/prefill";
 import { FormatStep } from "./format-step";
 import { MarketStep } from "./market-step";
 import { ConfirmStep } from "./confirm-step";
 import { RankingParamsStep } from "./ranking-params-step";
 import { RankingPreviewStep } from "./ranking-preview-step";
+import { InfographicParamsStep } from "./infographic-params-step";
+import {
+  INFOGRAPHIC_FORMAT,
+  type InfographicRunPlan,
+  type InfographicSelection,
+} from "./helpers/infographic-params";
 import type { BatchMarket } from "../lib/batch-runs-api";
 import {
   createRun,
@@ -34,12 +41,44 @@ type RankingArgs = {
 
 const RANKING_FORMATS = new Set(["top_10_ranking", "bottom_10_ranking"]);
 
+/**
+ * Reads the "Make this video" prefill (`?format=&market=`) and seeds the flow.
+ * useSearchParams requires a Suspense boundary in the App Router.
+ */
 export default function NewRunPage() {
+  return (
+    <Suspense fallback={null}>
+      <NewRunEntry />
+    </Suspense>
+  );
+}
+
+function NewRunEntry() {
+  const searchParams = useSearchParams();
+  const prefill = resolvePrefill({
+    format: searchParams.get("format"),
+    market: searchParams.get("market"),
+  });
+  return <NewRunFlow prefill={prefill} />;
+}
+
+function NewRunFlow({
+  prefill,
+}: {
+  prefill: ReturnType<typeof resolvePrefill>;
+}) {
   const [step, setStep] = useState<
-    "format" | "market" | "confirm" | "ranking-params" | "ranking-preview"
-  >("format");
-  const [format, setFormat] = useState<string>("");
+    | "format"
+    | "market"
+    | "confirm"
+    | "ranking-params"
+    | "ranking-preview"
+    | "infographic-params"
+  >(prefill.step);
+  const [format, setFormat] = useState<string>(prefill.format);
   const [mode, setMode] = useState<WizardMode>("single");
+  // The confirmed market is only ever set by picking a resolveMarket match; the
+  // prefill contributes a search seed, not a verified value.
   const [market, setMarket] = useState<string>("");
   const [batchMarkets, setBatchMarkets] = useState<BatchMarket[]>([]);
   const [formatOptions, setFormatOptions] = useState<WizardFormatOptions>({});
@@ -51,6 +90,16 @@ export default function NewRunPage() {
   );
   const [driftError, setDriftError] = useState<string | null>(null);
   const [rankingSubmitting, setRankingSubmitting] = useState(false);
+
+  // Infographic-specific state. The selection is kept so stepping back from
+  // confirm returns the operator to their picks, not to an empty step.
+  const [infographicSelection, setInfographicSelection] = useState<
+    InfographicSelection | undefined
+  >(undefined);
+  const [infographicPlan, setInfographicPlan] = useState<
+    InfographicRunPlan | undefined
+  >(undefined);
+  const isInfographic = format === INFOGRAPHIC_FORMAT;
 
   // Stable idempotency key for ranking submissions (regenerated on each preview visit)
   const rankingIdempotencyKey = useMemo(() => crypto.randomUUID(), [step]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -65,8 +114,14 @@ export default function NewRunPage() {
       setBatchMarkets([]);
       setFormatOptions({});
     }
+    if (f !== INFOGRAPHIC_FORMAT) {
+      setInfographicSelection(undefined);
+      setInfographicPlan(undefined);
+    }
     if (RANKING_FORMATS.has(f)) {
       setStep("ranking-params");
+    } else if (f === INFOGRAPHIC_FORMAT) {
+      setStep("infographic-params");
     } else {
       setStep("market");
     }
@@ -137,6 +192,7 @@ export default function NewRunPage() {
           onFormatOptionsChange={setFormatOptions}
           topMoversGeo={topMoversGeo}
           onTopMoversGeoChange={setTopMoversGeo}
+          initialQuery={prefill.marketSeed}
           onBack={() => setStep("format")}
           onPickSingle={(m, opts) => {
             setMarket(m);
@@ -168,6 +224,18 @@ export default function NewRunPage() {
         />
       )}
 
+      {step === "infographic-params" && isInfographic && (
+        <InfographicParamsStep
+          initial={infographicSelection}
+          onBack={() => setStep("format")}
+          onNext={(selection, plan) => {
+            setInfographicSelection(selection);
+            setInfographicPlan(plan);
+            setStep("confirm");
+          }}
+        />
+      )}
+
       {step === "confirm" && (
         <ConfirmStep
           format={format}
@@ -176,7 +244,10 @@ export default function NewRunPage() {
           batchMarkets={batchMarkets}
           formatOptions={formatOptions}
           onFormatOptionsChange={setFormatOptions}
-          onBack={() => setStep("market")}
+          infographicPlan={isInfographic ? infographicPlan : undefined}
+          onBack={() =>
+            setStep(isInfographic ? "infographic-params" : "market")
+          }
           onCreatedSingle={(id) =>
             router.push(`/admin/content-pipeline/runs/${id}`)
           }

@@ -10,7 +10,10 @@ import { getAssetSignedUrl } from '../../asset-signing';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { readFileSync } from 'fs';
-import { buildLongFormRenderPlan } from '../../render/long-form-render-plan';
+import { loadLongFormRenderPlan } from './long-form-render-plan-loader';
+import { buildRenderVideoProps } from './render-video-props';
+import { CostCapService } from '../../auto-ideation/cost-cap.service';
+import { recordDriverSpend } from './record-driver-spend';
 
 @Injectable()
 export class RenderVideoHandler {
@@ -21,6 +24,7 @@ export class RenderVideoHandler {
     @Inject(VIDEO_RENDERER) private readonly renderer: VideoRenderer,
     private readonly supabase: SupabaseService,
     private readonly queue: QueueService,
+    private readonly costCap: CostCapService,
   ) {}
 
   async handle(runId: string): Promise<void> {
@@ -69,41 +73,12 @@ export class RenderVideoHandler {
         | Array<{ startMs: number; endMs: number; word: string }>
         | undefined;
 
-      let longFormRenderPlan: ReturnType<
-        typeof buildLongFormRenderPlan
-      > | null = null;
-      if (
+      const longFormRenderPlan =
         run.format === 'long_form_deep_dive' &&
         captionWords &&
         captionWords.length > 0
-      ) {
-        const { data: scriptRows } = await client
-          .from('content_assets')
-          .select('metadata')
-          .eq('run_id', runId)
-          .eq('kind', 'script')
-          .order('created_at', { ascending: false })
-          .limit(1);
-        const scriptsRaw = scriptRows?.[0]?.metadata?.scripts;
-        const script = Array.isArray(scriptsRaw) ? scriptsRaw[0] : undefined;
-        const fullText =
-          script && typeof script.fullText === 'string' ? script.fullText : '';
-        const sceneBreakdown = script?.sceneBreakdown;
-        if (
-          fullText.length > 0 &&
-          Array.isArray(sceneBreakdown) &&
-          sceneBreakdown.length >= 5
-        ) {
-          longFormRenderPlan = buildLongFormRenderPlan({
-            fullText,
-            sceneBreakdown: sceneBreakdown as Array<{
-              sceneKey: string;
-              text: string;
-            }>,
-            captionWords,
-          });
-        }
-      }
+          ? await loadLongFormRenderPlan(client, runId, captionWords)
+          : null;
 
       const videoPath = join(tmpdir(), `video-${runId}.mp4`);
       this.logger.log(
@@ -113,39 +88,20 @@ export class RenderVideoHandler {
         `[PIPE] render-video run=${runId} dataBundle.score=${JSON.stringify(payload.metadata?.score)}`,
       );
 
-      // Ranking formats (top_10_ranking / bottom_10_ranking) have no single
-      // resolved market — they carry the N-market list on `params`, which
-      // Top10Layout reads. Non-ranking formats keep the existing
-      // `resolvedMarket` + `dataBundle` shape that GradeReveal/ScoreMover/etc.
-      // expect. fetch-data.handler already wrote the ranking bundle into
-      // mcp_payload.metadata, so for ranking we forward it as `params`.
       const isRanking =
         run.format === 'top_10_ranking' || run.format === 'bottom_10_ranking';
       this.logger.log(
         `[PIPE] render-video run=${runId} branch: isRanking=${isRanking} format=${run.format}`,
       );
-      const formatProps = isRanking
-        ? {
-            format: run.format,
-            params: payload.metadata,
-            dataBundle: payload.metadata,
-            ctaUrl: '',
-            audioUrl: audioSigned.url,
-            ...(captionWords && captionWords.length > 0
-              ? { captionWords }
-              : {}),
-          }
-        : {
-            format: run.format,
-            resolvedMarket: run.resolved_geo,
-            dataBundle: payload.metadata,
-            ctaUrl: '',
-            audioUrl: audioSigned.url,
-            ...(captionWords && captionWords.length > 0
-              ? { captionWords }
-              : {}),
-            ...(longFormRenderPlan ? { longFormRenderPlan } : {}),
-          };
+      const formatProps = buildRenderVideoProps({
+        format: run.format,
+        isRanking,
+        resolvedGeo: run.resolved_geo,
+        payloadMetadata: payload.metadata,
+        audioUrl: audioSigned.url,
+        captionWords,
+        longFormRenderPlan,
+      });
       this.logger.log(
         `[PIPE] render-video run=${runId} props.keys=[${Object.keys(formatProps).join(',')}] hasResolvedMarket=${'resolvedMarket' in formatProps} hasParams=${'params' in formatProps}`,
       );
@@ -256,6 +212,16 @@ export class RenderVideoHandler {
           cost_usd: result.cost?.amount_usd ?? 0,
         },
       });
+
+      // Local Remotion renders bill $0, so this is a no-op today; it keeps the
+      // ledger correct if the renderer ever moves to a metered backend.
+      await recordDriverSpend(
+        this.costCap,
+        this.logger,
+        'render-video',
+        runId,
+        result.cost,
+      );
 
       this.logger.log(`[PIPE] render-video.handle SUCCESS run=${runId}`);
       await this.orchestrator.handleStepSuccess(runId);

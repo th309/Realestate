@@ -1,9 +1,6 @@
 import { NotFoundException } from '@nestjs/common';
 import { LateApiError } from './late-client.types';
-import type {
-  PostCopy,
-  PostMediaRef,
-} from '../content-pipeline/posts/post.types';
+import type { PostCopy } from '../content-pipeline/posts/post.types';
 
 /** Scheduler tuning. Small batch + bounded retry so a bad run can't storm Late. */
 export const SCHEDULER_BATCH = 10;
@@ -14,6 +11,20 @@ export const STUCK_PUBLISHING_MIN = 5;
 /** Honest failure for YouTube feed posts — never silently skipped (Decision 2). */
 export const YOUTUBE_FAILURE_MESSAGE =
   'YouTube publishes via the video pipeline — create a video run instead';
+
+/**
+ * Honest failure for TikTok posts that carry images. TikTok photo posts require
+ * a top-level `tiktokSettings` with TikTok's legally-mandated consent flags
+ * (`content_preview_confirmed` + `express_consent_given`) — assertions an
+ * unattended auto-publisher must not fabricate on the operator's behalf. Rather
+ * than strip the images and silently post text-only, we fail the post so the
+ * operator can post it manually. Text-only TikTok posts are unaffected.
+ * Verified against Late/Zernio docs 2026-07-25 (docs.zernio.com/platforms/tiktok).
+ */
+export const TIKTOK_IMAGE_UNSUPPORTED_MESSAGE =
+  'TikTok photo posts require TikTok’s mandated consent settings, which ' +
+  'auto-publishing cannot assert on your behalf — post this image to TikTok ' +
+  'manually, or publish it to the other connected platforms instead';
 
 /** Flatten a post's structured copy into the single caption string Late wants. */
 export function renderPostCopy(copy: PostCopy): string {
@@ -29,19 +40,6 @@ export function renderPostCopy(copy: PostCopy): string {
     text += (text ? '\n\n' : '') + tags;
   }
   return text.trim();
-}
-
-/**
- * Media URLs safe to send to Late: https only (the publish DTO requires https,
- * and Late fetches these server-side). Refs with only a storage_path are dropped
- * — signing those is a later concern.
- */
-export function extractHttpsMediaUrls(refs: PostMediaRef[] | null): string[] {
-  return (refs ?? [])
-    .map((r) => r.url)
-    .filter(
-      (u): u is string => typeof u === 'string' && u.startsWith('https://'),
-    );
 }
 
 /**

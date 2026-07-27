@@ -22,4 +22,6 @@ export const FORMAT_DURATIONS_IN_FRAMES: Record<ContentFormat, number> = {
   farm_area_spotlight: 1800,
   brokerage_market_share: 2250,
   recruitment_angle: 2700,
+  // Static image — there is no video timeline and no thumbnail frame to pick.
+  infographic: 0,
 };

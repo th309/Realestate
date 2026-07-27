@@ -12,6 +12,8 @@ import {
   captureNativeCaptions,
 } from './synthesize-audio-chain';
 import { AlertDispatcherService } from '../../observability/alert-dispatcher.service';
+import { CostCapService } from '../../auto-ideation/cost-cap.service';
+import { recordDriverSpend } from './record-driver-spend';
 
 @Injectable()
 export class SynthesizeAudioHandler {
@@ -23,6 +25,7 @@ export class SynthesizeAudioHandler {
     private readonly ttsFactory: TTSDriverFactory,
     private readonly supabase: SupabaseService,
     private readonly alerts: AlertDispatcherService,
+    private readonly costCap: CostCapService,
   ) {}
 
   async handle(runId: string): Promise<void> {
@@ -236,6 +239,15 @@ export class SynthesizeAudioHandler {
           captions_word_count: captions.count,
         },
       });
+
+      // Edge TTS bills $0 and is skipped; Azure/OpenAI voices are charged.
+      await recordDriverSpend(
+        this.costCap,
+        this.logger,
+        'synthesize-audio',
+        runId,
+        result.cost,
+      );
 
       this.logger.log(`[PIPE] synthesize-audio.handle SUCCESS run=${runId}`);
       await this.orchestrator.handleStepSuccess(runId);

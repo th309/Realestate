@@ -1,7 +1,12 @@
 "use client";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { FORMAT_META, FORMAT_PREVIEWS } from "../lib/format-previews";
+import {
+  FORMAT_META,
+  FORMAT_PREVIEWS,
+  formatSpecLine,
+  type FormatMeta,
+} from "../lib/format-previews";
 import { fetchSettings } from "../lib/settings-api";
 import {
   fetchFormatSampleVideos,
@@ -43,10 +48,13 @@ export function FormatStep({ onPick }: { onPick: (format: string) => void }) {
     enabledSet.add("grade_reveal"); // fallback during initial load
   }
 
-  const enabledKeys = Object.keys(FORMAT_META).filter((k) => enabledSet.has(k));
-  const upcomingKeys = Object.keys(FORMAT_META).filter(
-    (k) => !enabledSet.has(k),
-  );
+  // The per-format switch in Settings governs Remotion video templates. Still
+  // graphics have no video template behind them, so they're always on offer.
+  const isOffered = (key: string) =>
+    FORMAT_META[key].medium === "image" || enabledSet.has(key);
+
+  const enabledKeys = Object.keys(FORMAT_META).filter(isOffered);
+  const upcomingKeys = Object.keys(FORMAT_META).filter((k) => !isOffered(k));
 
   return (
     <div className="p-8">
@@ -63,14 +71,13 @@ export function FormatStep({ onPick }: { onPick: (format: string) => void }) {
               <FormatPreview
                 formatKey={key}
                 enabled
-                aspect={meta.aspect}
-                displayName={meta.displayName}
+                meta={meta}
                 sample={sampleVideos[key] ?? null}
               />
               <div className="p-4">
                 <div className="font-semibold">{meta.displayName}</div>
                 <div className="text-xs text-outline">
-                  {meta.audience} · {meta.duration}s · {meta.aspect}
+                  {formatSpecLine(meta)}
                 </div>
                 <div className="text-xs mt-2">{meta.purpose}</div>
                 {sampleVideos[key]?.marketName && (
@@ -101,7 +108,7 @@ export function FormatStep({ onPick }: { onPick: (format: string) => void }) {
               <li key={key}>
                 {FORMAT_META[key].displayName}{" "}
                 <span className="text-xs">
-                  ({FORMAT_META[key].audience} · {FORMAT_META[key].duration}s)
+                  ({formatSpecLine(FORMAT_META[key])})
                 </span>
               </li>
             ))}
@@ -115,16 +122,16 @@ export function FormatStep({ onPick }: { onPick: (format: string) => void }) {
 function FormatPreview({
   formatKey,
   enabled,
-  aspect,
-  displayName,
+  meta,
   sample,
 }: {
   formatKey: string;
   enabled: boolean;
-  aspect: string;
-  displayName: string;
+  meta: FormatMeta;
   sample: FormatSampleVideo | null;
 }) {
+  const { aspect, displayName } = meta;
+  const isStillGraphic = meta.medium === "image";
   const [videoAvailable, setVideoAvailable] = useState(enabled);
   // Prefer the live signed URL from a recent successful run; fall back
   // to the static MP4 in /public; final fallback is the brand-card
@@ -136,7 +143,7 @@ function FormatPreview({
     <div
       className={`bg-gradient-to-br from-primary-container to-surface-container-high flex items-center justify-center ${aspect === "16:9" ? "aspect-video" : "aspect-[9/16]"}`}
     >
-      {enabled && videoAvailable && previewSrc ? (
+      {enabled && !isStillGraphic && videoAvailable && previewSrc ? (
         <video
           // key={previewSrc} ensures React re-mounts the element when the
           // signed URL refreshes, otherwise the cached <video> keeps the
@@ -156,7 +163,11 @@ function FormatPreview({
             {displayName}
           </div>
           <div className="text-xs text-on-surface-variant mt-1">
-            {aspect === "16:9" ? "16:9 landscape" : "9:16 vertical"}
+            {isStillGraphic
+              ? `Still graphic · ${aspect}`
+              : aspect === "16:9"
+                ? "16:9 landscape"
+                : "9:16 vertical"}
           </div>
         </div>
       )}

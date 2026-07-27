@@ -128,4 +128,70 @@ describe('buildGrounding', () => {
     expect(g.scoreLabel).toBe('rising');
     expect(g.homeValue).toBeNull();
   });
+
+  it('sets asOf from the data period (score date preferred, then ZHVI), not the render date', () => {
+    const withScoreDate = {
+      geo: { geography: 'metro', id: '12420', canonical_name: 'Austin' },
+      home_value: { value: 450000, yoy_pct: 5.2, period_date: '2026-07-01' },
+      rent: null,
+      demographics: null,
+      economic: null,
+      score: {
+        propertyiq_score: 82,
+        grade: 'A',
+        confidence: 'A',
+        current_score_date: '2026-06-30',
+      },
+    } as unknown as MarketSnapshot;
+    expect(buildGrounding(mover, withScoreDate).asOf).toBe('Jun 30, 2026');
+
+    const zhviOnly = {
+      geo: { geography: 'metro', id: '12420', canonical_name: 'Austin' },
+      home_value: { value: 450000, yoy_pct: 5.2, period_date: '2026-07-01' },
+      rent: null,
+      demographics: null,
+      economic: null,
+      score: { propertyiq_score: 82, grade: 'A', confidence: 'A' },
+    } as unknown as MarketSnapshot;
+    expect(buildGrounding(mover, zhviOnly).asOf).toBe('Jul 1, 2026');
+
+    expect(buildGrounding(mover, null).asOf).toBeNull();
+  });
+
+  it('passes mover candidates down as markets (momentum word + real fields, image-only)', () => {
+    const movers: ScoreMoverItem[] = [
+      {
+        id: '1',
+        canonical_name: 'Abilene, TX',
+        geography: 'metro',
+        current_score: 94,
+        previous_score: 80,
+        delta: 14,
+        population: 170000,
+      },
+      {
+        id: '2',
+        canonical_name: 'Austin, TX',
+        geography: 'metro',
+        current_score: 2,
+        previous_score: 20,
+        delta: -18,
+        population: 2_000_000,
+      },
+    ];
+    const g = buildGrounding(mover, null, movers);
+    expect(g.markets).toHaveLength(2);
+    expect(g.markets![0]).toEqual({
+      name: 'Abilene, TX',
+      state: null,
+      score: 94,
+      scoreLabel: 'very strong',
+      scoreDelta: 14,
+    });
+    expect(g.markets![1].scoreLabel).toBe('very weak');
+  });
+
+  it('omits markets when no candidate list is passed', () => {
+    expect(buildGrounding(mover, null).markets).toBeUndefined();
+  });
 });

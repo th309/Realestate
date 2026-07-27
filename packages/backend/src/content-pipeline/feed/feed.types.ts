@@ -69,6 +69,51 @@ export interface FeedMarketGrounding {
   homeValueYoyPct: number | null;
   rent: number | null;
   rentYoyPct: number | null;
+  /**
+   * Pre-formatted data-period date for the image footer ("As of Jun 30, 2026") —
+   * a data-freshness statement sourced from the snapshot's score/ZHVI period, NOT
+   * the render date. Null when the snapshot carried no dated data.
+   */
+  asOf: string | null;
+  /**
+   * Real ranked markets (the top-mover candidates) for the list / head-to-head
+   * image cards. Present only when the feed hands the candidate list down; the
+   * image selector picks a rows/versus look only when this holds >= 2 entries.
+   * Shape matches PostImageGrounding.markets. NOT surfaced in the generation
+   * prompt (groundingLines never reads it) — image render only.
+   */
+  markets?: Array<{
+    name: string;
+    state?: string | null;
+    score?: number | null;
+    scoreLabel?: string | null;
+    scoreDelta?: number | null;
+  }>;
+  /**
+   * The market's own skyline as a self-contained data URI, which makes the
+   * photo-hero image variants eligible. Present only for metro posts where a
+   * confidently-aligned photo exists. Like `markets`, this is image render only
+   * and is NEVER surfaced in the generation prompt — groundingLines never reads
+   * it, and it is attached on the render path only, so megabytes of base64 can
+   * never reach the model.
+   */
+  photoDataUri?: string;
+}
+
+/**
+ * A market to ground a post in. A score-mover (ScoreMoverItem, from the cron
+ * candidate pick) and a resolved market (ResolvedMarket, from an on-demand
+ * marketQuery) both satisfy this; the score fields are optional because a
+ * resolved market has none until getMarketSnapshot fills them.
+ */
+export interface GroundingTarget {
+  id: string;
+  canonical_name: string;
+  geography: 'metro' | 'county' | 'zip';
+  current_score?: number | null;
+  previous_score?: number | null;
+  delta?: number | null;
+  state?: string | null;
 }
 
 /** Result of one feed generation attempt (for logging / tests). */

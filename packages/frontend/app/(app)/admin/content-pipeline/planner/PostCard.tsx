@@ -13,6 +13,7 @@ import {
   postStatusToStatusChip,
 } from "../components/home/StatusChip";
 import { PlatformGlyph } from "./platform-glyph";
+import { PostMediaThumb } from "../components/PostMediaThumb";
 import {
   formatEtTime,
   etDayKey,
@@ -69,6 +70,12 @@ export function PostCard({
 
   return (
     <div className="rounded-lg border border-outline-variant bg-surface p-2 shadow-sm">
+      <PostMediaThumb
+        urls={post.mediaUrls}
+        className="mb-1.5 h-16 w-full"
+        rounded="rounded-md"
+      />
+
       <div className="flex items-center gap-1.5">
         <PlatformGlyph platform={post.platform} />
         {time && (

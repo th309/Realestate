@@ -22,7 +22,6 @@ import { ArchetypeClusteringService } from './archetypes/archetype-clustering.se
 import { ScriptArchetypeService } from './archetypes/script-archetype.service';
 import { ArchetypeRouter } from './archetypes/archetype-router.service';
 import { ArchetypeLibraryController } from './archetypes/archetype-library.controller';
-import { RefreshArchetypesCron } from './crons/refresh-archetypes.cron';
 import { SupabaseModule } from '../supabase/supabase.module';
 import { EmailModule } from '../email/email.module';
 import { MarketsModule } from '../markets/markets.module';
@@ -34,78 +33,29 @@ import { MetricResolutionModule } from '../metric-resolution/metric-resolution.m
 import { QueueModule } from './orchestrator/queue.module';
 import { RunOrchestratorService } from './orchestrator/run-orchestrator.service';
 import { ScriptRepairService } from './orchestrator/script-repair.service';
-import { HandlersBootstrapService } from './orchestrator/handlers-bootstrap.service';
-import { FetchDataHandler } from './orchestrator/job-handlers/fetch-data.handler';
-import { GenerateScriptHandler } from './orchestrator/job-handlers/generate-script.handler';
-import { VerifyDataHandler } from './orchestrator/job-handlers/verify-data.handler';
-import { LintVoiceHandler } from './orchestrator/job-handlers/lint-voice.handler';
-import { SynthesizeAudioHandler } from './orchestrator/job-handlers/synthesize-audio.handler';
-import { RenderVideoHandler } from './orchestrator/job-handlers/render-video.handler';
-import { RenderThumbnailHandler } from './orchestrator/job-handlers/render-thumbnail.handler';
-import { PublishHandler } from './orchestrator/job-handlers/publish.handler';
-import { PublishYouTubeShortsHandler } from './orchestrator/job-handlers/publish-youtube-shorts.handler';
-import { PublishTikTokHandler } from './orchestrator/job-handlers/publish-tiktok.handler';
-import { PublishInstagramHandler } from './orchestrator/job-handlers/publish-instagram.handler';
-import { PublishFacebookHandler } from './orchestrator/job-handlers/publish-facebook.handler';
-import { PublishLinkedInHandler } from './orchestrator/job-handlers/publish-linkedin.handler';
-import { GenerateLeadMagnetHandler } from './orchestrator/job-handlers/generate-lead-magnet.handler';
-import { TimeCaptionsHandler } from './orchestrator/job-handlers/time-captions.handler';
 
 import { ContentDataService } from './data/content-data.service';
 
-import { AnthropicScriptGenerator } from './drivers/anthropic-script-generator';
-import { SCRIPT_GENERATOR } from './drivers/script-generator.interface';
 import { DataVerifierService } from './gates/data-verifier.service';
 import { BrandVoiceLinterService } from './gates/brand-voice-linter.service';
-import { EdgeTTSDriver } from './drivers/edge-tts-driver';
-import { AzureSpeechDriver } from './drivers/azure-speech-driver';
-import { OpenAITTSDriver } from './drivers/openai-tts-driver';
-import { TTSDriverFactory } from './drivers/tts-driver.factory';
-import { CredentialCrypto } from './drivers/credential-crypto';
-import { YouTubeShortsPublisher } from './drivers/youtube-shorts-publisher';
-import { YouTubeLongFormPublisher } from './drivers/youtube-longform-publisher';
-import { TikTokPublisher } from './drivers/tiktok-publisher';
-import { InstagramReelsPublisher } from './drivers/instagram-reels-publisher';
-import { FacebookReelsPublisher } from './drivers/facebook-reels-publisher';
-import { LinkedInPublisher } from './drivers/linkedin-publisher';
-import { PlatformPublisherRegistry } from './drivers/platform-publisher.registry';
-import { PLATFORM_PUBLISHERS } from './drivers/platform-publisher.interface';
-import { RemotionCLIRenderer } from './drivers/remotion-cli-renderer';
-import { VIDEO_RENDERER } from './drivers/video-renderer.interface';
-import { PuppeteerLeadMagnetRenderer } from './drivers/puppeteer-lead-magnet-renderer';
-import { LEAD_MAGNET_RENDERER } from './drivers/lead-magnet-renderer.interface';
-import { OpenAIWhisperTimer } from './drivers/openai-whisper-timer';
-import { CAPTION_TIMER } from './drivers/caption-timer.interface';
 
 import { ShortLinkService } from './short-links/short-link.service';
 import { ShortLinkController } from './short-links/short-link.controller';
 import { AttributionService } from './short-links/attribution.service';
 
-import { YouTubeMetricsService } from './analytics/youtube-metrics.service';
-import { MetricsPullerService } from './analytics/metrics-puller.service';
-import { TikTokMetricsService } from './analytics/tiktok-metrics.service';
-import { InstagramMetricsService } from './analytics/instagram-metrics.service';
-import { FacebookMetricsService } from './analytics/facebook-metrics.service';
-import { LinkedInMetricsService } from './analytics/linkedin-metrics.service';
-import { HookABService } from './analytics/hook-ab.service';
-import { HookPromoterService } from './analytics/hook-promoter.service';
-import { RevenueAttributionService } from './analytics/revenue-attribution.service';
-import { PerformanceService } from './analytics/performance.service';
-import { SuggestedRunsService } from './analytics/suggested-runs.service';
-import { Pull24hMetricsCron } from './crons/pull-24h-metrics.cron';
-import { RecoverStuckRunsCron } from './crons/recover-stuck-runs.cron';
-import { CleanupTransientRefsCron } from './crons/cleanup-transient-refs.cron';
-import { Pull7dMetricsCron } from './crons/pull-7d-metrics.cron';
-import { Pull30dMetricsCron } from './crons/pull-30d-metrics.cron';
-import { HookPromotionCron } from './crons/hook-promotion.cron';
-import { CredentialHealthProbeCron } from './crons/credential-health-probe.cron';
-import { QueueMonitorCron } from './crons/queue-monitor.cron';
-import { SuccessRateCheckCron } from './crons/success-rate-check.cron';
-import { MagnetPromotionCron } from './crons/magnet-promotion.cron';
+import { AutoIdeationController } from './auto-ideation/auto-ideation.controller';
+
+import { InfographicOptionsController } from './infographics/infographic-options.controller';
+
+// WeeklySchedulePlanService and PostAutoSchedulerService are registered in
+// PostsBrandKitModule (see that file's doc comment for why) and exported for
+// use here — only the controller lives in this module.
+import { WeeklySchedulePlanController } from './scheduling/weekly-schedule-plan.controller';
 
 import { RankingResolverController } from './ranking/ranking-resolver.controller';
 import { RankingResolverService } from './ranking/ranking-resolver.service';
 import { MetroHeroImageService } from './metro-hero-image.service';
+import { MetroPhotoService } from './media/metro-photo.service';
 
 import { PlatformManagerService } from './platform-manager.service';
 import { PipelineSettingsService } from './pipeline-settings.service';
@@ -118,22 +68,25 @@ import { LeadMagnetBindingService } from './magnets/lead-magnet-binding.service'
 import { MagnetABPromoterService } from './magnets/magnet-ab-promoter.service';
 import { FFmpegWrapperService } from './style-refs/ffmpeg-wrapper.service';
 import { YtDlpWrapperService } from './style-refs/yt-dlp-wrapper.service';
-import { AlertDispatcherService } from './observability/alert-dispatcher.service';
-import { StallDetectorService } from './observability/stall-detector.service';
-import { QueueMonitorService } from './observability/queue-monitor.service';
-import { SuccessRateService } from './analytics/success-rate.service';
 import { StyleABService } from './style-references/style-ab.service';
-import { CostCapService } from './auto-ideation/cost-cap.service';
-import { TriggerRuleEvaluatorService } from './auto-ideation/trigger-rule-evaluator.service';
-import { AutoIdeationService } from './auto-ideation/auto-ideation.service';
-import { AutoIdeationController } from './auto-ideation/auto-ideation.controller';
-import { AutoIdeationScoreScanCron } from './crons/auto-ideation-score-scan.cron';
-import { AutoIdeationRankScanCron } from './crons/auto-ideation-rank-scan.cron';
-import { AutoIdeationThresholdScanCron } from './crons/auto-ideation-threshold-scan.cron';
 
 import { PostsBrandKitModule } from './posts-brand-kit.module';
 import { FeedService } from './feed/feed.service';
-import { FeedTopUpCron } from './crons/feed-topup.cron';
+import { FeedPostGeneratorService } from './feed/feed-post-generator.service';
+import { PostGenerateController } from './feed/post-generate.controller';
+import { PostImageRenderService } from './post-images/post-image-render.service';
+import { PostVideoCardService } from './post-images/post-video-card.service';
+import { MetroBrollService } from './media/metro-broll.service';
+
+// Registered via the provider groups below; imported here because the module
+// re-exports them to other feature modules.
+import { TTSDriverFactory } from './drivers/tts-driver.factory';
+import { PlatformPublisherRegistry } from './drivers/platform-publisher.registry';
+import { MetricsPullerService } from './analytics/metrics-puller.service';
+
+import { CONTENT_PIPELINE_DRIVER_PROVIDERS } from './content-pipeline-driver.providers';
+import { CONTENT_PIPELINE_JOB_HANDLER_PROVIDERS } from './content-pipeline-job-handler.providers';
+import { CONTENT_PIPELINE_ANALYTICS_PROVIDERS } from './content-pipeline-analytics.providers';
 
 @Module({
   imports: [
@@ -162,6 +115,9 @@ import { FeedTopUpCron } from './crons/feed-topup.cron';
     BatchRunsController,
     RankingResolverController,
     AutoIdeationController,
+    PostGenerateController,
+    InfographicOptionsController,
+    WeeklySchedulePlanController,
   ],
   providers: [
     ContentRunsService,
@@ -182,110 +138,16 @@ import { FeedTopUpCron } from './crons/feed-topup.cron';
     ArchetypeClusteringService,
     ScriptArchetypeService,
     ArchetypeRouter,
-    RefreshArchetypesCron,
     RunOrchestratorService,
     ScriptRepairService,
 
     ContentDataService,
 
-    AnthropicScriptGenerator,
-    { provide: SCRIPT_GENERATOR, useExisting: AnthropicScriptGenerator },
     DataVerifierService,
     BrandVoiceLinterService,
 
-    EdgeTTSDriver,
-    AzureSpeechDriver,
-    OpenAITTSDriver,
-    TTSDriverFactory,
-    CredentialCrypto,
-
-    OpenAIWhisperTimer,
-    { provide: CAPTION_TIMER, useExisting: OpenAIWhisperTimer },
-
-    YouTubeShortsPublisher,
-    YouTubeLongFormPublisher,
-    TikTokPublisher,
-    InstagramReelsPublisher,
-    FacebookReelsPublisher,
-    LinkedInPublisher,
-    {
-      provide: PLATFORM_PUBLISHERS,
-      useFactory: (
-        yt: YouTubeShortsPublisher,
-        ytLong: YouTubeLongFormPublisher,
-        tt: TikTokPublisher,
-        ig: InstagramReelsPublisher,
-        fb: FacebookReelsPublisher,
-        li: LinkedInPublisher,
-      ) => [yt, ytLong, tt, ig, fb, li],
-      inject: [
-        YouTubeShortsPublisher,
-        YouTubeLongFormPublisher,
-        TikTokPublisher,
-        InstagramReelsPublisher,
-        FacebookReelsPublisher,
-        LinkedInPublisher,
-      ],
-    },
-    PlatformPublisherRegistry,
-
-    RemotionCLIRenderer,
-    { provide: VIDEO_RENDERER, useExisting: RemotionCLIRenderer },
-
-    PuppeteerLeadMagnetRenderer,
-    { provide: LEAD_MAGNET_RENDERER, useExisting: PuppeteerLeadMagnetRenderer },
-
     ShortLinkService,
     AttributionService,
-
-    YouTubeMetricsService,
-    TikTokMetricsService,
-    InstagramMetricsService,
-    FacebookMetricsService,
-    LinkedInMetricsService,
-    MetricsPullerService,
-    HookABService,
-    HookPromoterService,
-    RevenueAttributionService,
-    PerformanceService,
-    SuggestedRunsService,
-    AlertDispatcherService,
-    StallDetectorService,
-    QueueMonitorService,
-    SuccessRateService,
-    CostCapService,
-    TriggerRuleEvaluatorService,
-    AutoIdeationService,
-    Pull24hMetricsCron,
-    Pull7dMetricsCron,
-    Pull30dMetricsCron,
-    HookPromotionCron,
-    CredentialHealthProbeCron,
-    QueueMonitorCron,
-    SuccessRateCheckCron,
-    MagnetPromotionCron,
-    AutoIdeationScoreScanCron,
-    AutoIdeationRankScanCron,
-    AutoIdeationThresholdScanCron,
-    RecoverStuckRunsCron,
-    CleanupTransientRefsCron,
-
-    FetchDataHandler,
-    GenerateScriptHandler,
-    VerifyDataHandler,
-    LintVoiceHandler,
-    SynthesizeAudioHandler,
-    RenderVideoHandler,
-    RenderThumbnailHandler,
-    TimeCaptionsHandler,
-    PublishHandler,
-    PublishYouTubeShortsHandler,
-    PublishTikTokHandler,
-    PublishInstagramHandler,
-    PublishFacebookHandler,
-    PublishLinkedInHandler,
-    GenerateLeadMagnetHandler,
-    HandlersBootstrapService,
 
     PlatformManagerService,
     PipelineSettingsService,
@@ -294,9 +156,17 @@ import { FeedTopUpCron } from './crons/feed-topup.cron';
     ScopeService,
     RankingResolverService,
     MetroHeroImageService,
+    MetroPhotoService,
+    MetroBrollService,
 
     FeedService,
-    FeedTopUpCron,
+    FeedPostGeneratorService,
+    PostImageRenderService,
+    PostVideoCardService,
+
+    ...CONTENT_PIPELINE_DRIVER_PROVIDERS,
+    ...CONTENT_PIPELINE_JOB_HANDLER_PROVIDERS,
+    ...CONTENT_PIPELINE_ANALYTICS_PROVIDERS,
   ],
   exports: [
     ContentRunsService,

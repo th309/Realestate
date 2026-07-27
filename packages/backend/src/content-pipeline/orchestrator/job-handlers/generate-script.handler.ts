@@ -5,6 +5,8 @@ import {
   SCRIPT_GENERATOR,
   ScriptGenerator,
 } from '../../drivers/script-generator.interface';
+import { CostCapService } from '../../auto-ideation/cost-cap.service';
+import { recordDriverSpend } from './record-driver-spend';
 
 @Injectable()
 export class GenerateScriptHandler {
@@ -14,6 +16,7 @@ export class GenerateScriptHandler {
     private readonly orchestrator: RunOrchestratorService,
     @Inject(SCRIPT_GENERATOR) private readonly scriptGen: ScriptGenerator,
     private readonly supabase: SupabaseService,
+    private readonly costCap: CostCapService,
   ) {}
 
   async handle(runId: string): Promise<void> {
@@ -132,6 +135,14 @@ export class GenerateScriptHandler {
           costs: { script: [result.cost] },
         })
         .eq('id', runId);
+
+      await recordDriverSpend(
+        this.costCap,
+        this.logger,
+        'generate-script',
+        runId,
+        result.cost,
+      );
 
       // Idempotent write: clear any prior script/script_raw rows first so
       // downstream .single() reads don't blow up after a retry.

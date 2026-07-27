@@ -18,6 +18,9 @@ const DONE_POLLING = [
   "failed",
   "rejected",
   "ready_for_review",
+  // Terminal success for the infographic lane — the PNG moves on as a draft
+  // post, so the run will never change again and polling it is pure waste.
+  "infographic_ready",
   "cancelled",
 ];
 
@@ -28,6 +31,9 @@ const TRULY_TERMINAL = [
   "published_partial",
   "failed",
   "rejected",
+  // The backend allows no transition out of infographic_ready, so offering
+  // Cancel here would surface a button the server refuses.
+  "infographic_ready",
   "cancelled",
 ];
 
@@ -130,6 +136,7 @@ export default function RunDetailPage() {
 
       <PipelineVisualization
         status={data.run.status}
+        format={data.run.format}
         eventsByType={eventsByType}
         trailing={
           canCancel ? (

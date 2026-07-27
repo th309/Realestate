@@ -10,6 +10,8 @@
  * from the data snapshot at runtime.
  */
 
+import { PROPERTYIQ_COVERAGE_STAT } from '../../content-pipeline/brand-kit/propertyiq-brand-seed';
+
 export type PlatformStage =
   | 'pre-launch'
   | 'early-launch'
@@ -114,7 +116,7 @@ export function buildProductContext(input: ProductContextInput): string {
 
   return `
 === PRODUCT OVERVIEW ===
-PropertyIQ is an AI-powered real estate market intelligence platform. It uses machine learning to rank 925 US metros, 3,100+ counties, and 33,000+ ZIP codes — helping homebuyers, investors, and real estate professionals identify markets that outperform. The platform combines data from Zillow, Realtor.com, Redfin, US Census, and FRED into proprietary scoring algorithms.
+PropertyIQ is an AI-powered real estate market intelligence platform. It uses machine learning to rank ${PROPERTYIQ_COVERAGE_STAT} — helping homebuyers, investors, and real estate professionals identify markets that outperform. The platform combines data from Zillow, Realtor.com, Redfin, US Census, and FRED into proprietary scoring algorithms.
 
 Core value proposition: "We find the markets that outperform" with personalized AI real estate reports.
 The founder is a solo developer (not a marketer) building the product. Every recommendation must include specific, actionable steps a developer can follow.
@@ -135,7 +137,7 @@ FREE (no credit card required):
 PRO (monthly/yearly billing, free trial available):
 - Everything in Free, plus:
 - Metro, county, and ZIP code level data
-- PropertyIQ Score (unified market quality score)
+- PropertyIQ Score (market momentum/timing signal, 1-99)
 - Unlimited AI report generation
 - CSV data export
 - Metric filtering & comparisons
@@ -151,13 +153,13 @@ ENTERPRISE (contact sales):
 === KEY FEATURES ===
 
 1. Market Discovery & Ranking
-   - Browse/search/rank 925 metros, 3,100+ counties, 33,000+ ZIPs
+   - Browse/search/rank ${PROPERTYIQ_COVERAGE_STAT}
    - Sort and filter by PropertyIQ scores
    - Drill-down navigation: state -> metro -> county -> ZIP
    - Interactive color-coded map with metric overlays
 
-2. PropertyIQ Scoring System (0-100 scale with A/B/C/F confidence grades)
-   PropertyIQ Score — unified 0-100 market quality score predicting 3-year excess appreciation
+2. PropertyIQ Scoring System (1-99 scale with A/B/C/F confidence grades; 50 = state average)
+   PropertyIQ Score — a momentum/timing signal for where a market's demand is heading now (not a quality grade); higher scores predict outperformance relative to the market's state
 
 3. 50+ Real Estate Metrics across categories:
    - Home Values: ZHVI, listing price, YoY change, forecast, price/sqft
@@ -202,7 +204,7 @@ Public Marketing Pages:
 
 Core Product Pages (require sign-in for full access):
 /map (interactive color-coded map with metric overlays — the main product experience)
-/market (market explorer — browse/search/rank 925 metros, 3,100+ counties, 33,000+ ZIPs)
+/market (market explorer — browse/search/rank ${PROPERTYIQ_COVERAGE_STAT})
 /market/[id] (market detail page — scores, metrics, charts for a single market)
 /markets (SEO-friendly market directory — static landing pages for organic search)
 /markets/[slug] (individual market landing page — SEO-optimized, publicly accessible)

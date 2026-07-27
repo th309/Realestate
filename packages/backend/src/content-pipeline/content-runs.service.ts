@@ -7,6 +7,7 @@ import { ContentDataService } from './data/content-data.service';
 import { LeadMagnetKind } from './drivers/lead-magnet-renderer.interface';
 import { RankingResolverService } from './ranking/ranking-resolver.service';
 import { CostCapService } from './auto-ideation/cost-cap.service';
+import { createInfographicRun } from './infographics/create-infographic-run';
 
 /**
  * Operations that *create* content-pipeline work: spawn a new run from
@@ -28,6 +29,8 @@ export class ContentRunsService {
     brokerage_market_share: 0.09,
     recruitment_angle: 0.1,
     long_form_deep_dive: 2.2,
+    // NotebookLM generation runs on the free tier — no per-run API spend.
+    infographic: 0.0,
   };
 
   constructor(
@@ -54,6 +57,13 @@ export class ContentRunsService {
         idempotencyKey: dto.idempotencyKey,
         status: existing.data.status,
       };
+    }
+
+    // Infographics have no format_templates row (no script, no voice, no
+    // platforms to configure) and are never handed to the orchestrator — the
+    // local NotebookLM worker picks them up straight from the database.
+    if (dto.format === 'infographic') {
+      return createInfographicRun(client, dto);
     }
 
     if (

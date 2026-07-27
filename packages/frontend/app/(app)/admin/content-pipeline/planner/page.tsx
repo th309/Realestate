@@ -83,12 +83,19 @@ export default function PlannerPage() {
     queryFn: () => fetchPosts({ status: "approved", limit: 500 }),
   });
 
+  // video_script posts are suggestions (they become runs, never publishable
+  // posts), so they never belong on the calendar or in the schedule tray.
+  const isSchedulable = (p: PlannerPost) => p.post_type !== "video_script";
+
   const scheduledPosts = useMemo(
-    () => scheduledQuery.data?.posts ?? [],
+    () => (scheduledQuery.data?.posts ?? []).filter(isSchedulable),
     [scheduledQuery.data],
   );
   const unscheduledPosts = useMemo(
-    () => (approvedQuery.data?.posts ?? []).filter((p) => !p.scheduled_at),
+    () =>
+      (approvedQuery.data?.posts ?? []).filter(
+        (p) => !p.scheduled_at && isSchedulable(p),
+      ),
     [approvedQuery.data],
   );
 
