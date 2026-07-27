@@ -37,10 +37,10 @@ All statically generated (`generateStaticParams`), only emitted where ≥1 post 
 
 - `BlogFrontmatter` (`lib/blog/types.ts`) gains `states: string[]` — USPS two-letter
   codes (e.g. `["OH"]`). Empty array = national post. Multi-state posts list every state.
-- New shared module `lib/blog/us-states.ts`: canonical 50-state (+DC) table with
-  `code ↔ slug ↔ display name` lookups. The existing state map inside
-  `lib/blog/extract-market.ts` is re-pointed at this module **without changing
-  `extractMarketFromTags` behavior** (its consumers: BlogMarketCTA).
+- State `code ↔ slug ↔ display name` lookups reuse the existing canonical table
+  `lib/data/state-slug-data.ts` (already powers `/markets/state/[state]` and the
+  sitemap — same slug convention site-wide). `lib/blog/extract-market.ts` is left
+  completely untouched.
 - New `lib/blog/archive.ts` helpers, all built on `getAllPosts()` (so the future-date
   filter and prod memoization carry over):
   - `getArchiveTree()` → `[{ year, months: [{ month, count }] }]`, newest first
@@ -87,7 +87,8 @@ text filter, and Latest strip are untouched. M3 styling per CLAUDE.md §8 (chips
 
 - Unit tests for `archive.ts` helpers (tree shape, month filtering, state grouping,
   national bucket, slug/code resolution).
-- Unit tests for `us-states.ts` lookups (slug round-trip, `north-carolina` style slugs).
+- State slug/code resolution (including two-word slugs like `north-carolina`) is
+  covered by the `archive.ts` tests via `lib/data/state-slug-data.ts`.
 - Corpus validation test described under Backfill.
 - Manual: build passes; spot-check `/blog/archive/2026/04`, `/blog/states/ohio`,
   `/blog/states/national` in the running app.
