@@ -94,6 +94,7 @@ fi
 
 # --- Validate added/modified posts --------------------------------------------
 TODAY="$(date +%F)"
+STALE_CUTOFF="$(date -d '-14 days' +%F 2>/dev/null || date +%F)"
 PUBLISH=()       # files that will actually be committed
 PUBLISH_NEW=()   # subset of PUBLISH that is brand-new (drives the live poll)
 frontmatter() { awk '/^---[[:space:]]*$/{c++; next} c==1{print} c>=2{exit}' "$1"; }
@@ -110,6 +111,12 @@ validate_post() {
   if [[ "$post_date" > "$TODAY" ]]; then
     SKIPPED_FUTURE+=("$file (dated $post_date)")
     return 1
+  fi
+
+  # The index sorts by date; a stale date buries a new post below "Latest" and
+  # past its category's visible-6 cutoff. Warn (generators tend to copy dates).
+  if [[ "$post_date" < "$STALE_CUTOFF" ]]; then
+    echo "   NOTE: $file is dated $post_date (>14 days old) — it will sort mid-index, not under Latest."
   fi
 
   # Retired coverage-count claims are a hard fail (see CLAUDE.md §9: use COVERAGE_COPY).
