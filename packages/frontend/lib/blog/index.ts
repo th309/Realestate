@@ -49,6 +49,7 @@ export function getPostBySlug(slug: string): BlogPost | null {
     author: data.author ?? "PropertyIQ Research",
     category: data.category ?? "market-analysis",
     tags: Array.isArray(data.tags) ? data.tags : [],
+    states: Array.isArray(data.states) ? data.states.map(String) : [],
     targetKeyword: data.targetKeyword ?? "",
   };
   const stats = readingTime(content);
