@@ -47,6 +47,11 @@ import { AutoIdeationController } from './auto-ideation/auto-ideation.controller
 
 import { InfographicOptionsController } from './infographics/infographic-options.controller';
 
+// WeeklySchedulePlanService and PostAutoSchedulerService are registered in
+// PostsBrandKitModule (see that file's doc comment for why) and exported for
+// use here — only the controller lives in this module.
+import { WeeklySchedulePlanController } from './scheduling/weekly-schedule-plan.controller';
+
 import { RankingResolverController } from './ranking/ranking-resolver.controller';
 import { RankingResolverService } from './ranking/ranking-resolver.service';
 import { MetroHeroImageService } from './metro-hero-image.service';
@@ -112,6 +117,7 @@ import { CONTENT_PIPELINE_ANALYTICS_PROVIDERS } from './content-pipeline-analyti
     AutoIdeationController,
     PostGenerateController,
     InfographicOptionsController,
+    WeeklySchedulePlanController,
   ],
   providers: [
     ContentRunsService,

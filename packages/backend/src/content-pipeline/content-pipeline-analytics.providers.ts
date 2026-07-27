@@ -33,6 +33,7 @@ import { RecoverStuckRunsCron } from './crons/recover-stuck-runs.cron';
 import { CleanupTransientRefsCron } from './crons/cleanup-transient-refs.cron';
 import { RefreshArchetypesCron } from './crons/refresh-archetypes.cron';
 import { FeedTopUpCron } from './crons/feed-topup.cron';
+import { AutoScheduleApprovedPostsCron } from './crons/auto-schedule-approved-posts.cron';
 
 /**
  * Post-publish measurement (platform metrics, revenue attribution, hook A/B),
@@ -74,4 +75,5 @@ export const CONTENT_PIPELINE_ANALYTICS_PROVIDERS: Provider[] = [
   CleanupTransientRefsCron,
   RefreshArchetypesCron,
   FeedTopUpCron,
+  AutoScheduleApprovedPostsCron,
 ];
