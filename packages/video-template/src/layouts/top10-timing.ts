@@ -9,7 +9,20 @@
  */
 
 export const FPS = 30;
-export const BUMPER_FRAMES = 60;
+/**
+ * Re-exported from constants so the bumper length has exactly ONE
+ * definition. Every beat table's "reclaim the bumper's frames" math depends
+ * on this matching BrandBumper's real sting length; two copies could drift
+ * and silently desync ranking timing from every other format.
+ */
+export { BUMPER_FRAMES } from "../constants";
+
+/**
+ * Rows a ranking composition actually renders. The layout slices to this,
+ * so timing and SFX must reason about the same number or the composition's
+ * duration stops matching what plays.
+ */
+export const MAX_RANKING_ROWS = 10;
 /**
  * Frames between frame 0 and the first narrated word. Equals the bumper
  * length on bumper'd formats and 0 on vertical short-form (which opens
@@ -42,7 +55,12 @@ export interface CaptionWord {
 export function computeRankingTiming(
   rowCount: number,
   captionWords: ReadonlyArray<CaptionWord> | undefined,
-  openWithBumper = false,
+  // Required, deliberately: this value must agree across the layout, the
+  // composition's calculateMetadata, and the SFX cues. A default let two of
+  // those three silently disagree, which would truncate the composition
+  // short of its own outro. Making it required turns that into a compile
+  // error instead of a rendering bug nobody sees until playback.
+  openWithBumper: boolean,
 ): RankingTiming {
   // Narration (and therefore every row reveal) starts after the sting only
   // when there IS a sting; otherwise at frame 0.

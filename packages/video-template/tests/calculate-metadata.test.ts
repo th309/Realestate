@@ -89,8 +89,32 @@ describe("calculateRankingMetadata", () => {
     expect(d).toBe(expectedFrames(10)); // 1245
   });
 
+  it("caps at the rows the layout actually renders", () => {
+    // An over-fetched candidate list must not stretch the composition past
+    // what plays. Top10Layout slices to 10, so 15 candidates still yield a
+    // 10-row duration — otherwise the video runs on past its own outro.
+    const overfetched = {
+      ...(propsForN(10) as any),
+      params: {
+        ...(propsForN(10) as any).params,
+        resolved_markets: Array.from({ length: 15 }, (_, i) => ({
+          rank: i + 1,
+          region_id: `r${i}`,
+          region_name: `Market ${i}`,
+          state: "TX",
+          value: 100 - i,
+          value_formatted: `${100 - i}`,
+        })),
+      },
+    };
+    const d = calculateRankingMetadata({
+      props: overfetched,
+    } as any).durationInFrames;
+    expect(d).toBe(expectedFrames(10));
+  });
+
   it("opens on the hook at frame 0 — no bumper gap on vertical", () => {
-    const timing = computeRankingTiming(10, undefined);
+    const timing = computeRankingTiming(10, undefined, false);
     expect(timing.hookStartFrame).toBe(0);
   });
 

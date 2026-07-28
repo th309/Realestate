@@ -5,7 +5,10 @@
  */
 import type { SfxCue } from "./AudioMix";
 import { buildGradeRevealBeats } from "../layouts/grade-reveal-beats";
-import { computeRankingTiming } from "../layouts/top10-timing";
+import {
+  MAX_RANKING_ROWS,
+  computeRankingTiming,
+} from "../layouts/top10-timing";
 import {
   DELTA_SETTLE_FRAMES,
   DELTA_TICK_DELAY,
@@ -55,10 +58,20 @@ function gradeFamilyCues(scale: number, openWithBumper: boolean): SfxCue[] {
  * exactly as the narrator says "Number N." and the hero row swaps. The final
  * stage is #1 (the layout reverses the list), so it gets the chime.
  */
-function rankingCues(props: RankingVideoProps): SfxCue[] {
-  // Mirrors Top10Layout: at most 10 markets, counted down #N → #1.
-  const rowCount = Math.min(10, props.params.resolved_markets.length);
-  const timing = computeRankingTiming(rowCount, props.captionWords);
+function rankingCues(
+  props: RankingVideoProps,
+  openWithBumper: boolean,
+): SfxCue[] {
+  // Mirrors Top10Layout: at most MAX_RANKING_ROWS markets, counted #N → #1.
+  const rowCount = Math.min(
+    MAX_RANKING_ROWS,
+    props.params.resolved_markets.length,
+  );
+  const timing = computeRankingTiming(
+    rowCount,
+    props.captionWords,
+    openWithBumper,
+  );
   const cues: SfxCue[] = [{ frame: timing.hookStartFrame, sound: "whoosh" }];
   timing.rowStartFrames.forEach((frame, i) => {
     const isFinalRank = i === timing.rowStartFrames.length - 1;
@@ -131,7 +144,7 @@ export function buildSfxCues(
       return gradeFamilyCues(3, openWithBumper);
     case "top_10_ranking":
     case "bottom_10_ranking":
-      return rankingCues(props);
+      return rankingCues(props, openWithBumper);
     case "score_mover":
       return scoreMoverCues(openWithBumper);
     case "farm_area_spotlight":

@@ -15,6 +15,7 @@ import {
 } from "./constants";
 import {
   BRAND_OUTRO_FRAMES,
+  MAX_RANKING_ROWS,
   computeRankingTiming,
 } from "./layouts/top10-timing";
 
@@ -30,8 +31,21 @@ export const calculateRankingMetadata = ({
 }: {
   props: RankingVideoProps;
 }) => {
-  const n = props.params?.resolved_markets?.length || 10;
-  const timing = computeRankingTiming(n, props.captionWords);
+  // Cap to the rows the layout actually renders (Top10Layout slices to the
+  // same limit). An over-fetched candidate list would otherwise make this
+  // compute a duration for rows nobody sees — and worse, the caption-aligned
+  // branch requires one "Number N" cue per row, so an inflated rowCount
+  // silently drops it to generic even-spacing and the composition's length
+  // stops matching its own audio.
+  const n = Math.min(
+    MAX_RANKING_ROWS,
+    props.params?.resolved_markets?.length || MAX_RANKING_ROWS,
+  );
+  const timing = computeRankingTiming(
+    n,
+    props.captionWords,
+    FORMAT_CONFIGS[props.format].openWithBumper,
+  );
   return {
     durationInFrames: timing.totalFrames + BRAND_OUTRO_FRAMES,
     fps: 30,

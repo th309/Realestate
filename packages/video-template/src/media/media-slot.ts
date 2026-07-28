@@ -59,7 +59,14 @@ export const MediaSlotSchema = z
       .strict()
       .optional(),
   })
-  .strict();
+  .strict()
+  .refine((slot) => !slot.focusRegion || slot.sourceAspect !== undefined, {
+    message:
+      "sourceAspect is required whenever focusRegion is set — without the " +
+      "source's shape the region cannot be mapped onto the frame, and a " +
+      "16:9 asset in a 9:16 frame lands the punch-in somewhere else entirely",
+    path: ["sourceAspect"],
+  });
 
 export type MediaSlotValue = z.infer<typeof MediaSlotSchema>;
 

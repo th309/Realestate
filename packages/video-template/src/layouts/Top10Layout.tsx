@@ -14,6 +14,7 @@ import type { RankingVideoProps } from "../types";
 import {
   BRAND_OUTRO_FRAMES,
   BUMPER_FRAMES,
+  MAX_RANKING_ROWS,
   computeRankingTiming,
   formatAsOf,
   shortenLabel,
@@ -73,7 +74,9 @@ export const Top10Layout: React.FC<Top10LayoutProps> = (props) => {
 
   // Reveal cadence: count down #N → #1, so ordered[0] is the lowest-rank
   // market the audience sees first.
-  const ordered = [...params.resolved_markets].slice(0, 10).reverse();
+  const ordered = [...params.resolved_markets]
+    .slice(0, MAX_RANKING_ROWS)
+    .reverse();
   const { format } = useLayoutConfig();
   const openWithBumper = format.openWithBumper;
   const bumperFrames = openWithBumper ? BUMPER_FRAMES : 0;
