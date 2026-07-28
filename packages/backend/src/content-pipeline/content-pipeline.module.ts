@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { ContentPipelineController } from './content-pipeline.controller';
 import { ContentPipelineRunsController } from './content-pipeline-runs.controller';
 import { ContentPipelinePlatformsController } from './content-pipeline-platforms.controller';
+import { CopySuggestController } from './copy-suggest/copy-suggest.controller';
+import { CopySuggestService } from './copy-suggest/copy-suggest.service';
 import { PlatformOAuthCallbackController } from './platform-oauth-callback.controller';
 import { ContentRunsService } from './content-runs.service';
 import { ContentPipelineQueriesService } from './content-pipeline-queries.service';
@@ -108,6 +110,7 @@ import { CONTENT_PIPELINE_ANALYTICS_PROVIDERS } from './content-pipeline-analyti
     ContentPipelineRunsController,
     ContentPipelineController,
     ContentPipelinePlatformsController,
+    CopySuggestController,
     PlatformOAuthCallbackController,
     ShortLinkController,
     MagnetLibraryController,
@@ -129,6 +132,7 @@ import { CONTENT_PIPELINE_ANALYTICS_PROVIDERS } from './content-pipeline-analyti
     RunActionsService,
     RunThumbnailService,
     RunMediaSlotService,
+    CopySuggestService,
     MagnetLibraryService,
     DashboardMagnetsService,
     LeadMagnetBindingService,
