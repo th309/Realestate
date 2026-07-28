@@ -8,6 +8,15 @@
     "render-thumbnail": "./dist/cli/render-thumbnail-cli.js",
     "render-preflight": "./dist/cli/preflight-cli.js"
   },
+  "//exports": "The manifest is read by three consumers — the renderer, the create-run contract, and the admin wizard — but only the first lives in this package, so the catalogue needs a real entry point. It sits on its own subpath rather than the package root because the root (src/index.ts) is Remotion's entry: importing it calls registerRoot() and drags in the whole composition tree, React and Mapbox included. ./formats is pure data and constants, safe in a Next.js bundle. NOTE the ./dist/* wildcard is load-bearing: an exports map is a whitelist, and the backend renderer resolves ./dist/cli/render-cli.js by path. Dropping it silently breaks every video render.",
+  "exports": {
+    "./formats": {
+      "types": "./dist/formats/manifest.d.ts",
+      "default": "./dist/formats/manifest.js"
+    },
+    "./dist/*": "./dist/*",
+    "./package.json": "./package.json"
+  },
   "scripts": {
     "start": "npx remotion studio",
     "render": "npx remotion render grade-reveal out.mp4",

@@ -11,7 +11,12 @@
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "outDir": "dist",
-    "rootDir": "src"
+    "rootDir": "src",
+    // Consumers outside this package (the admin wizard reads the format
+    // manifest) need types, not just JS — without these the import resolves
+    // to `any` and the manifest stops being a contract.
+    "declaration": true,
+    "declarationMap": true
   },
   "include": ["src"],
   "exclude": ["node_modules", "dist"]
