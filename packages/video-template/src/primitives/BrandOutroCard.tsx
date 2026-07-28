@@ -8,6 +8,11 @@ import { useLayoutConfig } from "../layout/useLayoutConfig";
 export interface BrandOutroCardProps {
   ctaUrl: string;
   score?: number;
+  /**
+   * Authored closing line, shown above the wordmark. Formats that generate
+   * their own copy from data omit it and keep the standing brand close.
+   */
+  headline?: string;
 }
 
 /**
@@ -18,8 +23,9 @@ export interface BrandOutroCardProps {
 export const BrandOutroCard: React.FC<BrandOutroCardProps> = ({
   ctaUrl,
   score,
+  headline,
 }) => {
-  const { scale } = useLayoutConfig();
+  const { scale, isVertical } = useLayoutConfig();
   return (
     <AbsoluteFill
       style={{
@@ -32,6 +38,24 @@ export const BrandOutroCard: React.FC<BrandOutroCardProps> = ({
       {typeof score === "number" && (
         <AnimatedEntrance index={0} from="scale" preset="gentle">
           <ScoreRing score={score} size={220 * scale} delay={6} />
+        </AnimatedEntrance>
+      )}
+      {headline && (
+        <AnimatedEntrance index={0} from="rise" distance={32}>
+          <div
+            style={{
+              color: PALETTE.surface,
+              fontFamily: FONTS.display,
+              fontSize: (isVertical ? 68 : 54) * scale,
+              fontWeight: 800,
+              letterSpacing: "-0.02em",
+              lineHeight: 1.05,
+              textAlign: "center",
+              maxWidth: 900 * scale,
+            }}
+          >
+            {headline}
+          </div>
         </AnimatedEntrance>
       )}
       <AnimatedEntrance index={1} from="rise">

@@ -12,6 +12,15 @@ export interface ScoreRingProps {
   strokeWidth?: number;
   /** Hide the numeral when the parent renders its own readout. */
   showNumber?: boolean;
+  /**
+   * Sweep the dial, or draw it already arrived. Defaults to sweeping.
+   *
+   * A spring driven by useCurrentFrame() renders its PRE-animation state at
+   * frame 0 — an empty arc reading zero. That is invisible inside a video,
+   * where frame 0 flicks past, but it is the entire image on a one-frame
+   * still, so thumbnails must opt out of the motion.
+   */
+  animate?: boolean;
 }
 
 /**
@@ -30,14 +39,16 @@ export const ScoreRing: React.FC<ScoreRingProps> = ({
   delay = 0,
   strokeWidth,
   showNumber = true,
+  animate = true,
 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const progress = spring({
+  const animated = spring({
     frame: frame - delay,
     fps,
     config: SPRINGS.counter,
   });
+  const progress = animate ? animated : 1;
 
   const stroke = strokeWidth ?? Math.max(8, size * 0.05);
   const radius = size / 2 - stroke - CHART.endpointRadius;

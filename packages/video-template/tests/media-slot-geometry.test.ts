@@ -83,6 +83,19 @@ describe("punchInGeometry", () => {
     expect(end.scale / start.scale).toBeLessThan(1.15);
   });
 
+  it("resolves slot URLs idempotently", async () => {
+    // A caller may hand us a signed https link, a bare package-relative
+    // path, or a path it already put through staticFile() (which returns a
+    // root-relative path with no scheme). Only the bare one may be
+    // resolved; doubling a prefix on the others silently 404s.
+    const alreadyResolved = (url: string) =>
+      /^[a-z][a-z0-9+.-]*:/i.test(url) || url.startsWith("/");
+
+    expect(alreadyResolved("https://cdn.example.com/a.png")).toBe(true);
+    expect(alreadyResolved("/test-fixtures/a.png")).toBe(true);
+    expect(alreadyResolved("test-fixtures/a.png")).toBe(false);
+  });
+
   it("treats the asset as frame-shaped when no aspect is supplied", () => {
     const geo = punchInGeometry(undefined, 0, W, H);
     expect(geo.boxWidth).toBe(W);

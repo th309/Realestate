@@ -7,13 +7,19 @@ import {
   RankingVideoProps,
   SingleMarketVideoProps,
 } from "./types";
-import { FORMAT_KEYS, compositionId } from "./formats/manifest";
+import {
+  FORMAT_KEYS,
+  FORMAT_MANIFEST,
+  compositionId,
+} from "./formats/manifest";
+import { ThumbnailLayout } from "./layouts/ThumbnailLayout";
 import { isProductDemoFormat } from "./formats/product-demo-format";
 import type { ProductDemoVideoProps } from "./types";
 import {
   PropertyIQVideo,
   calculateRankingMetadata,
   calculateLongFormMetadata,
+  calculateProductDemoMetadata,
 } from "./PropertyIQVideo";
 import { loadBrandFonts } from "./styles/fonts";
 import {
@@ -140,6 +146,19 @@ export const RemotionRoot: React.FC = () => {
                 height: number;
               }>,
             })}
+            {...(isProductDemoFormat(key) && {
+              // Length follows the authored feature count — three features
+              // and six are different videos.
+              calculateMetadata:
+                calculateProductDemoMetadata as unknown as (arg: {
+                  props: Record<string, unknown>;
+                }) => Promise<{
+                  durationInFrames: number;
+                  fps: number;
+                  width: number;
+                  height: number;
+                }>,
+            })}
             {...(isLongForm && {
               calculateMetadata: calculateLongFormMetadata as unknown as (arg: {
                 props: Record<string, unknown>;
@@ -150,6 +169,37 @@ export const RemotionRoot: React.FC = () => {
                 height: number;
               }>,
             })}
+          />
+        );
+      })}
+
+      {/*
+        One designed thumbnail composition per format, rendered as a still
+        instead of grabbing a frame out of the video. A frame lifted from
+        motion is mid-word and accidentally composed; for YouTube the
+        thumbnail is about half the click decision.
+      */}
+      {FORMAT_KEYS.map((key) => {
+        const m = FORMAT_MANIFEST[key];
+        return (
+          <Composition
+            key={`${key}-thumb`}
+            id={`${compositionId(key)}-thumbnail`}
+            component={
+              ThumbnailLayout as unknown as React.FC<Record<string, unknown>>
+            }
+            durationInFrames={1}
+            fps={m.fps}
+            width={m.width}
+            height={m.height}
+            defaultProps={
+              {
+                formatKey: key,
+                variant: m.thumbnail.layout,
+                headline: m.displayName,
+                eyebrow: "PropertyIQ",
+              } as unknown as Record<string, unknown>
+            }
           />
         );
       })}

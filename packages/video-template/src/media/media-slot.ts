@@ -50,6 +50,14 @@ export const MediaSlotSchema = z
     sourceAspect: z.number().positive().optional(),
     /** Dim everything outside the focus region while punching in. */
     spotlight: z.boolean().optional(),
+    /**
+     * Length of a video slot's clip, in frames.
+     *
+     * Lets a beat run as long as its footage instead of a budgeted guess —
+     * an avatar hook should end when the presenter stops talking, not when
+     * a constant says so. Probed at upload alongside sourceAspect.
+     */
+    durationInFrames: z.number().int().positive().optional(),
     /** Trim points for video slots, in ms from the asset's start. */
     trimMs: z
       .object({

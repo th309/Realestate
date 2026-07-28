@@ -1,5 +1,11 @@
 import React from "react";
-import { AbsoluteFill, Img, OffthreadVideo, useVideoConfig } from "remotion";
+import {
+  AbsoluteFill,
+  Img,
+  OffthreadVideo,
+  staticFile,
+  useVideoConfig,
+} from "remotion";
 import { useScriptedProgress } from "../motion";
 import { PALETTE, withAlpha } from "../styles/tokens";
 import { punchInGeometry, type MediaSlotValue } from "../media/media-slot";
@@ -43,6 +49,21 @@ export const MediaSlot: React.FC<MediaSlotProps> = ({
     sourceAspect: slot.sourceAspect,
   });
 
+  /*
+   * A bare relative path means an asset shipped inside this package, and
+   * must go through staticFile() HERE — resolving it caller-side gives a
+   * URL that does not exist, because staticFile only knows the serve origin
+   * from inside the render.
+   *
+   * Idempotent on purpose: a signed https link from a real run passes
+   * through, and so does a path a caller ALREADY put through staticFile()
+   * (which returns a root-relative path, not a scheme). Resolving one of
+   * those twice yields a doubled prefix that silently 404s.
+   */
+  const alreadyResolved =
+    /^[a-z][a-z0-9+.-]*:/i.test(slot.url) || slot.url.startsWith("/");
+  const src = alreadyResolved ? slot.url : staticFile(slot.url);
+
   // The element is laid out at the ASSET's shape, not the frame's, so the
   // focus region's coordinates stay linear under the transform.
   const assetStyle: React.CSSProperties = {
@@ -64,10 +85,10 @@ export const MediaSlot: React.FC<MediaSlotProps> = ({
         }}
       >
         {slot.kind === "image" ? (
-          <Img src={slot.url} style={assetStyle} />
+          <Img src={src} style={assetStyle} />
         ) : (
           <OffthreadVideo
-            src={slot.url}
+            src={src}
             startFrom={msToFrames(slot.trimMs?.start)}
             endAt={msToFrames(slot.trimMs?.end)}
             style={assetStyle}

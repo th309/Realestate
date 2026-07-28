@@ -4,7 +4,9 @@ import {
   VideoProps,
   RankingVideoProps,
   SingleMarketVideoProps,
+  ProductDemoVideoProps,
   FORMAT_CONFIGS,
+  FORMAT_MANIFEST,
 } from "./types";
 import { AudioMix } from "./audio/AudioMix";
 import { buildSfxCues } from "./audio/sfx-cues";
@@ -105,6 +107,37 @@ import { LongFormDeepDiveLayout } from "./layouts/LongFormDeepDiveLayout";
 import { BrokerageMarketShareLayout } from "./layouts/BrokerageMarketShareLayout";
 import { RecruitmentAngleLayout } from "./layouts/RecruitmentAngleLayout";
 import { CaptionOverlay } from "./primitives/CaptionOverlay";
+import { ProductDemoLayout } from "./layouts/ProductDemoLayout";
+import { isProductDemoFormat } from "./formats/product-demo-format";
+import { buildProductDemoBeats } from "./lib/product-demo-timing";
+
+/**
+ * A product demo's length comes from how many features were authored, not
+ * from a catalogue constant — three features and six are different videos.
+ */
+export const calculateProductDemoMetadata = ({
+  props,
+}: {
+  props: ProductDemoVideoProps;
+}) => {
+  const manifest = FORMAT_MANIFEST[props.format];
+  const hookFrames =
+    props.hook?.kind === "avatar_video"
+      ? props.hook.slot?.durationInFrames
+      : undefined;
+  const beats = buildProductDemoBeats(
+    props.features?.length ?? 1,
+    manifest.beats,
+    manifest.fps,
+    hookFrames,
+  );
+  return {
+    durationInFrames: beats.totalFrames,
+    fps: manifest.fps,
+    width: manifest.width,
+    height: manifest.height,
+  };
+};
 
 export const PropertyIQVideo: React.FC<VideoProps> = (props) => {
   const cfg = FORMAT_CONFIGS[props.format];
@@ -130,6 +163,9 @@ export const PropertyIQVideo: React.FC<VideoProps> = (props) => {
         )}
         {props.format === "recruitment_angle" && (
           <RecruitmentAngleLayout {...props} />
+        )}
+        {isProductDemoFormat(props.format) && (
+          <ProductDemoLayout {...(props as ProductDemoVideoProps)} />
         )}
         {/* Other formats rendered in later phases.
             CaptionOverlay is suppressed for ranking layouts — they have

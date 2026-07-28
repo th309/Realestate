@@ -22,9 +22,6 @@ export interface MediaCalloutProps {
   delay?: number;
 }
 
-/** Approximate label width used for edge-flipping, as a fraction of frame width. */
-const LABEL_WIDTH_FRACTION = 0.46;
-
 /**
  * A labeled annotation pinned to a point on the media beneath it: a dot at
  * the anchor, a short connector, and a pill carrying the words.
@@ -40,17 +37,29 @@ export const MediaCallout: React.FC<MediaCalloutProps> = ({
   delay = 0,
 }) => {
   const { width, height } = useVideoConfig();
-  const { scale, safeZone } = useLayoutConfig();
+  const { scale, isVertical, safeZone } = useLayoutConfig();
 
   const anchorX = clamp(at.x * width, safeZone.left, width - safeZone.right);
   const anchorY = clamp(at.y * height, safeZone.top, height - safeZone.bottom);
 
-  // Flip the label to the anchor's left when there isn't room on the right.
-  const labelWidth = width * LABEL_WIDTH_FRACTION;
-  const flip = anchorX + labelWidth > width - safeZone.right;
-
   const dotSize = 18 * scale;
   const connector = 56 * scale;
+
+  /*
+   * Clamping the ANCHOR is not enough — the pill extends from it, so a long
+   * label still runs off-frame. Bound the label to whatever safe width is
+   * left after the dot and connector, and let it wrap. A callout that
+   * spills past the edge is worse than one on two lines.
+   */
+  const safeWidth = width - safeZone.left - safeZone.right;
+  const labelMaxWidth = Math.max(
+    240 * scale,
+    safeWidth - dotSize - connector - 48 * scale,
+  );
+
+  // Flip to the anchor's left when the label wouldn't fit on the right.
+  const armWidth = dotSize + connector + labelMaxWidth;
+  const flip = anchorX + armWidth > width - safeZone.right;
 
   return (
     <AnimatedEntrance
@@ -101,9 +110,10 @@ export const MediaCallout: React.FC<MediaCalloutProps> = ({
             padding: `${14 * scale}px ${26 * scale}px`,
             fontFamily: FONTS.body,
             fontWeight: 700,
-            fontSize: 34 * scale,
+            fontSize: (isVertical ? 30 : 34) * scale,
+            lineHeight: 1.25,
             color: PALETTE.surface,
-            whiteSpace: "nowrap",
+            maxWidth: labelMaxWidth,
             textShadow: `0 2px 8px ${withAlpha(PALETTE.stageDeep, 0.9)}`,
           }}
         >
