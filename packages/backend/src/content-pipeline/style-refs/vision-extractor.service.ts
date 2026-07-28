@@ -163,6 +163,11 @@ Rules:
     let attributes: Record<string, unknown> = {};
     try {
       attributes = JSON.parse(cleaned) as Record<string, unknown>;
+      // The model's palette is rendered as CSS backgroundColor downstream —
+      // enforce the same #RRGGBB contract parseResponse applies to images.
+      attributes.dominant_palette = this.sanitizePalette(
+        attributes.dominant_palette,
+      );
     } catch {
       // Keep the raw response for operator debugging.
       attributes = { summary: raw.slice(0, 600) };
@@ -191,11 +196,7 @@ Rules:
         summary?: unknown;
       };
       return {
-        palette: this.toStringArray(obj.palette)
-          .filter((s) => /^#?[0-9A-Fa-f]{6}$/.test(s))
-          .map((s) =>
-            s.startsWith('#') ? s.toUpperCase() : `#${s.toUpperCase()}`,
-          ),
+        palette: this.sanitizePalette(obj.palette),
         typography: this.toStringArray(obj.typography),
         layout: this.toStringArray(obj.layout),
         summary:
@@ -212,6 +213,15 @@ Rules:
         summary: raw.slice(0, 280),
       };
     }
+  }
+
+  /** Filter an untrusted value down to normalized #RRGGBB hex strings. */
+  private sanitizePalette(v: unknown): string[] {
+    return this.toStringArray(v)
+      .filter((s) => /^#?[0-9A-Fa-f]{6}$/.test(s))
+      .map((s) =>
+        s.startsWith('#') ? s.toUpperCase() : `#${s.toUpperCase()}`,
+      );
   }
 
   private toStringArray(v: unknown): string[] {

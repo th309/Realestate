@@ -5,6 +5,7 @@ import {
   Get,
   BadRequestException,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Req,
@@ -16,10 +17,17 @@ import type { Request } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { AdminGuard } from '../../common/guards/admin-auth.guard';
 import { StyleReferenceService } from './style-reference.service';
+import { StyleReferenceVideoIngestService } from './style-reference-video-ingest.service';
 import {
   CreateStyleReferenceDto,
+  IngestVideoUrlDto,
   UpdateStyleReferenceDto,
+  UploadVideoDto,
 } from '../dto/style-reference.dto';
+
+// Matches the yt-dlp URL path's --max-filesize cap so uploads and URL ingests
+// share one ceiling.
+const UPLOAD_VIDEO_MAX_BYTES = 200 * 1024 * 1024;
 
 interface AuthenticatedRequest extends Request {
   userId?: string;
@@ -28,7 +36,10 @@ interface AuthenticatedRequest extends Request {
 @UseGuards(AdminGuard)
 @Controller('api/admin/content-pipeline/style-references')
 export class StyleReferenceController {
-  constructor(private readonly svc: StyleReferenceService) {}
+  constructor(
+    private readonly svc: StyleReferenceService,
+    private readonly videoIngest: StyleReferenceVideoIngestService,
+  ) {}
 
   @Get()
   async list(@Req() req: AuthenticatedRequest) {
@@ -51,11 +62,13 @@ export class StyleReferenceController {
   }
 
   @Post('upload-video')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: UPLOAD_VIDEO_MAX_BYTES } }),
+  )
   async uploadVideo(
     @Req() req: AuthenticatedRequest,
     @UploadedFile() file: Express.Multer.File | undefined,
-    @Body('label') label: string,
+    @Body() body: UploadVideoDto,
   ) {
     if (!req.userId) {
       throw new BadRequestException('authenticated admin userId missing');
@@ -65,14 +78,14 @@ export class StyleReferenceController {
         'file is required (multipart/form-data field "file")',
       );
     }
-    const cleanLabel = String(label ?? '').trim();
+    const cleanLabel = body.label.trim();
     if (!cleanLabel) {
       throw new BadRequestException('label is required');
     }
     try {
       return {
         success: true,
-        data: await this.svc.ingestVideoFromUpload(
+        data: await this.videoIngest.ingestVideoFromUpload(
           req.userId,
           file.buffer,
           cleanLabel,
@@ -86,20 +99,20 @@ export class StyleReferenceController {
   @Post('ingest-video-url')
   async ingestVideoUrl(
     @Req() req: AuthenticatedRequest,
-    @Body() body: { url: string; label: string },
+    @Body() body: IngestVideoUrlDto,
   ) {
     if (!req.userId) {
       throw new BadRequestException('authenticated admin userId missing');
     }
-    const url = String(body?.url ?? '').trim();
-    const label = String(body?.label ?? '').trim();
+    const url = body.url.trim();
+    const label = body.label.trim();
     if (!url || !label) {
       throw new BadRequestException('url and label are required');
     }
     try {
       return {
         success: true,
-        data: await this.svc.ingestVideoFromUrl(req.userId, url, label),
+        data: await this.videoIngest.ingestVideoFromUrl(req.userId, url, label),
       };
     } catch (err) {
       return { success: false, error: this.mapError(err) };
@@ -111,27 +124,36 @@ export class StyleReferenceController {
     if (msg.toLowerCase().includes('allowlist')) {
       return 'That URL is not from a supported source. Upload the file instead.';
     }
-    if (msg.toLowerCase().includes('private') || msg.toLowerCase().includes('geo')) {
+    if (
+      msg.toLowerCase().includes('private') ||
+      msg.toLowerCase().includes('geo')
+    ) {
       return "Couldn't access this, it might be private or geo-blocked.";
     }
-    if (msg.toLowerCase().includes('filesize') || msg.toLowerCase().includes('too long')) {
+    if (
+      msg.toLowerCase().includes('filesize') ||
+      msg.toLowerCase().includes('too long')
+    ) {
       return "Video is too long; we'll analyze just the first 5 minutes.";
     }
     return msg.slice(0, 300);
   }
 
   @Patch(':id')
-  async update(@Param('id') id: string, @Body() dto: UpdateStyleReferenceDto) {
+  async update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateStyleReferenceDto,
+  ) {
     return { success: true, data: await this.svc.update(id, dto) };
   }
 
   @Post(':id/re-extract')
-  async reExtract(@Param('id') id: string) {
+  async reExtract(@Param('id', ParseUUIDPipe) id: string) {
     return { success: true, data: await this.svc.reExtract(id) };
   }
 
   @Delete(':id')
-  async delete(@Param('id') id: string) {
+  async delete(@Param('id', ParseUUIDPipe) id: string) {
     await this.svc.delete(id);
     return { success: true, data: { deleted: true } };
   }

@@ -3,29 +3,37 @@
 import type { StyleReference } from "../../lib/style-refs-api";
 
 /**
- * One style reference in the library grid. The save toggle is the
- * preference-learning entry point: a saved reference is described to the
- * generator in every prompt, so a saved card is marked plainly rather than
- * subtly.
+ * One style reference in the library grid. Preference-learning (the "use for
+ * generation" star) lives on the style-group header, not the card — a style
+ * is steered as a whole (image + sample video together).
  */
 export function ReferenceCard({
   reference,
   isSaved,
-  onToggleSaved,
   onReExtract,
   onDelete,
-  isSaving,
   isReExtracting,
 }: {
   reference: StyleReference;
   isSaved: boolean;
-  onToggleSaved: () => void;
   onReExtract: () => void;
   onDelete: () => void;
-  isSaving: boolean;
   isReExtracting: boolean;
 }) {
-  const palette = reference.extracted_attributes.palette ?? [];
+  // dominant_palette (video path) predates backend sanitization for older
+  // rows — guard the shape so one malformed reference can't crash the grid.
+  const rawPalette =
+    reference.extracted_attributes.palette ??
+    reference.extracted_attributes.dominant_palette;
+  const palette = Array.isArray(rawPalette)
+    ? rawPalette.filter((c): c is string => typeof c === "string")
+    : [];
+  // Backend list() signs stored previews to https URLs. Prefer the mirrored
+  // preview (CSP-clean, survives dead source links); fall back to source_url
+  // only when it is itself a renderable http image URL.
+  const previewSrc = reference.preview_strip_url?.startsWith("http")
+    ? reference.preview_strip_url
+    : reference.source_url;
   return (
     <div
       className={`rounded-2xl bg-surface-container-low overflow-hidden shadow-sm flex flex-col transition-shadow duration-200 ${
@@ -33,10 +41,10 @@ export function ReferenceCard({
       }`}
     >
       <div className="relative">
-        {reference.source_url ? (
+        {previewSrc ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={reference.source_url}
+            src={previewSrc}
             alt={reference.label}
             className="w-full h-40 object-cover bg-on-surface/10"
           />
@@ -45,15 +53,14 @@ export function ReferenceCard({
             (no image)
           </div>
         )}
-        <SaveToggle
-          isSaved={isSaved}
-          busy={isSaving}
-          onClick={onToggleSaved}
-          label={reference.label}
-        />
       </div>
 
       <div className="p-4 flex-1 flex flex-col gap-3">
+        {isSaved && (
+          <span className="sr-only">
+            {reference.label}: included in generation
+          </span>
+        )}
         <div className="flex items-baseline justify-between gap-2">
           <h3 className="text-sm font-semibold text-on-surface truncate">
             {reference.label}
@@ -86,12 +93,6 @@ export function ReferenceCard({
           </p>
         )}
 
-        {isSaved && (
-          <p className="text-[11px] font-medium text-primary">
-            Steering generation
-          </p>
-        )}
-
         <div className="flex items-center justify-between mt-auto pt-2 text-[11px] text-on-surface-variant">
           <span>
             ${reference.vision_cost_usd?.toFixed(4) ?? "0"} ·{" "}
@@ -117,60 +118,5 @@ export function ReferenceCard({
         </div>
       </div>
     </div>
-  );
-}
-
-function SaveToggle({
-  isSaved,
-  busy,
-  onClick,
-  label,
-}: {
-  isSaved: boolean;
-  busy: boolean;
-  onClick: () => void;
-  label: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={busy}
-      aria-pressed={isSaved}
-      title={
-        isSaved
-          ? "Stop using this style for generation"
-          : "Use this style for generation"
-      }
-      aria-label={
-        isSaved
-          ? `Stop using ${label} for generation`
-          : `Use ${label} for generation`
-      }
-      className={`absolute top-2 right-2 h-10 w-10 rounded-full shadow-sm inline-flex items-center justify-center disabled:opacity-60 transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
-        isSaved
-          ? "bg-primary text-on-primary hover:bg-primary/90"
-          : "bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest"
-      }`}
-    >
-      <StarIcon filled={isSaved} />
-    </button>
-  );
-}
-
-function StarIcon({ filled }: { filled: boolean }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      width="20"
-      height="20"
-      fill={filled ? "currentColor" : "none"}
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 9.7l5.9-.9z" />
-    </svg>
   );
 }

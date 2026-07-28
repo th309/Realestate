@@ -21,6 +21,8 @@ import { DestructiveDialog } from "../components/destructive-dialog";
 import { ReferenceCard } from "../components/style-library/ReferenceCard";
 import { AddReferenceDialog } from "../components/style-library/AddReferenceDialog";
 import { StyleSignalPanel } from "../components/style-library/StyleSignalPanel";
+import { groupStyleReferences } from "../components/style-library/group-style-references";
+import { StyleGroupHeader } from "../components/style-library/StyleGroupHeader";
 
 const QUERY_KEY = ["content-pipeline-style-references"] as const;
 const PREFERENCES_KEY = ["content-pipeline-style-preferences"] as const;
@@ -106,17 +108,40 @@ export default function StyleReferencesPage() {
       toast.error(`Delete failed: ${err.message.slice(0, 100)}`),
   });
 
-  const toggleSavedMut = useMutation({
-    mutationFn: ({ id, saved }: { id: string; saved: boolean }) =>
-      saved ? unsaveStylePreference(id) : saveStylePreference(id),
-    onSuccess: (data, { saved }) => {
-      qc.setQueryData(PREFERENCES_KEY, data);
+  // One star per style group: starring saves EVERY reference in the group
+  // (image + sample video) so the generator gets the look and the motion
+  // together; unstarring clears them all. Sequential calls — the preferences
+  // row is read-modify-write server-side, so parallel saves would race.
+  const toggleGroupMut = useMutation({
+    mutationFn: async ({
+      op,
+      ids,
+    }: {
+      group: string;
+      op: "save" | "unsave";
+      ids: string[];
+    }) => {
+      let prefs = preferences;
+      for (const id of ids) {
+        prefs =
+          op === "save"
+            ? await saveStylePreference(id)
+            : await unsaveStylePreference(id);
+      }
+      return prefs;
+    },
+    onSuccess: (data, { op }) => {
+      if (data) qc.setQueryData(PREFERENCES_KEY, data);
       toast.success(
-        saved ? "Stopped using this style" : "Now using this style",
+        op === "unsave" ? "Stopped using this style" : "Now using this style",
       );
     },
-    onError: (err: Error) =>
-      toast.error(`Could not update: ${err.message.slice(0, 100)}`),
+    onError: (err: Error) => {
+      // A mid-loop failure can leave the group partially saved — refetch so
+      // the star reflects the server state rather than the optimistic one.
+      qc.invalidateQueries({ queryKey: PREFERENCES_KEY });
+      toast.error(`Could not update: ${err.message.slice(0, 100)}`);
+    },
   });
 
   const strengthMut = useMutation({
@@ -168,29 +193,55 @@ export default function StyleReferencesPage() {
       ) : data.length === 0 ? (
         <EmptyState onAdd={() => setAddOpen(true)} />
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {data.map((ref) => (
-            <ReferenceCard
-              key={ref.id}
-              reference={ref}
-              isSaved={savedIds.has(ref.id)}
-              onToggleSaved={() =>
-                toggleSavedMut.mutate({
-                  id: ref.id,
-                  saved: savedIds.has(ref.id),
-                })
-              }
-              onReExtract={() => reExtractMut.mutate(ref.id)}
-              onDelete={() => setDeleting(ref)}
-              isSaving={
-                toggleSavedMut.isPending &&
-                toggleSavedMut.variables?.id === ref.id
-              }
-              isReExtracting={
-                reExtractMut.isPending && reExtractMut.variables === ref.id
-              }
-            />
-          ))}
+        <div className="space-y-8">
+          {groupStyleReferences(data).map((group) => {
+            const groupIds = group.references.map((r) => r.id);
+            const savedInGroup = groupIds.filter((id) => savedIds.has(id));
+            const allSaved =
+              groupIds.length > 0 && savedInGroup.length === groupIds.length;
+            return (
+              <section key={group.name} aria-label={group.name}>
+                <StyleGroupHeader
+                  name={group.name}
+                  isSteering={allSaved}
+                  busy={
+                    toggleGroupMut.isPending &&
+                    toggleGroupMut.variables?.group === group.name
+                  }
+                  onToggle={() =>
+                    toggleGroupMut.mutate(
+                      allSaved
+                        ? {
+                            group: group.name,
+                            op: "unsave",
+                            ids: savedInGroup,
+                          }
+                        : {
+                            group: group.name,
+                            op: "save",
+                            ids: groupIds.filter((id) => !savedIds.has(id)),
+                          },
+                    )
+                  }
+                />
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {group.references.map((ref) => (
+                    <ReferenceCard
+                      key={ref.id}
+                      reference={ref}
+                      isSaved={savedIds.has(ref.id)}
+                      onReExtract={() => reExtractMut.mutate(ref.id)}
+                      onDelete={() => setDeleting(ref)}
+                      isReExtracting={
+                        reExtractMut.isPending &&
+                        reExtractMut.variables === ref.id
+                      }
+                    />
+                  ))}
+                </div>
+              </section>
+            );
+          })}
         </div>
       )}
 

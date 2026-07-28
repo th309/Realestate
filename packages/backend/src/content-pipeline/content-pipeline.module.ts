@@ -15,6 +15,8 @@ import { ScopeService } from './scope/scope.service';
 import { BatchRunsController } from './batch-runs.controller';
 import { VisionExtractorService } from './style-refs/vision-extractor.service';
 import { StyleReferenceService } from './style-refs/style-reference.service';
+import { StyleReferencePreviewService } from './style-refs/style-reference-preview.service';
+import { StyleReferenceVideoIngestService } from './style-refs/style-reference-video-ingest.service';
 import { StyleReferenceController } from './style-refs/style-reference.controller';
 import { YouTubeDiscoveryService } from './archetypes/youtube-discovery.service';
 import { TranscriptFetcherService } from './archetypes/transcript-fetcher.service';
@@ -130,6 +132,8 @@ import { CONTENT_PIPELINE_ANALYTICS_PROVIDERS } from './content-pipeline-analyti
     MagnetABPromoterService,
     VisionExtractorService,
     StyleReferenceService,
+    StyleReferencePreviewService,
+    StyleReferenceVideoIngestService,
     StyleABService,
     FFmpegWrapperService,
     YtDlpWrapperService,
