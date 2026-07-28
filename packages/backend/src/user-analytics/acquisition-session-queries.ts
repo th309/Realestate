@@ -22,6 +22,7 @@ export async function queryTrafficSources(
   const { data: sessions, error } = await client
     .from('user_sessions')
     .select('entry_type, utm_source, referrer_domain')
+    .eq('is_bot', false)
     .gte('started_at', startDate);
 
   if (error) {
@@ -66,6 +67,7 @@ export async function queryLandingPagePerformance(
   const { data: sessions, error } = await client
     .from('user_sessions')
     .select('landing_page, is_bounce, duration_seconds, converted')
+    .eq('is_bot', false)
     .gte('started_at', startDate)
     .not('landing_page', 'is', null);
 
@@ -127,6 +129,7 @@ export async function queryChannelTrend(
   const { data: sessions, error } = await client
     .from('user_sessions')
     .select('started_at, entry_type')
+    .eq('is_bot', false)
     .gte('started_at', startDate);
 
   if (error) {

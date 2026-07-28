@@ -25,9 +25,15 @@ export async function POST(request: NextRequest): Promise<Response> {
 
   const body = await request.text();
 
+  // This proxy is the ONLY hop that sees the real browser User-Agent — the
+  // backend otherwise receives this Next.js server's UA, which is why bot
+  // classification was impossible server-side. Forward it explicitly.
   fetch(`${BACKEND_URL}/api/usage/events`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "x-client-user-agent": request.headers.get("user-agent") ?? "",
+    },
     body,
     keepalive: true,
   }).catch((err) => {

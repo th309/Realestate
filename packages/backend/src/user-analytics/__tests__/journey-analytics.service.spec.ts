@@ -22,6 +22,15 @@ const MOCK_JOURNEY_DATA: JourneyData = {
   ],
   exitPages: [{ page: '/pricing', exits: 40 }],
   commonPaths: [{ path: ['/home', '/pricing', '/signup'], sessions: 25 }],
+  outboundDestinations: [
+    {
+      domain: 'www.zillow.com',
+      clicks: 12,
+      sessions: 9,
+      topUrl: 'https://www.zillow.com/homes/austin-tx',
+      fromPage: '/markets/metro/austin-tx',
+    },
+  ],
   avgPagesPerSession: 3.2,
   sessionDurationDistribution: [
     { bucket: '<30s', count: 10 },

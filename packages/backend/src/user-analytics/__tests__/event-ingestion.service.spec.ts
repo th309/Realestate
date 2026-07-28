@@ -224,15 +224,19 @@ describe('EventIngestionService', () => {
 
       await service.ingestBatch(events);
 
-      // Two distinct sessions should trigger two upsertSession calls
+      // Two distinct sessions should trigger two upsertSession calls.
+      // The third argument is the client User-Agent forwarded for bot
+      // classification — empty here since ingestBatch was called without one.
       expect(mockSessionManager.upsertSession).toHaveBeenCalledTimes(2);
       expect(mockSessionManager.upsertSession).toHaveBeenCalledWith(
         's1',
         expect.any(Array),
+        '',
       );
       expect(mockSessionManager.upsertSession).toHaveBeenCalledWith(
         's2',
         expect.any(Array),
+        '',
       );
     });
   });
