@@ -4,7 +4,7 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { trackEvent, flush, gtagEvent } from "@/lib/analytics/tracker";
+import { emitSignupCompleteOnce } from "@/lib/analytics/signup-conversion";
 import { startOnboardingTrial, API_URL } from "@/lib/data";
 import { decideNeedsOnboarding } from "./onboarding-routing";
 
@@ -101,8 +101,6 @@ function CallbackHandler() {
           refresh_token: session.refresh_token,
         });
 
-        setStatus("Setting up your account...");
-
         // Use Promise.race with timeout to prevent hanging queries
         const withTimeout = <T,>(p: Promise<T>, ms = 5000): Promise<T> =>
           Promise.race([
@@ -111,6 +109,39 @@ function CallbackHandler() {
               setTimeout(() => rej(new Error("timeout")), ms),
             ),
           ]);
+
+        // Record the conversion FIRST, ahead of all the post-signup work below.
+        // This used to live at the END of completeSignIn, behind a profile
+        // upsert, an identity lookup and an un-timed tour-claim fetch. Two ways
+        // that dropped the event: any of them throwing jumped to the outer
+        // catch, and their combined latency pushed past the old 60-second
+        // "isFreshSignup" window -- a real Google signup measured 155s, which
+        // is why method='oauth' never once fired. Nothing here may depend on
+        // that later work completing.
+        //
+        // `type=signup` is the emailed confirm link; `type=recovery` is a
+        // password reset and is NOT a signup. Everything else reaching this
+        // page with a session is OAuth.
+        if (type !== "recovery") {
+          try {
+            // Timed like every other await here: this now runs BEFORE the user
+            // is routed onward, so a hung claim must never strand them on
+            // "Completing sign-in...". Losing the event beats blocking auth.
+            await withTimeout(
+              emitSignupCompleteOnce(
+                supabase,
+                session.user.id,
+                type === "signup" ? "email" : "oauth",
+                session.user.created_at,
+              ),
+            );
+          } catch (err) {
+            // Analytics must never break auth.
+            debugLog("signup_complete_failed", { error: String(err) });
+          }
+        }
+
+        setStatus("Setting up your account...");
 
         await withTimeout(handlePostSignup(supabase, session, tosFromParam));
 
@@ -161,14 +192,20 @@ function CallbackHandler() {
         const tourSessionId = getCookie("piq_tour_session");
         if (tourSessionId) {
           try {
-            const claimRes = await fetch(`${API_URL}/api/anonymous/claim`, {
-              method: "POST",
-              headers: {
-                "content-type": "application/json",
-                Authorization: `Bearer ${session.access_token}`,
-              },
-              body: JSON.stringify({ tourSessionId }),
-            });
+            // Timed like every other await here: this call hits a Railway
+            // backend that can cold-start, and it was previously unbounded --
+            // a major contributor to the multi-minute callbacks that dropped
+            // the signup conversion.
+            const claimRes = await withTimeout(
+              fetch(`${API_URL}/api/anonymous/claim`, {
+                method: "POST",
+                headers: {
+                  "content-type": "application/json",
+                  Authorization: `Bearer ${session.access_token}`,
+                },
+                body: JSON.stringify({ tourSessionId }),
+              }),
+            );
             if (claimRes.ok) {
               const body = (await claimRes.json()) as {
                 claimed?: boolean;
@@ -200,7 +237,7 @@ function CallbackHandler() {
           const profileResult: any = await withTimeout(
             supabase
               .from("user_profiles")
-              .select("created_at, onboarding_completed_at")
+              .select("onboarding_completed_at")
               .eq("id", session.user.id)
               .maybeSingle(),
           );
@@ -211,30 +248,13 @@ function CallbackHandler() {
             onboardingCompletedAt: profile?.onboarding_completed_at ?? null,
             now: Date.now(),
           });
-          // Fire signup_complete on first activation. Two triggers:
-          //  - Email confirmation: the Supabase confirm link carries
-          //    type=signup; the click can happen minutes/hours after signup,
-          //    so the 60s window below would miss it.
-          //  - OAuth: fast, so the freshly-created-profile window catches it.
-          const isEmailConfirm = type === "signup";
-          const isFreshSignup =
-            !!profile &&
-            Date.now() - new Date(profile.created_at).getTime() < 60_000;
-          if (isEmailConfirm || isFreshSignup) {
-            trackEvent("conversion.signup_complete", {
-              method: isEmailConfirm ? "email" : "oauth",
-            });
-            // Mirror to GA4 so the conversion is visible there too (see
-            // gtagEvent); parity with the autoconfirm/OTP path in complete-signup.ts.
-            gtagEvent("sign_up", {
-              method: isEmailConfirm ? "email" : "oauth",
-            });
-            gtagEvent("trial_start", { tier: "pro" });
-            flush();
-          }
+          // NOTE: signup_complete is emitted near the top of completeSignIn,
+          // before this query. It must not move back down here -- being behind
+          // these awaits is exactly what suppressed method='oauth' entirely.
         } catch (err) {
-          // Analytics must never break auth. Swallow and continue.
-          console.error("OAuth signup event tracking failed", err);
+          // Routing must never break auth. Fall back to the default
+          // destination and continue.
+          console.error("Onboarding routing check failed", err);
         }
 
         // Tour claim takes priority over the generic onboarding redirect:
