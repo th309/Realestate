@@ -29,7 +29,7 @@
     "zillow:import:zip": "npx tsx scripts/zillow-import/import-zip.ts",
     "zillow:import:city": "npx tsx scripts/zillow-import/import-city.ts",
     "email:dev": "npm run dev -w @propertyiq/emails",
-    "build:libs": "npm run build -w @propertyiq/analyzer-core && npm run build -w @propertyiq/emails",
+    "build:libs": "npm run build -w @propertyiq/analyzer-core && npm run build -w @propertyiq/emails && npm run build:cli -w @propertyiq/video-template",
     "release:main": "bash scripts/git/release-to-main.sh",
     "sync:develop": "bash scripts/git/release-to-main.sh --sync-only",
     "blog:publish": "bash scripts/git/publish-blog.sh",
