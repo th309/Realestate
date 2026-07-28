@@ -13,6 +13,10 @@ import {
   calculateLongFormMetadata,
 } from "./PropertyIQVideo";
 import { loadBrandFonts } from "./styles/fonts";
+import {
+  MediaSlotProbe,
+  MEDIA_SLOT_PROBE_DURATION,
+} from "./probes/MediaSlotProbe";
 
 loadBrandFonts();
 
@@ -118,6 +122,20 @@ export const RemotionRoot: React.FC = () => {
           />
         );
       })}
+
+      {/*
+        Render harness for the media-slot primitives — proves image punch-in
+        and real video embedding survive a headless render. Not a
+        customer-facing format; see probes/MediaSlotProbe.
+      */}
+      <Composition
+        id="media-slot-probe"
+        component={MediaSlotProbe}
+        durationInFrames={MEDIA_SLOT_PROBE_DURATION}
+        fps={30}
+        width={1080}
+        height={1920}
+      />
     </>
   );
 };

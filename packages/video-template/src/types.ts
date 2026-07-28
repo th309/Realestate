@@ -7,6 +7,9 @@
 
 import { z } from "zod";
 import { MUSIC_BED_NAMES } from "./audio/levels";
+import { MediaSlotSchema } from "./media/media-slot";
+
+export type { MediaSlotValue, FocusRegion } from "./media/media-slot";
 
 export type ScoreTier =
   | "excellent"
@@ -162,6 +165,11 @@ const sharedShape = {
    * the house default. Keys come from audio/levels MUSIC_BEDS.
    */
   musicBed: z.enum(MUSIC_BED_NAMES).optional(),
+  /**
+   * Operator-supplied images/video, addressed by slotId. Formats that
+   * declare no slots simply never read this.
+   */
+  mediaSlots: z.array(MediaSlotSchema).optional(),
   audioUrl: z.string().url().optional(),
   captionWords: z
     .array(
