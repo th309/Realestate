@@ -1,3 +1,86 @@
+# Remotion Composition Upgrade — Motion, Tokens, Audio Mix (2026-07-28)
+
+Directive: upgrade all active Remotion compositions (Reels/Shorts pipeline) to the brand
+motion language + a real audio mix, as shared reusable utilities (not per-composition
+fixes), then document the standards in the video pipeline SKILL.md. Branch `develop`
+(commit locally; never push without ask).
+
+## Plan
+
+### Phase 0 — Discovery
+
+- [x] Locate Remotion project root, all active compositions, current animation patterns (`packages/video-template`, 9 compositions, 13 bespoke springs + ~30 raw linear interpolates)
+- [x] Locate Edge TTS narration path, audio insertion, existing assets, SKILL.md (backend driver chain, one-blob synthesis, zero mix assets, `Skills/youtube-production/SKILL.md`)
+
+### Phase 1 — Shared motion system
+
+- [x] Motion utility module `src/motion/` (SPRINGS presets, M3 EASINGS, STAGGER_FRAMES=4, hooks)
+- [x] `<AnimatedEntrance>` wrapper: spring-in + 1.05→1.0 settle + index-based stagger
+- [x] Signature motif: `ScoreRing` dial spin-up (counter spring + endpoint glow pulse) adopted by ScoreReveal, Comparison, BrandOutroCard
+- [x] Audit complete: no raw linear interpolate remains on visible motion; surviving interpolates all carry EASINGS curves
+- [x] Stagger applied wherever siblings animate (stat cards, ranking rows, comparison columns, farm grid)
+
+### Phase 2 — Brand token enforcement
+
+- [x] `src/styles/tokens.ts` (PALETTE, 1.75px borders, 8% fills, tabular-nums, chart rules); COLORS + style-variants rewired onto it; zero hex literals in components
+- [x] Fonts self-hosted (`public/fonts/` variable woff2 + `loadBrandFonts()` with delayRender) — Railway render container has no Roboto
+- [x] Asymmetric layout pass (ScoreReveal off-center dial + overlapping momentum pill, StatCards hero mosaic, Intro lower-third) + MeshBackground depth (blooms + grain) mounted per-layout
+- [x] TrendChart rebuilt to Robinhood spec: line draw-in with exact tip tracking, endpoint glow pulse, range pills, scripted scrub, no gridlines (dashed 50 baseline only)
+
+### Phase 3 — Audio production
+
+- [x] `src/audio/` — AudioMix (music bed + room tone + narration + SFX), sidechain duck from captionWords (attack 8f / release 20f / hold 600ms)
+- [x] SFX cues frame-locked to layout beat tables (`sfx-cues.ts` imports the same beats layouts render from); deterministic WAV asset generator (replace with licensed files, same names)
+- [x] Loudness: narration loudnorm'd backend-side to -16 LUFS; all in-comp gains from AUDIO_LEVELS
+- [x] TTS segmentation (backend): sentence-split clips + 200-500ms pauses + ffmpeg concat + loudnorm; per-segment word-timing offsets (drift resets each boundary); ffmpeg-absent → exact legacy fallback. 690 content-pipeline tests green, tsc clean.
+
+### Phase 4 — Documentation + verification
+
+- [x] SKILL.md updated: Step 6 (segmented pipeline TTS), Step 7b (template exists + REQUIRED composition standards), coverage-copy fix
+- [x] Verification: build:cli clean; backend plain tsc clean; content-pipeline jest 690 passed / 1 pre-existing skip; snapshot baselines regenerated (55 PNGs, 8 suites / 60 tests) and determinism proven on a second full run
+- [x] Review section below
+
+### Pre-existing bugs found & fixed along the way
+
+- Brokerage/recruitment narration desync: beats scaled the 2s bumper to 5-6s while narration always starts at frame 60 — bumper now fixed at 60f (`NARRATION_START_FRAME`), content beats stretch to fill
+- Intro/Outro exit fades anchored to unscaled frames → scenes went invisible mid-slot in scaled formats + HeadToHead (`durationInFrames` props added)
+- Outro "Explore 400+ scored markets" retired raw coverage count → countless copy; SKILL.md "40,000 markets" → sanctioned 900+/3,000+/29,000+ phrasing
+- ScoreReveal/Comparison badges rendered legacy quality-word `grade` from the bundle → momentum ladder (CLAUDE.md §9)
+- Edge TTS Windows cmdline-length latent bug sidestepped by short per-segment texts
+- Dead code deleted: RankingRow, MetricValue, DeltaDisplay, compositions/factory.ts; package.json render script ids fixed (grade_reveal → grade-reveal)
+
+## Review
+
+Shipped on `develop` (local only, NOT pushed): `89b18147` (video-template) +
+`4d93313b` (backend TTS) + docs commit. Four §1.6 review passes ran; every
+CRITICAL/WARNING was fixed and re-verified (narration-over-bumper desync in
+scaled formats; audio-vs-wall-clock bitrate domain mix; DOM.Iterable tsconfig
+lib for FontFaceSet).
+
+Architecture notes for future sessions:
+
+- One timing source per family: layouts AND sfx cues read the same beat
+  tables (`grade-reveal-beats.ts`, `SCORE_MOVER_BEATS`, `FARM_AREA_BEATS`,
+  `computeRankingTiming`) — never hardcode a cue frame.
+- `NARRATION_START_FRAME` (60) is a backend contract (audio budget =
+  duration − 2s buffer). Opening bumpers must stay 60 frames in every format.
+- Audio assets are generated (deterministic script); drop licensed
+  replacements onto the same filenames in `public/audio/`.
+- Snapshot baselines re-mint automatically when deleted; always run the
+  suite twice (mint + determinism) after motion changes.
+- Standards documented as REQUIRED in `Skills/youtube-production/SKILL.md`
+  Step 7b — point future composition work there first.
+
+Known limits (deliberate): head_to_head/long-form/rankings get bespoke cue
+plans only where their beat tables allowed; other formats fall back to
+scene-change bookends. Inserted TTS pauses (~0.3s/sentence) count against
+the audio budget — `silence_ms` in `synthesize_audio_done` makes overflow
+attributable; `SENTENCE_BREAK_MS` is the single tuning knob if repair-loop
+rates rise. A real rendered-video listen/watch on a live run is the one
+check no test covers — do it on the next pipeline run.
+
+---
+
 # Content Pipeline (SocialAuto) — Purpose Taxonomy + Mix Rotation + Lane A/B Bridge (2026-07-27)
 
 Full design: `docs/superpowers/specs/2026-07-27-content-purpose-taxonomy-design.md` (approved by Troy 2026-07-27, session with Claude). Branch `develop` (commit locally; never push without ask).
