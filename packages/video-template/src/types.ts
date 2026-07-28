@@ -71,11 +71,25 @@ export interface ComparisonMarket {
 
 // Format configuration for the expanded content pipeline
 // ---------------------------------------------------------------------------
-// Lives in ./formats/format-configs.ts; re-exported here so existing
-// `from "./types"` imports keep working.
+// The catalogue lives in ./formats/manifest.ts — one declaration per
+// template, read by the composition registry, the create-run contract and
+// the admin wizard. Re-exported here so existing `from "./types"` imports
+// keep working; FORMAT_CONFIGS is derived from the manifest, so render
+// dimensions can never disagree with what the wizard advertises.
 
-export type { FormatKey, FormatConfig } from "./formats/format-configs";
-export { FORMAT_CONFIGS } from "./formats/format-configs";
+export type {
+  FormatKey,
+  FormatConfig,
+  FormatManifestEntry,
+  MediaSlotDeclaration,
+  CopyFieldDeclaration,
+  WizardStep,
+} from "./formats/manifest";
+export {
+  FORMAT_CONFIGS,
+  FORMAT_MANIFEST,
+  FORMAT_KEYS,
+} from "./formats/manifest";
 
 export interface ResolvedMarket {
   rank: number;

@@ -7,6 +7,7 @@ import {
   RankingVideoProps,
   SingleMarketVideoProps,
 } from "./types";
+import { FORMAT_KEYS, compositionId } from "./formats/manifest";
 import {
   PropertyIQVideo,
   calculateRankingMetadata,
@@ -79,10 +80,11 @@ function buildDefaultProps(key: FormatKey): VideoProps {
 }
 
 export const RemotionRoot: React.FC = () => {
-  const keys = Object.keys(FORMAT_CONFIGS) as FormatKey[];
+  // Registered straight off the manifest, so a new template appears here by
+  // declaring itself rather than by editing this file.
   return (
     <>
-      {keys.map((key) => {
+      {FORMAT_KEYS.map((key) => {
         const cfg = FORMAT_CONFIGS[key];
         const defaultProps = buildDefaultProps(key);
         const isRanking = RANKING_FORMATS.has(key);
@@ -90,7 +92,7 @@ export const RemotionRoot: React.FC = () => {
         return (
           <Composition
             key={key}
-            id={key.replace(/_/g, "-")}
+            id={compositionId(key)}
             component={PropertyIQVideo as React.FC<Record<string, unknown>>}
             durationInFrames={cfg.durationInFrames}
             fps={cfg.fps}
