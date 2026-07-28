@@ -89,10 +89,15 @@ function makePostsFake(seed: Record<string, unknown>[] = []) {
         return Promise.resolve(resolveSingle());
       },
       then(resolve: (v: unknown) => unknown, reject?: (e: unknown) => unknown) {
-        return Promise.resolve({ data: applyListFilters(), error: null }).then(
-          resolve,
-          reject,
-        );
+        const rows = applyListFilters();
+        // `count` mirrors real supabase-js's `{ count, error }` shape for a
+        // `select('*', { count: 'exact', head: true })` query (countAll()); every
+        // other caller here just ignores the extra field.
+        return Promise.resolve({
+          data: rows,
+          count: rows.length,
+          error: null,
+        }).then(resolve, reject);
       },
     };
     return b;
@@ -260,6 +265,37 @@ describe('PostsService.listPosts calendar range filter (planner contract)', () =
 
     const rows = await service.listPosts({});
     expect(rows.map((r) => r.id)).toEqual(['new', 'old']);
+  });
+});
+
+describe('PostsService.countAll', () => {
+  it('returns the exact count for a brand without fetching rows', async () => {
+    const { supabase } = makePostsFake([
+      { ...seedPost('draft'), id: 'p-1', brand_id: 'brand-1' },
+      { ...seedPost('pending_review'), id: 'p-2', brand_id: 'brand-1' },
+      { ...seedPost('draft'), id: 'p-3', brand_id: 'brand-2' },
+    ]);
+    const service = new PostsService(supabase);
+
+    await expect(service.countAll('brand-1')).resolves.toBe(2);
+    await expect(service.countAll('brand-2')).resolves.toBe(1);
+  });
+
+  it('counts every brand when no brandId is given', async () => {
+    const { supabase } = makePostsFake([
+      { ...seedPost('draft'), id: 'p-1', brand_id: 'brand-1' },
+      { ...seedPost('draft'), id: 'p-2', brand_id: 'brand-2' },
+    ]);
+    const service = new PostsService(supabase);
+
+    await expect(service.countAll()).resolves.toBe(2);
+  });
+
+  it('returns 0 for a brand with no posts', async () => {
+    const { supabase } = makePostsFake([]);
+    const service = new PostsService(supabase);
+
+    await expect(service.countAll('brand-empty')).resolves.toBe(0);
   });
 });
 

@@ -74,6 +74,7 @@ import { StyleABService } from './style-references/style-ab.service';
 
 import { PostsBrandKitModule } from './posts-brand-kit.module';
 import { FeedService } from './feed/feed.service';
+import { FeedTopUpService } from './feed/feed-topup.service';
 import { FeedPostGeneratorService } from './feed/feed-post-generator.service';
 import { PostGenerateController } from './feed/post-generate.controller';
 import { PostImageRenderService } from './post-images/post-image-render.service';
@@ -164,6 +165,7 @@ import { CONTENT_PIPELINE_ANALYTICS_PROVIDERS } from './content-pipeline-analyti
     MetroBrollService,
 
     FeedService,
+    FeedTopUpService,
     FeedPostGeneratorService,
     PostImageRenderService,
     PostVideoCardService,

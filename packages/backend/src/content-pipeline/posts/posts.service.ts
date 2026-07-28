@@ -115,6 +115,23 @@ export class PostsService {
     return counts;
   }
 
+  /**
+   * Total posts ever created for a brand, across every status (exact count,
+   * no rows fetched). A monotonically-advancing cursor for callers that need
+   * to vary behavior across repeated calls regardless of how many posts are
+   * currently pending review — e.g. FeedService's post-type rotation, which a
+   * transient queue-depth count cannot serve because queue depth can return to
+   * the same value on every cron tick (steady-state review cadence).
+   */
+  async countAll(brandId?: string): Promise<number> {
+    const client = this.supabase.getClient();
+    let q = client.from('posts').select('*', { count: 'exact', head: true });
+    if (brandId) q = q.eq('brand_id', brandId);
+    const { count, error } = await q;
+    if (error) throw error;
+    return count ?? 0;
+  }
+
   async getById(id: string): Promise<PostRow> {
     const client = this.supabase.getClient();
     const { data, error } = await client
