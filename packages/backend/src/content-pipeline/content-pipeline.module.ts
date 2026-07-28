@@ -7,6 +7,7 @@ import { ContentRunsService } from './content-runs.service';
 import { ContentPipelineQueriesService } from './content-pipeline-queries.service';
 import { RunActionsService } from './run-actions.service';
 import { RunThumbnailService } from './run-thumbnail.service';
+import { RunMediaSlotService } from './media/run-media-slot.service';
 import { MagnetLibraryService } from './magnets/magnet-library.service';
 import { MagnetLibraryController } from './magnets/magnet-library.controller';
 import { FormatsController } from './formats/formats.controller';
@@ -127,6 +128,7 @@ import { CONTENT_PIPELINE_ANALYTICS_PROVIDERS } from './content-pipeline-analyti
     ContentPipelineQueriesService,
     RunActionsService,
     RunThumbnailService,
+    RunMediaSlotService,
     MagnetLibraryService,
     DashboardMagnetsService,
     LeadMagnetBindingService,
