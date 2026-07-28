@@ -183,6 +183,30 @@ Notes: `maxresdefault.jpg` can 404 (returns a 120×90 placeholder) — fall back
 (Vision keyed on the UI cards, not the lavender backdrop) — re-extract or swap the
 image if that style's output drifts off-palette.
 
+## Sample Videos (ingested 2026-07-28)
+
+Each style also has a `video`-kind reference ingested from these URLs (first 5
+minutes, 720p; Vision extracts hook archetype, caption style, cut rate, energy,
+palette from sampled frames; the card preview is a 3×3 frame strip):
+
+| Style                           | Sample video                                         |
+| ------------------------------- | ---------------------------------------------------- |
+| Market-Data Authority Card      | `youtube.com/watch?v=A4CoF9uxnGs` (Altos, chart-led) |
+| Doom-Data Alarm                 | `youtube.com/watch?v=LCbVikmmBls` (Graham Stephan)   |
+| Bright Data Explainer           | `youtube.com/watch?v=3db5MyGIUBE` (Humphrey Yang)    |
+| Bold-Type Hook                  | `youtube.com/watch?v=53Tt5DqONNM`                    |
+| Cinematic Luxury Editorial      | `youtube.com/watch?v=LWbH_LwS0Ss` (Enes Yilmazer)    |
+| Faceless Voiceover Essay        | `youtube.com/watch?v=1zjcZ661ups` (How Money Works)  |
+| Soft-Gradient Premium App       | `youtube.com/watch?v=DUHqeTqYM2o` (glassmorphism UI) |
+| Green-Screen Receipt Commentary | `youtube.com/watch?v=Atf8I82zFog`                    |
+| Lo-Fi Authentic (deadpan)       | `youtube.com/watch?v=meesr2gDINA` (ClearValue Tax)   |
+| Screenshot Meme                 | `youtube.com/watch?v=0WCYDrE8Rw0` (Zillow Gone Wild) |
+
+Local machine note: video ingest requires yt-dlp (`YT_DLP_BIN` in
+`packages/backend/.env`, pip-installed) and the Norton AV root certificate
+appended to Python certifi's `cacert.pem` — Norton intercepts YouTube TLS and
+yt-dlp trusts only certifi. See the `norton-ca-node-tls` memory family.
+
 ## Sources
 
 Primary trend sources (2025–2026): tubetuner.ai thumbnail styles 2026 ·
