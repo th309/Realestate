@@ -19,25 +19,30 @@
     "test": "jest"
   },
   "dependencies": {
-    "@remotion/bundler": "^4.0.253",
-    "@remotion/renderer": "^4.0.253",
+    "@remotion/bundler": "^4.0.500",
+    "@remotion/renderer": "^4.0.500",
     "commander": "^13.1.0",
     "mapbox-gl": "^3.22.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
     "zod": "^3.24.0"
   },
+  "//peerDependencies": "React is a PEER, not a dependency. Declaring it as a dependency made npm install a nested copy that could never dedupe with the frontend's React, so importing a composition into Next.js loaded two Reacts at once ('Invalid hook call'). Remotion itself only requires >=16.8.0.",
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18"
+  },
   "devDependencies": {
-    "@remotion/cli": "^4.0.253",
+    "@remotion/cli": "^4.0.500",
     "@types/jest": "^30.0.0",
     "@types/mapbox-gl": "^3.4.1",
     "@types/pngjs": "^6.0.5",
-    "@types/react": "^18.2.0",
-    "@types/react-dom": "^18.2.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
     "dotenv": "^9.0.2",
     "jest": "^30.0.0",
     "pngjs": "^7.0.0",
-    "remotion": "^4.0.253",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "remotion": "^4.0.500",
     "ts-jest": "^29.2.5",
     "typescript": "^5.0.0"
   }

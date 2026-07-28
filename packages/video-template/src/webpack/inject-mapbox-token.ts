@@ -1,8 +1,21 @@
 import fs from "fs";
 import path from "path";
 import { config as loadEnvFile } from "dotenv";
-import type { Configuration } from "webpack";
-import webpack from "webpack";
+/**
+ * Webpack comes from @remotion/bundler, NOT the root install.
+ *
+ * The monorepo has two webpack copies (Next.js hoists one to the root;
+ * @remotion/bundler nests its own), and their Configuration types are
+ * structurally identical but nominally distinct. Importing from "webpack"
+ * directly makes this override unassignable to bundle()'s webpackOverride,
+ * which TypeScript reports as a confusing overload mismatch on bundle()
+ * itself rather than on the callback.
+ */
+import {
+  webpack,
+  type WebpackConfiguration,
+  type WebpackOverrideFn,
+} from "@remotion/bundler";
 
 /**
  * Repo root `.env` is often absent in dev; Next.js loads `packages/frontend/.env.local`.
@@ -37,9 +50,9 @@ function resolveMapboxTokenForClientBundle(): string {
   );
 }
 
-export function injectMapboxTokenWebpack(
-  config: Configuration,
-): Configuration {
+export const injectMapboxTokenWebpack: WebpackOverrideFn = (
+  config: WebpackConfiguration,
+): WebpackConfiguration => {
   loadMapboxEnvFiles();
   const token = resolveMapboxTokenForClientBundle();
   if (token.length === 0) {
@@ -57,4 +70,4 @@ export function injectMapboxTokenWebpack(
       }),
     ],
   };
-}
+};
