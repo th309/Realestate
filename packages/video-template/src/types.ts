@@ -8,6 +8,12 @@
 import { z } from "zod";
 import { MUSIC_BED_NAMES } from "./audio/levels";
 import { MediaSlotSchema } from "./media/media-slot";
+import { ProductDemoShape } from "./media/product-demo-props";
+
+export type {
+  ProductDemoHook,
+  ProductDemoFeature,
+} from "./media/product-demo-props";
 
 export type { MediaSlotValue, FocusRegion } from "./media/media-slot";
 
@@ -244,13 +250,32 @@ export const RankingVideoPropsSchema = z
   })
   .strict();
 
+/**
+ * The product demo is the first format with no market behind it at all —
+ * its content is authored copy plus operator-supplied screens, so it gets
+ * its own branch rather than pretending to carry a `resolvedMarket`.
+ */
+export const ProductDemoVideoPropsSchema = z
+  .object({
+    format: z.enum(["product_demo_horizontal", "product_demo_vertical"]),
+    ...ProductDemoShape,
+    ...sharedShape,
+  })
+  .strict();
+
 export const VideoPropsSchema = z.union([
   SingleMarketVideoPropsSchema,
   RankingVideoPropsSchema,
+  ProductDemoVideoPropsSchema,
 ]);
+
+export type ProductDemoVideoProps = z.infer<typeof ProductDemoVideoPropsSchema>;
 
 export type SingleMarketVideoProps = z.infer<
   typeof SingleMarketVideoPropsSchema
 >;
 export type RankingVideoProps = z.infer<typeof RankingVideoPropsSchema>;
-export type VideoProps = SingleMarketVideoProps | RankingVideoProps;
+export type VideoProps =
+  | SingleMarketVideoProps
+  | RankingVideoProps
+  | ProductDemoVideoProps;

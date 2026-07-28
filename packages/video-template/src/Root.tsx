@@ -1,5 +1,5 @@
 import React from "react";
-import { Composition, registerRoot } from "remotion";
+import { Composition, registerRoot, staticFile } from "remotion";
 import {
   FORMAT_CONFIGS,
   FormatKey,
@@ -8,6 +8,8 @@ import {
   SingleMarketVideoProps,
 } from "./types";
 import { FORMAT_KEYS, compositionId } from "./formats/manifest";
+import { isProductDemoFormat } from "./formats/product-demo-format";
+import type { ProductDemoVideoProps } from "./types";
 import {
   PropertyIQVideo,
   calculateRankingMetadata,
@@ -27,6 +29,34 @@ const RANKING_FORMATS = new Set<FormatKey>([
 ]);
 
 function buildDefaultProps(key: FormatKey): VideoProps {
+  if (isProductDemoFormat(key)) {
+    // Studio placeholder only — a real run supplies captured screens. The
+    // fixture asset keeps the composition renderable with no network.
+    const demo: ProductDemoVideoProps = {
+      format: key,
+      hook: {
+        kind: "text_card",
+        headline: "Not using PropertyIQ yet?",
+        subhead: "You're guessing where your clients should buy.",
+      },
+      features: [
+        {
+          key: "placeholder",
+          title: "Your product, on screen",
+          callouts: ["Drop a screenshot into this slot"],
+          slot: {
+            slotId: "feature1",
+            kind: "image",
+            url: staticFile("test-fixtures/dashboard.png"),
+            sourceAspect: 1600 / 900,
+            focusRegion: { x: 0.63, y: 0.2, w: 0.22, h: 0.16 },
+          },
+        },
+      ],
+      ctaUrl: "https://propertyiq.app",
+    };
+    return demo;
+  }
   if (RANKING_FORMATS.has(key)) {
     const rk = key as "top_10_ranking" | "bottom_10_ranking";
     const ranking: RankingVideoProps = {
@@ -64,10 +94,9 @@ function buildDefaultProps(key: FormatKey): VideoProps {
           ctaUrl: "",
         }
       : {
-          format: key as Exclude<
-            FormatKey,
-            "top_10_ranking" | "bottom_10_ranking"
-          >,
+          // Ranking and product-demo keys already returned above; Set.has()
+          // and the type predicate don't both narrow, so state what's left.
+          format: key as SingleMarketVideoProps["format"],
           resolvedMarket: {
             canonical_name: "Preview",
             geography: "metro",

@@ -16,6 +16,10 @@ import type {
   FormatManifestEntry,
   WizardStep,
 } from "./manifest-types";
+import {
+  PRODUCT_DEMO_HORIZONTAL,
+  PRODUCT_DEMO_VERTICAL,
+} from "./product-demo-format";
 
 export * from "./manifest-types";
 
@@ -243,6 +247,8 @@ export const FORMAT_MANIFEST: Record<FormatKey, FormatManifestEntry> = {
     thumbnail: dataThumbnail("score"),
     steps: MARKET_STEPS,
   },
+  product_demo_horizontal: PRODUCT_DEMO_HORIZONTAL,
+  product_demo_vertical: PRODUCT_DEMO_VERTICAL,
 };
 
 export const FORMAT_KEYS = Object.keys(FORMAT_MANIFEST) as FormatKey[];

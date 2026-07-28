@@ -21,7 +21,10 @@ export type FormatKey =
   | "long_form_deep_dive"
   | "farm_area_spotlight"
   | "brokerage_market_share"
-  | "recruitment_angle";
+  | "recruitment_angle"
+  // Two ratios, one authored spine — see media/product-demo-props.
+  | "product_demo_horizontal"
+  | "product_demo_vertical";
 
 /** Where a format's data comes from — decides which wizard steps appear. */
 export type FormatDataSource = "single_market" | "ranking" | "none";
