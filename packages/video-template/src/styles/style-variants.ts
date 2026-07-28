@@ -57,25 +57,27 @@ export interface StyleVariant {
   };
 }
 
+import { PALETTE, FONTS } from "./tokens";
+
 export const DEFAULT_VARIANT: StyleVariant = {
   id: "propertyiq_default",
   displayName: "PropertyIQ Indigo (default)",
   colors: {
-    primary: "#3949AB",
-    primaryDark: "#1A237E",
-    surface: "#FAFBFF",
-    onSurface: "#1A237E",
-    surfaceContainer: "#E8EAF6",
-    accentPositive: "#00C853",
-    accentNegative: "#B3261E",
-    accentWarning: "#FF8F00",
-    onDark: "#FAFBFF",
-    sceneBackground: "#1A1A2E",
+    primary: PALETTE.indigo,
+    primaryDark: PALETTE.indigoDark,
+    surface: PALETTE.surface,
+    onSurface: PALETTE.indigoDark,
+    surfaceContainer: PALETTE.container,
+    accentPositive: PALETTE.positive,
+    accentNegative: PALETTE.negative,
+    accentWarning: PALETTE.warning,
+    onDark: PALETTE.surface,
+    sceneBackground: PALETTE.stage,
   },
   typography: {
-    headingFamily: '"Roboto", system-ui, sans-serif',
-    bodyFamily: '"Roboto", system-ui, sans-serif',
-    monoFamily: '"Roboto Mono", monospace',
+    headingFamily: FONTS.display,
+    bodyFamily: FONTS.body,
+    monoFamily: FONTS.mono,
   },
 };
 

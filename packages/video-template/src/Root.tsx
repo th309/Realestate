@@ -12,6 +12,9 @@ import {
   calculateRankingMetadata,
   calculateLongFormMetadata,
 } from "./PropertyIQVideo";
+import { loadBrandFonts } from "./styles/fonts";
+
+loadBrandFonts();
 
 const RANKING_FORMATS = new Set<FormatKey>([
   "top_10_ranking",
@@ -56,7 +59,10 @@ function buildDefaultProps(key: FormatKey): VideoProps {
           ctaUrl: "",
         }
       : {
-          format: key as Exclude<FormatKey, "top_10_ranking" | "bottom_10_ranking">,
+          format: key as Exclude<
+            FormatKey,
+            "top_10_ranking" | "bottom_10_ranking"
+          >,
           resolvedMarket: {
             canonical_name: "Preview",
             geography: "metro",

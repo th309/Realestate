@@ -1,11 +1,8 @@
 import React from "react";
-import {
-  AbsoluteFill,
-  spring,
-  useCurrentFrame,
-  useVideoConfig,
-} from "remotion";
+import { AbsoluteFill } from "remotion";
 import { ScoreRing } from "./ScoreRing";
+import { AnimatedEntrance } from "../motion";
+import { FONTS, PALETTE } from "../styles/tokens";
 import { useLayoutConfig } from "../layout/useLayoutConfig";
 
 export interface BrandOutroCardProps {
@@ -14,73 +11,80 @@ export interface BrandOutroCardProps {
 }
 
 /**
- * 3-second closing CTA card. Displays optional ScoreRing above the
- * PropertyIQ wordmark and the UTM-tagged CTA URL.
+ * 3-second closing CTA card. The signature ScoreRing dial re-sweeps above
+ * the PropertyIQ wordmark and the UTM-tagged CTA URL — the motif viewers
+ * saw at the reveal closes the video.
  */
 export const BrandOutroCard: React.FC<BrandOutroCardProps> = ({
   ctaUrl,
   score,
 }) => {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
   const { scale } = useLayoutConfig();
-  const opacity = spring({ frame, fps, config: { damping: 12 } });
   return (
     <AbsoluteFill
       style={{
-        backgroundColor: "#1A1A2E",
+        backgroundColor: PALETTE.stage,
         justifyContent: "center",
         alignItems: "center",
         gap: 36 * scale,
-        opacity,
       }}
     >
       {typeof score === "number" && (
-        <ScoreRing score={score} size={220 * scale} />
+        <AnimatedEntrance index={0} from="scale" preset="gentle">
+          <ScoreRing score={score} size={220 * scale} delay={6} />
+        </AnimatedEntrance>
       )}
-      <div
-        style={{
-          color: "#FFFFFF",
-          fontFamily: "Roboto",
-          fontSize: 144 * scale,
-          fontWeight: 800,
-          letterSpacing: "-0.04em",
-          lineHeight: 1,
-        }}
-      >
-        PropertyIQ
-      </div>
-      <div
-        style={{
-          height: 3,
-          width: 320 * scale,
-          backgroundColor: "#5C6BC0",
-        }}
-      />
-      <div
-        style={{
-          color: "#00C853",
-          fontFamily: "Roboto Mono",
-          fontSize: 112 * scale,
-          fontWeight: 700,
-          letterSpacing: "-0.01em",
-          lineHeight: 1,
-        }}
-      >
-        propertyiq.app
-      </div>
-      {ctaUrl && (
+      <AnimatedEntrance index={1} from="rise">
         <div
           style={{
-            color: "#C5CAE9",
-            fontFamily: "Roboto Mono",
-            fontSize: 32 * scale,
-            opacity: 0.75,
-            letterSpacing: "0.02em",
+            color: PALETTE.surface,
+            fontFamily: FONTS.display,
+            fontSize: 144 * scale,
+            fontWeight: 800,
+            letterSpacing: "-0.04em",
+            lineHeight: 1,
           }}
         >
-          {ctaUrl}
+          PropertyIQ
         </div>
+      </AnimatedEntrance>
+      <AnimatedEntrance index={2} from="none">
+        <div
+          style={{
+            height: 3,
+            width: 320 * scale,
+            backgroundColor: PALETTE.indigoMedium,
+          }}
+        />
+      </AnimatedEntrance>
+      <AnimatedEntrance index={3} from="rise">
+        <div
+          style={{
+            color: PALETTE.positive,
+            fontFamily: FONTS.mono,
+            fontSize: 112 * scale,
+            fontWeight: 700,
+            letterSpacing: "-0.01em",
+            lineHeight: 1,
+          }}
+        >
+          propertyiq.app
+        </div>
+      </AnimatedEntrance>
+      {ctaUrl && (
+        <AnimatedEntrance index={4} from="rise">
+          <div
+            style={{
+              color: PALETTE.indigoLight,
+              fontFamily: FONTS.mono,
+              fontSize: 32 * scale,
+              opacity: 0.75,
+              letterSpacing: "0.02em",
+            }}
+          >
+            {ctaUrl}
+          </div>
+        </AnimatedEntrance>
       )}
     </AbsoluteFill>
   );

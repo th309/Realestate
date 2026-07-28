@@ -1,12 +1,17 @@
 import React from "react";
+import { AbsoluteFill } from "remotion";
 import {
-  AbsoluteFill,
-  Easing,
-  interpolate,
-  spring,
-  useCurrentFrame,
-  useVideoConfig,
-} from "remotion";
+  AnimatedEntrance,
+  useScriptedProgress,
+  useSpringProgress,
+} from "../motion";
+import {
+  BORDER_WIDTH,
+  FONTS,
+  NUMERIC,
+  PALETTE,
+  withAlpha,
+} from "../styles/tokens";
 
 interface HeroRowProps {
   rank: number;
@@ -20,18 +25,23 @@ interface HeroRowProps {
 
 /**
  * Editorial hero treatment for a single ranking row. Centred on the frame.
- * Three movements, all settled within the first ~0.6s so the remaining hold
+ * Three movements, all settled within the first ~0.9s so the remaining hold
  * is a still magazine page rather than perpetual motion:
  *
- *   1. Rank stamp — drops in with a high-damping spring + scale settle.
+ *   1. Rank stamp — lands on a house entrance spring, scaling 1.35 → 1.
  *      Reads like a printer's number plate landing on the page.
- *   2. City + state — fade-and-rise with a hairline rule that draws across
+ *   2. City + state — spring-rise, with a hairline rule that wipes across
  *      after the city lands. The rule grounds the typography on a baseline.
  *   3. Value — count-up replaces Number.0/.1/etc. with the final number;
  *      gives a small "this is the data" reveal beat without an SFX hit.
  *
- * No bouncy springs, no zoom-bombs, no confetti. The aesthetic is
- * Bloomberg-meets-Apple-Keynote, not TikTok-meets-game-show.
+ * The count-up is deliberately a SCRIPTED move (interpolate + M3 emphasized
+ * decelerate) rather than a spring counter: a caption-aligned row can be as
+ * short as ~35 frames, and a `counter` spring needs ~76 to settle, which
+ * would leave the final number never reaching its real value on tight rows.
+ *
+ * Every element enters through AnimatedEntrance on the house 4-frame stagger,
+ * so no two siblings ever animate on the same frame.
  */
 export const HeroRow: React.FC<HeroRowProps> = ({
   rank,
@@ -41,51 +51,17 @@ export const HeroRow: React.FC<HeroRowProps> = ({
   metricLabel,
   accent,
 }) => {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
+  // Movement 1 — rank stamp lands (scale settle is bigger than the house
+  // 1.05, so the stamp drives its own spring rather than AnimatedEntrance).
+  const stampProgress = useSpringProgress({ preset: "entrance" });
+  const stampScale = 1.35 - 0.35 * stampProgress;
 
-  // Movement 1 — rank stamp lands.
-  const rankSpring = spring({
-    frame,
-    fps,
-    config: { damping: 18, stiffness: 110 },
-    durationInFrames: 18,
-  });
-  const rankScale = interpolate(rankSpring, [0, 1], [1.35, 1]);
-  const rankOpacity = interpolate(frame, [0, 8], [0, 1], {
-    extrapolateRight: "clamp",
-  });
+  // Movement 2 — hairline rule wipes across once the city has landed.
+  const ruleWidth = useScriptedProgress(14, 26, "standard") * 100;
 
-  // Movement 2 — city rise, then rule draws.
-  const cityRise = interpolate(frame, [4, 18], [40, 0], {
-    easing: Easing.out(Easing.cubic),
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-  const cityOpacity = interpolate(frame, [4, 16], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-  const ruleWidth = interpolate(frame, [14, 26], [0, 100], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-  const stateOpacity = interpolate(frame, [18, 28], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-
-  // Movement 3 — value count-up reveal.
-  const valueProgress = interpolate(frame, [22, 40], [0, 1], {
-    easing: Easing.out(Easing.quad),
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
+  // Movement 3 — value count-up.
+  const valueProgress = useScriptedProgress(22, 40, "emphasized");
   const valueDisplay = renderCountUp(valueFormatted, valueProgress);
-  const valueOpacity = interpolate(frame, [22, 32], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
 
   return (
     <AbsoluteFill
@@ -105,48 +81,49 @@ export const HeroRow: React.FC<HeroRowProps> = ({
           height: 280,
           borderRadius: "50%",
           backgroundColor: accent,
-          color: "#08081A",
+          color: PALETTE.stageDeep,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          fontFamily: "'Roboto Mono', monospace",
+          fontFamily: FONTS.mono,
           fontWeight: 800,
           fontSize: 168,
           lineHeight: 1,
           letterSpacing: "-0.05em",
-          opacity: rankOpacity,
-          transform: `scale(${rankScale})`,
-          boxShadow: `0 24px 80px ${hexToRgba(accent, 0.4)}`,
+          opacity: Math.min(1, stampProgress * 2.5),
+          transform: `scale(${stampScale})`,
+          boxShadow: `0 24px 80px ${withAlpha(accent, 0.4)}`,
+          ...NUMERIC,
         }}
       >
         {rank}
       </div>
 
       {/* City — Roboto Black, tight letter-spacing for editorial weight */}
-      <div
-        style={{
-          fontFamily: "'Roboto', sans-serif",
-          fontWeight: 900,
-          fontSize: 132,
-          lineHeight: 0.95,
-          letterSpacing: "-0.04em",
-          color: "#FFFFFF",
-          textAlign: "center",
-          opacity: cityOpacity,
-          transform: `translateY(${cityRise}px)`,
-          maxWidth: 920,
-        }}
-      >
-        {marketName}
-      </div>
+      <AnimatedEntrance index={1} delay={2} from="rise" distance={40}>
+        <div
+          style={{
+            fontFamily: FONTS.display,
+            fontWeight: 900,
+            fontSize: 132,
+            lineHeight: 0.95,
+            letterSpacing: "-0.04em",
+            color: PALETTE.surface,
+            textAlign: "center",
+            maxWidth: 920,
+          }}
+        >
+          {marketName}
+        </div>
+      </AnimatedEntrance>
 
-      {/* Rule — draws horizontally after city lands */}
+      {/* Rule — wipes horizontally after city lands */}
       <div
         style={{
-          height: 2,
+          height: BORDER_WIDTH,
           width: `${ruleWidth}%`,
           maxWidth: 680,
-          backgroundColor: "#5C6BC0",
+          backgroundColor: PALETTE.indigoMedium,
         }}
       />
 
@@ -159,45 +136,49 @@ export const HeroRow: React.FC<HeroRowProps> = ({
           gap: 24,
         }}
       >
-        <div
-          style={{
-            fontFamily: "'Roboto Mono', monospace",
-            fontWeight: 500,
-            fontSize: 42,
-            letterSpacing: "0.18em",
-            color: "#C5CAE9",
-            textTransform: "uppercase",
-            opacity: stateOpacity,
-          }}
-        >
-          {state}
-        </div>
-        <div
-          style={{
-            fontFamily: "'Roboto Mono', monospace",
-            fontWeight: 700,
-            fontSize: 220,
-            lineHeight: 1,
-            letterSpacing: "-0.04em",
-            color: accent,
-            opacity: valueOpacity,
-          }}
-        >
-          {valueDisplay}
-        </div>
-        <div
-          style={{
-            fontFamily: "'Roboto Mono', monospace",
-            fontWeight: 500,
-            fontSize: 26,
-            letterSpacing: "0.22em",
-            color: "#9FA8DA",
-            textTransform: "uppercase",
-            opacity: valueOpacity,
-          }}
-        >
-          {metricLabel}
-        </div>
+        <AnimatedEntrance index={2} delay={8} from="rise" distance={16}>
+          <div
+            style={{
+              fontFamily: FONTS.mono,
+              fontWeight: 500,
+              fontSize: 42,
+              letterSpacing: "0.18em",
+              color: PALETTE.indigoLight,
+              textTransform: "uppercase",
+            }}
+          >
+            {state}
+          </div>
+        </AnimatedEntrance>
+        <AnimatedEntrance index={3} delay={10} from="rise" distance={20}>
+          <div
+            style={{
+              fontFamily: FONTS.mono,
+              fontWeight: 700,
+              fontSize: 220,
+              lineHeight: 1,
+              letterSpacing: "-0.04em",
+              color: accent,
+              ...NUMERIC,
+            }}
+          >
+            {valueDisplay}
+          </div>
+        </AnimatedEntrance>
+        <AnimatedEntrance index={4} delay={10} from="rise" distance={12}>
+          <div
+            style={{
+              fontFamily: FONTS.mono,
+              fontWeight: 500,
+              fontSize: 26,
+              letterSpacing: "0.22em",
+              color: PALETTE.indigoMuted,
+              textTransform: "uppercase",
+            }}
+          >
+            {metricLabel}
+          </div>
+        </AnimatedEntrance>
       </div>
     </AbsoluteFill>
   );
@@ -218,13 +199,4 @@ function renderCountUp(formatted: string, progress: number): string {
   const live = finalNum * progress;
   const decimals = (numStr.split(".")[1] ?? "").length;
   return `${prefix}${live.toFixed(decimals)}${suffix}`;
-}
-
-function hexToRgba(hex: string, alpha: number): string {
-  const m = hex.replace("#", "");
-  const bigint = parseInt(m, 16);
-  const r = (bigint >> 16) & 255;
-  const g = (bigint >> 8) & 255;
-  const b = bigint & 255;
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }

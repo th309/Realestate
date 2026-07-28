@@ -1,18 +1,27 @@
 import React from "react";
+import { useVideoConfig } from "remotion";
 import {
-  useCurrentFrame,
-  useVideoConfig,
-  interpolate,
-  spring,
-  Easing,
-} from "remotion";
-import { COLORS, scoreTierColor, scoreTierLabel } from "../constants";
+  COLORS,
+  scoreMomentumArrow,
+  scoreTierColor,
+  scoreTierLabel,
+} from "../constants";
+import { AnimatedEntrance } from "../motion";
+import { ScoreRing } from "../primitives/ScoreRing";
+import {
+  BORDER_WIDTH,
+  FONTS,
+  NUMERIC,
+  brandBorder,
+  brandFill,
+} from "../styles/tokens";
 import type { TrendDirection } from "../types";
 import { useLayoutConfig } from "../layout/useLayoutConfig";
 
 interface ScoreRevealProps {
   market: string;
   score: number;
+  /** Legacy label from the bundle — display uses the momentum ladder. */
   grade: string;
   trend: TrendDirection;
   trendChange: number;
@@ -21,54 +30,30 @@ interface ScoreRevealProps {
   confidenceLetter?: string;
 }
 
+/** Frames into the scene before the dial sweep starts (SFX cues match). */
+export const SCORE_DIAL_DELAY = 12;
+
+/**
+ * The signature scene: the PropertyIQ score dial spin-up. Asymmetric
+ * composition — header block pinned top-left, oversized dial pushed
+ * right-of-center, momentum pill overlapping the dial's lower-left edge.
+ * The badge always shows the momentum ladder label (never quality words —
+ * CLAUDE.md §9), regardless of what the bundle's legacy `grade` says.
+ */
 export const ScoreReveal: React.FC<ScoreRevealProps> = ({
   market,
   score,
-  grade,
   trend,
   trendChange,
   periodDate,
   confidenceLetter,
 }) => {
-  const frame = useCurrentFrame();
-  const { width, height, fps } = useVideoConfig();
+  const { width, height } = useVideoConfig();
   const { isVertical } = useLayoutConfig();
 
   const tierColor = scoreTierColor(score);
-
-  // Fade in the whole scene
-  const sceneOpacity = interpolate(frame, [0, 20], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-
-  // Animated counter: 0 → score over ~120 frames with spring easing
-  const counterProgress = spring({
-    fps,
-    frame,
-    config: { damping: 20, stiffness: 80, mass: 1 },
-    durationInFrames: 120,
-  });
-  const displayScore = Math.round(
-    interpolate(counterProgress, [0, 1], [0, score]),
-  );
-
-  // Arc circle animation (SVG stroke-dashoffset trick)
-  const circumference = 2 * Math.PI * 160;
-  const arcProgress = interpolate(counterProgress, [0, 1], [0, score / 100]);
-  const strokeDashoffset = circumference * (1 - arcProgress);
-
-  // Grade badge appears after counter reaches ~80%
-  const gradeOpacity = interpolate(frame, [80, 110], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-
-  // Trend indicator appears near end
-  const trendOpacity = interpolate(frame, [100, 130], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
+  const momentumLabel = scoreTierLabel(score);
+  const momentumArrow = scoreMomentumArrow(score);
 
   const trendColor =
     trend === "up"
@@ -82,180 +67,175 @@ export const ScoreReveal: React.FC<ScoreRevealProps> = ({
       ? "FLAT"
       : `${trend === "up" ? "+" : ""}${trendChange} pts`;
 
-  const arcSize = isVertical ? 340 : 340;
-  const arcRadius = arcSize / 2 - 20;
-  const arcStroke = 18;
-  const numberSize = isVertical ? 160 : 140;
-  const marketSize = isVertical ? 48 : 36;
-  const gradeSize = isVertical ? 36 : 28;
-  const periodSize = isVertical ? 24 : 18;
+  const dialSize = isVertical ? 560 : 520;
+  const marketSize = isVertical ? 60 : 48;
+  const eyebrowSize = isVertical ? 24 : 18;
+  const badgeSize = isVertical ? 38 : 30;
+  const metaSize = isVertical ? 28 : 22;
+  const leftMargin = isVertical ? 96 : 140;
 
   return (
     <div
       style={{
         width,
         height,
-        background: COLORS.bg,
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        fontFamily: "'Inter', 'Segoe UI', sans-serif",
-        opacity: sceneOpacity,
-        gap: isVertical ? 32 : 24,
+        position: "relative",
+        fontFamily: FONTS.body,
       }}
     >
-      {/* Market name */}
+      {/* Header block — pinned top-left */}
       <div
         style={{
-          fontSize: marketSize,
-          fontWeight: 700,
-          color: COLORS.text,
-          letterSpacing: "-0.5px",
-        }}
-      >
-        {market}
-      </div>
-
-      {/* Score ring */}
-      <div style={{ position: "relative", width: arcSize, height: arcSize }}>
-        <svg
-          width={arcSize}
-          height={arcSize}
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            transform: "rotate(-90deg)",
-          }}
-        >
-          {/* Track */}
-          <circle
-            cx={arcSize / 2}
-            cy={arcSize / 2}
-            r={arcRadius}
-            fill="none"
-            stroke={COLORS.bgCard}
-            strokeWidth={arcStroke}
-          />
-          {/* Progress arc */}
-          <circle
-            cx={arcSize / 2}
-            cy={arcSize / 2}
-            r={arcRadius}
-            fill="none"
-            stroke={tierColor}
-            strokeWidth={arcStroke}
-            strokeDasharray={circumference}
-            strokeDashoffset={strokeDashoffset}
-            strokeLinecap="round"
-            style={{ filter: `drop-shadow(0 0 12px ${tierColor}80)` }}
-          />
-        </svg>
-
-        {/* Score number */}
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <span
-            style={{
-              fontSize: numberSize,
-              fontWeight: 900,
-              color: tierColor,
-              lineHeight: 1,
-              letterSpacing: "-4px",
-              textShadow: `0 0 40px ${tierColor}60`,
-            }}
-          >
-            {displayScore}
-          </span>
-          <span
-            style={{
-              fontSize: isVertical ? 24 : 18,
-              fontWeight: 500,
-              color: COLORS.textMuted,
-              marginTop: 4,
-              letterSpacing: "0.1em",
-            }}
-          >
-            / 100
-          </span>
-        </div>
-      </div>
-
-      {/* Grade badge */}
-      <div
-        style={{
-          opacity: gradeOpacity,
-          background: `${tierColor}20`,
-          border: `2px solid ${tierColor}`,
-          borderRadius: 12,
-          padding: isVertical ? "16px 40px" : "12px 32px",
-          fontSize: gradeSize,
-          fontWeight: 800,
-          color: tierColor,
-          letterSpacing: "0.15em",
-        }}
-      >
-        {grade}
-      </div>
-
-      {confidenceLetter && /^[A-F]$/i.test(confidenceLetter) && (
-        <div
-          style={{
-            opacity: gradeOpacity,
-            fontSize: isVertical ? 26 : 20,
-            fontWeight: 600,
-            color: COLORS.textMuted,
-            letterSpacing: "0.08em",
-          }}
-        >
-          Data confidence{" "}
-          <span style={{ color: COLORS.text, fontWeight: 800 }}>
-            {confidenceLetter.toUpperCase()}
-          </span>
-        </div>
-      )}
-
-      {/* Trend indicator */}
-      <div
-        style={{
-          opacity: trendOpacity,
+          position: "absolute",
+          left: leftMargin,
+          top: isVertical ? 190 : 140,
           display: "flex",
-          alignItems: "center",
-          gap: 12,
-          fontSize: isVertical ? 32 : 24,
-          color: trendColor,
-          fontWeight: 600,
+          flexDirection: "column",
+          gap: 14,
         }}
       >
-        <span>{trendSymbol}</span>
-        <span>{trendLabel}</span>
-        <span style={{ color: COLORS.textDim, fontSize: isVertical ? 24 : 18 }}>
-          vs last month
-        </span>
+        <AnimatedEntrance index={0} from="left" distance={32}>
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <div
+              style={{
+                width: 48,
+                height: BORDER_WIDTH,
+                background: COLORS.accent,
+              }}
+            />
+            <span
+              style={{
+                fontSize: eyebrowSize,
+                fontWeight: 600,
+                color: COLORS.accent,
+                letterSpacing: "0.28em",
+                textTransform: "uppercase",
+              }}
+            >
+              PropertyIQ Score
+            </span>
+          </div>
+        </AnimatedEntrance>
+        <AnimatedEntrance index={1} from="rise" distance={28}>
+          <div
+            style={{
+              fontSize: marketSize,
+              fontWeight: 700,
+              color: COLORS.text,
+              letterSpacing: "-1px",
+              lineHeight: 1.05,
+              maxWidth: isVertical ? width - leftMargin * 2 : width * 0.42,
+            }}
+          >
+            {market}
+          </div>
+        </AnimatedEntrance>
       </div>
 
-      {/* Period date */}
+      {/* Dial cluster — pushed right-of-center, momentum pill overlapping */}
       <div
         style={{
-          fontSize: periodSize,
-          color: COLORS.textDim,
-          opacity: trendOpacity,
+          position: "absolute",
+          left: isVertical
+            ? `calc(58% - ${dialSize / 2}px)`
+            : `calc(70% - ${dialSize / 2}px)`,
+          top: isVertical ? height * 0.3 : `calc(50% - ${dialSize / 2}px)`,
+          width: dialSize,
+          height: dialSize,
         }}
       >
-        Scored{" "}
-        {new Date(periodDate).toLocaleDateString("en-US", {
-          month: "long",
-          year: "numeric",
-        })}
+        <AnimatedEntrance index={2} from="scale" preset="gentle">
+          <ScoreRing score={score} size={dialSize} delay={SCORE_DIAL_DELAY} />
+        </AnimatedEntrance>
+        <AnimatedEntrance
+          index={0}
+          delay={SCORE_DIAL_DELAY + 52}
+          from="rise"
+          preset="pop"
+          style={{
+            position: "absolute",
+            left: -Math.round(dialSize * 0.09),
+            bottom: Math.round(dialSize * 0.02),
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 14,
+              background: brandFill(tierColor),
+              border: brandBorder(tierColor),
+              backdropFilter: "blur(4px)",
+              borderRadius: 999,
+              padding: isVertical ? "18px 42px" : "14px 34px",
+              fontSize: badgeSize,
+              fontWeight: 800,
+              color: tierColor,
+              letterSpacing: "0.14em",
+            }}
+          >
+            <span>{momentumArrow}</span>
+            <span>{momentumLabel}</span>
+          </div>
+        </AnimatedEntrance>
+      </div>
+
+      {/* Meta column — bottom-left */}
+      <div
+        style={{
+          position: "absolute",
+          left: leftMargin,
+          top: isVertical ? height * 0.72 : height * 0.74,
+          display: "flex",
+          flexDirection: "column",
+          gap: 18,
+        }}
+      >
+        {confidenceLetter && /^[A-F]$/i.test(confidenceLetter) && (
+          <AnimatedEntrance index={0} delay={SCORE_DIAL_DELAY + 60} from="rise">
+            <div
+              style={{
+                fontSize: metaSize,
+                fontWeight: 600,
+                color: COLORS.textMuted,
+                letterSpacing: "0.08em",
+              }}
+            >
+              Data confidence{" "}
+              <span style={{ color: COLORS.text, fontWeight: 800, ...NUMERIC }}>
+                {confidenceLetter.toUpperCase()}
+              </span>
+            </div>
+          </AnimatedEntrance>
+        )}
+        <AnimatedEntrance index={1} delay={SCORE_DIAL_DELAY + 60} from="rise">
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              fontSize: metaSize,
+              color: trendColor,
+              fontWeight: 600,
+              ...NUMERIC,
+            }}
+          >
+            <span>{trendSymbol}</span>
+            <span>{trendLabel}</span>
+            <span style={{ color: COLORS.textDim, fontSize: metaSize * 0.8 }}>
+              vs last month
+            </span>
+          </div>
+        </AnimatedEntrance>
+        <AnimatedEntrance index={2} delay={SCORE_DIAL_DELAY + 60} from="rise">
+          <div style={{ fontSize: metaSize * 0.8, color: COLORS.textDim }}>
+            Scored{" "}
+            {new Date(periodDate).toLocaleDateString("en-US", {
+              month: "long",
+              year: "numeric",
+            })}
+          </div>
+        </AnimatedEntrance>
       </div>
     </div>
   );

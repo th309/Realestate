@@ -1,6 +1,21 @@
 import React from "react";
-import { useCurrentFrame, useVideoConfig, interpolate, spring } from "remotion";
-import { COLORS, scoreTierColor, scoreTierLabel } from "../constants";
+import { useVideoConfig } from "remotion";
+import {
+  COLORS,
+  scoreMomentumArrow,
+  scoreTierColor,
+  scoreTierLabel,
+} from "../constants";
+import { AnimatedEntrance, staggerDelay } from "../motion";
+import { ScoreRing } from "../primitives/ScoreRing";
+import {
+  BORDER_WIDTH,
+  FONTS,
+  NUMERIC,
+  PALETTE,
+  brandBorder,
+  brandFill,
+} from "../styles/tokens";
 import type { MarketData, ComparisonMarket } from "../types";
 import { useLayoutConfig } from "../layout/useLayoutConfig";
 
@@ -12,49 +27,39 @@ interface ComparisonProps {
 interface MarketColumnProps {
   market: string;
   score: number;
+  /** Legacy label from the bundle — display uses the momentum ladder. */
   grade: string;
   trend: string;
   trendChange: number;
   isPrimary: boolean;
-  delay: number;
+  /** Position in the column group — drives the 4-frame sibling stagger. */
+  index: number;
   isVertical: boolean;
 }
 
+/** Frames before the columns enter, so the header lands first. */
+const COLUMN_ENTRANCE_DELAY = 8;
+/** Frames into the scene before the first column's dial starts its sweep. */
+const COLUMN_DIAL_DELAY = 20;
+
+/**
+ * One market's card: the signature ScoreRing dial, the momentum badge, and
+ * the month-over-month delta. Columns never animate together — `index`
+ * offsets both the card entrance and its dial sweep by 4 frames apiece, so
+ * the eye lands on the featured market first.
+ */
 const MarketColumn: React.FC<MarketColumnProps> = ({
   market,
   score,
-  grade,
   trend,
   trendChange,
   isPrimary,
-  delay,
+  index,
   isVertical,
 }) => {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
-
   const tierColor = scoreTierColor(score);
-
-  const appear = spring({
-    fps,
-    frame: Math.max(0, frame - delay),
-    config: { damping: 20, stiffness: 80 },
-    durationInFrames: 60,
-  });
-
-  const opacity = interpolate(appear, [0, 0.2], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-  const counterProgress = spring({
-    fps,
-    frame: Math.max(0, frame - delay - 10),
-    config: { damping: 22, stiffness: 70 },
-    durationInFrames: 90,
-  });
-  const displayScore = Math.round(
-    interpolate(counterProgress, [0, 1], [0, score]),
-  );
+  const momentumLabel = scoreTierLabel(score);
+  const momentumArrow = scoreMomentumArrow(score);
 
   const trendColor =
     trend === "up"
@@ -65,173 +70,123 @@ const MarketColumn: React.FC<MarketColumnProps> = ({
   const trendSymbol = trend === "up" ? "▲" : trend === "down" ? "▼" : "●";
 
   const marketSize = isVertical ? 36 : 26;
-  const scoreSize = isVertical ? 120 : 96;
-  const gradeSize = isVertical ? 28 : 22;
-
-  const circumference = 2 * Math.PI * 100;
-  const arcSize = isVertical ? 250 : 240;
-  const arcRadius = arcSize / 2 - 15;
+  const badgeSize = isVertical ? 26 : 20;
+  const dialSize = isVertical ? 250 : 240;
 
   return (
-    <div
-      style={{
-        flex: 1,
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        gap: isVertical ? 20 : 16,
-        opacity,
-        padding: isVertical ? "24px 16px" : "20px 16px",
-        background: isPrimary ? `${tierColor}0a` : COLORS.bgCard,
-        borderRadius: 24,
-        border: isPrimary
-          ? `2px solid ${tierColor}40`
-          : `1px solid ${COLORS.bgCardAlt}`,
-        position: "relative",
-      }}
+    <AnimatedEntrance
+      index={index}
+      delay={COLUMN_ENTRANCE_DELAY}
+      from="rise"
+      preset="gentle"
+      distance={28}
+      style={{ flex: 1, display: "flex", flexDirection: "column" }}
     >
-      {/* Primary badge */}
-      {isPrimary && (
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: isVertical ? 20 : 16,
+          padding: isVertical ? "24px 16px" : "20px 16px",
+          background: isPrimary ? brandFill(tierColor) : COLORS.bgCard,
+          borderRadius: 24,
+          border: isPrimary
+            ? brandBorder(tierColor, 0.6)
+            : brandBorder(PALETTE.indigoMedium, 0.25),
+          position: "relative",
+        }}
+      >
+        {isPrimary && (
+          <div
+            style={{
+              position: "absolute",
+              top: -14,
+              background: tierColor,
+              color: PALETTE.stage,
+              fontSize: isVertical ? 18 : 13,
+              fontWeight: 700,
+              padding: "4px 16px",
+              borderRadius: 999,
+              letterSpacing: "0.1em",
+            }}
+          >
+            FEATURED MARKET
+          </div>
+        )}
+
         <div
           style={{
-            position: "absolute",
-            top: -14,
-            background: tierColor,
-            color: "#000",
-            fontSize: isVertical ? 18 : 13,
+            fontSize: marketSize,
             fontWeight: 700,
-            padding: "4px 16px",
-            borderRadius: 20,
+            color: COLORS.text,
+            textAlign: "center",
+          }}
+        >
+          {market}
+        </div>
+
+        {/* The signature dial — same primitive every score-forward beat mounts */}
+        <ScoreRing
+          score={score}
+          size={dialSize}
+          delay={COLUMN_DIAL_DELAY + staggerDelay(index)}
+          strokeWidth={12}
+        />
+
+        {/* Momentum badge — the ladder label, never a quality word */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            background: brandFill(tierColor),
+            border: brandBorder(tierColor),
+            borderRadius: 999,
+            padding: isVertical ? "10px 28px" : "8px 22px",
+            fontSize: badgeSize,
+            fontWeight: 800,
+            color: tierColor,
             letterSpacing: "0.1em",
           }}
         >
-          FEATURED MARKET
+          <span>{momentumArrow}</span>
+          <span>{momentumLabel}</span>
         </div>
-      )}
 
-      {/* Market name */}
-      <div
-        style={{
-          fontSize: marketSize,
-          fontWeight: 700,
-          color: COLORS.text,
-          textAlign: "center",
-        }}
-      >
-        {market}
-      </div>
-
-      {/* Score arc */}
-      <div style={{ position: "relative", width: arcSize, height: arcSize }}>
-        <svg
-          width={arcSize}
-          height={arcSize}
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            transform: "rotate(-90deg)",
-          }}
-        >
-          <circle
-            cx={arcSize / 2}
-            cy={arcSize / 2}
-            r={arcRadius}
-            fill="none"
-            stroke={COLORS.bgCardAlt}
-            strokeWidth={12}
-          />
-          <circle
-            cx={arcSize / 2}
-            cy={arcSize / 2}
-            r={arcRadius}
-            fill="none"
-            stroke={tierColor}
-            strokeWidth={12}
-            strokeDasharray={circumference}
-            strokeDashoffset={
-              circumference *
-              (1 -
-                (score / 100) *
-                  interpolate(counterProgress, [0, 1], [0, 1], {
-                    extrapolateLeft: "clamp",
-                    extrapolateRight: "clamp",
-                  }))
-            }
-            strokeLinecap="round"
-          />
-        </svg>
         <div
           style={{
-            position: "absolute",
-            inset: 0,
             display: "flex",
-            flexDirection: "column",
             alignItems: "center",
-            justifyContent: "center",
+            gap: 8,
+            fontFamily: FONTS.mono,
+            fontSize: isVertical ? 26 : 20,
+            color: trendColor,
+            fontWeight: 600,
+            ...NUMERIC,
           }}
         >
-          <span
-            style={{
-              fontSize: scoreSize,
-              fontWeight: 900,
-              color: tierColor,
-              lineHeight: 1,
-              letterSpacing: "-3px",
-            }}
-          >
-            {displayScore}
+          <span>{trendSymbol}</span>
+          <span>
+            {trend === "stable"
+              ? "FLAT"
+              : `${trend === "up" ? "+" : ""}${trendChange} pts`}
           </span>
         </div>
       </div>
-
-      {/* Grade */}
-      <div
-        style={{
-          background: `${tierColor}20`,
-          border: `2px solid ${tierColor}`,
-          borderRadius: 10,
-          padding: isVertical ? "10px 28px" : "8px 22px",
-          fontSize: gradeSize,
-          fontWeight: 800,
-          color: tierColor,
-          letterSpacing: "0.1em",
-        }}
-      >
-        {grade}
-      </div>
-
-      {/* Trend */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          fontSize: isVertical ? 26 : 20,
-          color: trendColor,
-          fontWeight: 600,
-        }}
-      >
-        <span>{trendSymbol}</span>
-        <span>
-          {trend === "stable"
-            ? "FLAT"
-            : `${trend === "up" ? "+" : ""}${trendChange} pts`}
-        </span>
-      </div>
-    </div>
+    </AnimatedEntrance>
   );
 };
 
+/**
+ * Head-to-head beat: eyebrow + rule header, then one dial column per market.
+ * Paints no background of its own — the hosting layout keeps a persistent
+ * MeshBackground underneath every scene.
+ */
 export const Comparison: React.FC<ComparisonProps> = ({ primary, others }) => {
-  const frame = useCurrentFrame();
   const { width, height } = useVideoConfig();
   const { isVertical } = useLayoutConfig();
-
-  const sceneOpacity = interpolate(frame, [0, 15], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
 
   const allMarkets = [
     { ...primary, isPrimary: true },
@@ -245,6 +200,7 @@ export const Comparison: React.FC<ComparisonProps> = ({ primary, others }) => {
   ];
 
   const titleSize = isVertical ? 48 : 36;
+  const eyebrowSize = isVertical ? 22 : 16;
   const padding = isVertical ? 40 : 80;
 
   return (
@@ -252,32 +208,62 @@ export const Comparison: React.FC<ComparisonProps> = ({ primary, others }) => {
       style={{
         width,
         height,
-        background: COLORS.bg,
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        fontFamily: "'Inter', 'Segoe UI', sans-serif",
-        opacity: sceneOpacity,
+        fontFamily: FONTS.body,
         padding: `0 ${padding}px`,
         gap: isVertical ? 40 : 32,
         boxSizing: "border-box",
       }}
     >
-      {/* Title */}
+      {/* Header: eyebrow + rule, then the scene title */}
       <div
         style={{
-          fontSize: titleSize,
-          fontWeight: 700,
-          color: COLORS.text,
+          display: "flex",
+          flexDirection: "column",
+          gap: 12,
           alignSelf: "flex-start",
           width: "100%",
         }}
       >
-        Market Comparison
+        <AnimatedEntrance index={0} from="left" distance={32}>
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <div
+              style={{
+                width: 48,
+                height: BORDER_WIDTH,
+                background: COLORS.accent,
+              }}
+            />
+            <span
+              style={{
+                fontSize: eyebrowSize,
+                fontWeight: 600,
+                color: COLORS.accent,
+                letterSpacing: "0.28em",
+                textTransform: "uppercase",
+              }}
+            >
+              Head to Head
+            </span>
+          </div>
+        </AnimatedEntrance>
+        <AnimatedEntrance index={1} from="rise" distance={24}>
+          <div
+            style={{
+              fontSize: titleSize,
+              fontWeight: 700,
+              color: COLORS.text,
+              letterSpacing: "-1px",
+            }}
+          >
+            Market Comparison
+          </div>
+        </AnimatedEntrance>
       </div>
 
-      {/* Market columns */}
       <div
         style={{
           display: "flex",
@@ -296,7 +282,7 @@ export const Comparison: React.FC<ComparisonProps> = ({ primary, others }) => {
             trend={m.trend}
             trendChange={m.trendChange}
             isPrimary={m.isPrimary}
-            delay={i * 25}
+            index={i}
             isVertical={!!isVertical}
           />
         ))}

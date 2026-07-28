@@ -1,40 +1,67 @@
 import React from "react";
 import { spring, useCurrentFrame, useVideoConfig } from "remotion";
+import { COLORS, scoreTierColor } from "../constants";
+import { SPRINGS } from "../motion";
+import { CHART, FONTS, brandFill, PALETTE, withAlpha } from "../styles/tokens";
 
 export interface ScoreRingProps {
   score: number;
   size: number;
+  /** Frames before the sweep begins (stagger against siblings). */
+  delay?: number;
+  strokeWidth?: number;
+  /** Hide the numeral when the parent renders its own readout. */
+  showNumber?: boolean;
 }
 
 /**
- * Shared animated score ring used by BrandOutroCard and any future
- * score-forward layouts. Extracted from the legacy ScoreReveal scene
- * so the primitive can be re-used without pulling in scene styles.
+ * The PropertyIQ signature motion element: the score dial spin-up.
+ * A heavy spring sweeps the arc to the score while the mono numeral
+ * counts alongside it; when the sweep settles, the endpoint dot pulses
+ * with a soft glow (the same endpoint-pulse the web charts use).
+ *
+ * Every score-forward moment across every format mounts THIS component —
+ * ScoreReveal, Comparison, BrandOutroCard — so the dial reads as a
+ * recurring brand motif, not a per-scene rendering.
  */
-export const ScoreRing: React.FC<ScoreRingProps> = ({ score, size }) => {
+export const ScoreRing: React.FC<ScoreRingProps> = ({
+  score,
+  size,
+  delay = 0,
+  strokeWidth,
+  showNumber = true,
+}) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const progress = spring({ frame, fps, config: { damping: 20 } });
-  const radius = size / 2 - 8;
+  const progress = spring({
+    frame: frame - delay,
+    fps,
+    config: SPRINGS.counter,
+  });
+
+  const stroke = strokeWidth ?? Math.max(8, size * 0.05);
+  const radius = size / 2 - stroke - CHART.endpointRadius;
   const circumference = 2 * Math.PI * radius;
-  const offset = circumference * (1 - progress * (score / 100));
-  const color =
-    score >= 80
-      ? "#00C853"
-      : score >= 60
-        ? "#3949AB"
-        : score >= 40
-          ? "#FF8F00"
-          : "#B3261E";
+  const fraction = progress * (score / 100);
+  const offset = circumference * (1 - fraction);
+  const color = scoreTierColor(score);
+
+  // Endpoint dot rides the arc head; pulses once the sweep has settled.
+  const angle = -Math.PI / 2 + fraction * Math.PI * 2;
+  const dotX = size / 2 + radius * Math.cos(angle);
+  const dotY = size / 2 + radius * Math.sin(angle);
+  const settled = Math.min(1, Math.max(0, (progress - 0.92) / 0.08));
+  const pulse = 0.5 + 0.5 * Math.sin((frame - delay) * 0.18);
 
   return (
     <svg width={size} height={size}>
+      {/* Track: brand 8% fill, never a hard grey */}
       <circle
         cx={size / 2}
         cy={size / 2}
         r={radius}
-        stroke="#C5CAE9"
-        strokeWidth={8}
+        stroke={brandFill(PALETTE.indigoLight)}
+        strokeWidth={stroke}
         fill="none"
       />
       <circle
@@ -42,24 +69,60 @@ export const ScoreRing: React.FC<ScoreRingProps> = ({ score, size }) => {
         cy={size / 2}
         r={radius}
         stroke={color}
-        strokeWidth={8}
+        strokeWidth={stroke}
         fill="none"
         strokeDasharray={circumference}
         strokeDashoffset={offset}
+        strokeLinecap="round"
         transform={`rotate(-90 ${size / 2} ${size / 2})`}
+        style={{
+          filter: `drop-shadow(0 0 ${stroke}px ${withAlpha(color, 0.5)})`,
+        }}
       />
-      <text
-        x="50%"
-        y="50%"
-        dy="0.35em"
-        textAnchor="middle"
-        fontFamily="Roboto Mono"
-        fontWeight={700}
-        fontSize={size * 0.36}
+      {/* Endpoint glow pulse (settles → breathes) */}
+      <circle
+        cx={dotX}
+        cy={dotY}
+        r={CHART.endpointRadius * (1.7 + 0.6 * pulse)}
+        fill={withAlpha(color, settled * (0.18 + 0.14 * pulse))}
+      />
+      <circle
+        cx={dotX}
+        cy={dotY}
+        r={CHART.endpointRadius}
         fill={color}
-      >
-        {Math.round(score * progress)}
-      </text>
+        opacity={0.35 + 0.65 * settled}
+      />
+      {showNumber && (
+        <>
+          <text
+            x="50%"
+            y="47%"
+            dy="0.35em"
+            textAnchor="middle"
+            fontFamily={FONTS.mono}
+            fontWeight={700}
+            fontSize={size * 0.34}
+            fill={color}
+            style={{ fontVariantNumeric: "tabular-nums" }}
+          >
+            {Math.round(score * progress)}
+          </text>
+          <text
+            x="50%"
+            y="47%"
+            dy="2.6em"
+            textAnchor="middle"
+            fontFamily={FONTS.mono}
+            fontWeight={500}
+            fontSize={size * 0.07}
+            fill={COLORS.textMuted}
+            letterSpacing="0.1em"
+          >
+            / 100
+          </text>
+        </>
+      )}
     </svg>
   );
 };

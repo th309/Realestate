@@ -1,21 +1,15 @@
 import React from "react";
-import {
-  AbsoluteFill,
-  Img,
-  spring,
-  useCurrentFrame,
-  useVideoConfig,
-  Audio,
-  staticFile,
-  interpolate,
-} from "remotion";
+import { AbsoluteFill, Audio, Img, interpolate, staticFile } from "remotion";
+import { AUDIO_LEVELS } from "../audio/levels";
+import { AnimatedEntrance } from "../motion";
+import { PALETTE } from "../styles/tokens";
 import { useLayoutConfig } from "../layout/useLayoutConfig";
 
 /**
  * 2-second opening brand sting. On the brand indigo background, the
- * shortmark pops in (spring) and the PropertyIQ wordmark fades in
- * beneath it after a short delay. Audio sting plays from
- * /public/brand-sting.mp3.
+ * shortmark pops in (spring) and the PropertyIQ wordmark rises in
+ * beneath it on the house stagger. The sting is gain-staged via
+ * AUDIO_LEVELS and eased out before the narration starts at frame 60.
  *
  * Assets live in /public/brand/ (shipped via Remotion's staticFile()):
  *   - piq-shortmark-192px-normal.png — the square PIQ icon + dots
@@ -23,23 +17,7 @@ import { useLayoutConfig } from "../layout/useLayoutConfig";
  *     Every Market" wordmark in light colors, meant for dark backgrounds
  */
 export const BrandBumper: React.FC = () => {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
   const { scale } = useLayoutConfig();
-
-  // Shortmark pops in immediately via spring.
-  const shortmarkSpring = spring({
-    frame,
-    fps,
-    config: { damping: 12, stiffness: 140 },
-    durationInFrames: 20,
-  });
-
-  // Wordmark fades in after the shortmark settles.
-  const wordmarkOpacity = interpolate(frame, [15, 35], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
 
   const shortmarkSize = 260 * scale;
   const wordmarkWidth = 520 * scale;
@@ -47,31 +25,42 @@ export const BrandBumper: React.FC = () => {
   return (
     <AbsoluteFill
       style={{
-        backgroundColor: "#1A237E",
+        backgroundColor: PALETTE.indigoDark,
         justifyContent: "center",
         alignItems: "center",
         gap: 40 * scale,
       }}
     >
-      <Audio src={staticFile("brand-sting.mp3")} />
-      <Img
-        src={staticFile("brand/piq-shortmark-192px-normal.png")}
-        style={{
-          width: shortmarkSize,
-          height: shortmarkSize,
-          objectFit: "contain",
-          transform: `scale(${shortmarkSpring})`,
-        }}
+      <Audio
+        src={staticFile("brand-sting.mp3")}
+        volume={(f) =>
+          AUDIO_LEVELS.sting *
+          interpolate(f, [44, 58], [1, 0], {
+            extrapolateLeft: "clamp",
+            extrapolateRight: "clamp",
+          })
+        }
       />
-      <Img
-        src={staticFile("brand/piq-logo-primary-dark-reversed.png")}
-        style={{
-          width: wordmarkWidth,
-          height: "auto",
-          objectFit: "contain",
-          opacity: wordmarkOpacity,
-        }}
-      />
+      <AnimatedEntrance index={0} from="scale" preset="pop">
+        <Img
+          src={staticFile("brand/piq-shortmark-192px-normal.png")}
+          style={{
+            width: shortmarkSize,
+            height: shortmarkSize,
+            objectFit: "contain",
+          }}
+        />
+      </AnimatedEntrance>
+      <AnimatedEntrance index={1} delay={8} from="rise" distance={18}>
+        <Img
+          src={staticFile("brand/piq-logo-primary-dark-reversed.png")}
+          style={{
+            width: wordmarkWidth,
+            height: "auto",
+            objectFit: "contain",
+          }}
+        />
+      </AnimatedEntrance>
     </AbsoluteFill>
   );
 };

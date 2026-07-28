@@ -1,5 +1,7 @@
 import React from "react";
-import { AbsoluteFill, Easing, interpolate, useCurrentFrame } from "remotion";
+import { AbsoluteFill } from "remotion";
+import { AnimatedEntrance } from "../motion";
+import { BORDER_WIDTH, FONTS, PALETTE } from "../styles/tokens";
 
 interface HookHeadlineProps {
   headline: string;
@@ -12,6 +14,9 @@ interface HookHeadlineProps {
  * says "Number N."). Editorial framing — Roboto Black at display size with
  * tight letter-spacing, plus a hairline rule grounding the typography.
  *
+ * The four elements enter on the house 4-frame stagger (eyebrow → headline →
+ * rule → scope) so the card assembles top-down instead of flashing in whole.
+ *
  * Used only by Top10Layout's hook window; not a generic primitive.
  */
 export const HookHeadline: React.FC<HookHeadlineProps> = ({
@@ -19,16 +24,6 @@ export const HookHeadline: React.FC<HookHeadlineProps> = ({
   scope,
   accent,
 }) => {
-  const frame = useCurrentFrame();
-  const rise = interpolate(frame, [0, 18], [40, 0], {
-    easing: Easing.out(Easing.cubic),
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-  const opacity = interpolate(frame, [0, 14], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
   return (
     <AbsoluteFill
       style={{
@@ -40,56 +35,58 @@ export const HookHeadline: React.FC<HookHeadlineProps> = ({
         padding: "0 80px",
       }}
     >
-      <div
-        style={{
-          fontFamily: "'Roboto Mono', monospace",
-          fontWeight: 600,
-          fontSize: 28,
-          letterSpacing: "0.32em",
-          color: accent,
-          textTransform: "uppercase",
-          opacity,
-          transform: `translateY(${rise}px)`,
-        }}
-      >
-        Countdown
-      </div>
-      <div
-        style={{
-          fontFamily: "'Roboto', sans-serif",
-          fontWeight: 900,
-          fontSize: 156,
-          letterSpacing: "-0.05em",
-          lineHeight: 0.95,
-          color: "#FFFFFF",
-          textAlign: "center",
-          opacity,
-          transform: `translateY(${rise}px)`,
-        }}
-      >
-        {headline}
-      </div>
-      <div
-        style={{
-          height: 2,
-          width: 320,
-          backgroundColor: "#5C6BC0",
-          opacity,
-        }}
-      />
-      <div
-        style={{
-          fontFamily: "'Roboto Mono', monospace",
-          fontWeight: 500,
-          fontSize: 32,
-          letterSpacing: "0.18em",
-          color: "#C5CAE9",
-          textTransform: "uppercase",
-          opacity,
-        }}
-      >
-        {scope}
-      </div>
+      <AnimatedEntrance index={0} from="rise" distance={40}>
+        <div
+          style={{
+            fontFamily: FONTS.mono,
+            fontWeight: 600,
+            fontSize: 28,
+            letterSpacing: "0.32em",
+            color: accent,
+            textTransform: "uppercase",
+          }}
+        >
+          Countdown
+        </div>
+      </AnimatedEntrance>
+      <AnimatedEntrance index={1} from="rise" distance={40}>
+        <div
+          style={{
+            fontFamily: FONTS.display,
+            fontWeight: 900,
+            fontSize: 156,
+            letterSpacing: "-0.05em",
+            lineHeight: 0.95,
+            color: PALETTE.surface,
+            textAlign: "center",
+          }}
+        >
+          {headline}
+        </div>
+      </AnimatedEntrance>
+      <AnimatedEntrance index={2} from="none" preset="gentle">
+        <div
+          style={{
+            height: BORDER_WIDTH,
+            width: 320,
+            backgroundColor: PALETTE.indigoMedium,
+          }}
+        />
+      </AnimatedEntrance>
+      <AnimatedEntrance index={3} from="rise" distance={24}>
+        <div
+          style={{
+            fontFamily: FONTS.mono,
+            fontWeight: 500,
+            fontSize: 32,
+            letterSpacing: "0.18em",
+            color: PALETTE.indigoLight,
+            textTransform: "uppercase",
+          }}
+        >
+          {scope}
+        </div>
+      </AnimatedEntrance>
     </AbsoluteFill>
   );
 };

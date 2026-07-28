@@ -2,6 +2,7 @@ import React from "react";
 import { AbsoluteFill, Sequence, useVideoConfig } from "remotion";
 import { BrandBumper } from "../primitives/BrandBumper";
 import { BrandOutroCard } from "../primitives/BrandOutroCard";
+import { MeshBackground } from "../primitives/MeshBackground";
 import { Intro } from "../scenes/Intro";
 import { ScoreReveal } from "../scenes/ScoreReveal";
 import { StatCards } from "../scenes/StatCards";
@@ -17,7 +18,6 @@ import type {
   TrendDirection,
 } from "../types";
 import {
-  COLORS,
   LONG_FORM_FALLBACK_BODY_WEIGHTS,
   LONG_FORM_MAP_INTRO_SECONDS,
   LONG_FORM_METRO_HERO_SECONDS,
@@ -118,7 +118,11 @@ export const LongFormDeepDiveLayout: React.FC<SingleMarketVideoProps> = (
               from={timeline.mapFrames}
               durationInFrames={timeline.heroFrames}
             >
-              <MetroHeroStill imageUrl={heroUrl} marketLabel={marketName} />
+              <MetroHeroStill
+                imageUrl={heroUrl}
+                marketLabel={marketName}
+                durationInFrames={timeline.heroFrames}
+              />
             </Sequence>
           ) : null}
           {timeline.padFrames > 0 ? (
@@ -126,7 +130,8 @@ export const LongFormDeepDiveLayout: React.FC<SingleMarketVideoProps> = (
               from={timeline.mapFrames + (showHero ? timeline.heroFrames : 0)}
               durationInFrames={timeline.padFrames}
             >
-              <AbsoluteFill style={{ backgroundColor: COLORS.bg }} />
+              {/* Transparent hold — the layout's MeshBackground fills the gap. */}
+              <AbsoluteFill />
             </Sequence>
           ) : null}
         </>
@@ -137,11 +142,7 @@ export const LongFormDeepDiveLayout: React.FC<SingleMarketVideoProps> = (
 
   const trendScene =
     history.length > 0 ? (
-      <TrendChart
-        market={marketName}
-        history={history}
-        currentScore={score}
-      />
+      <TrendChart market={marketName} history={history} currentScore={score} />
     ) : economic ? (
       <EconomicPulse
         market={marketName}
@@ -181,7 +182,9 @@ export const LongFormDeepDiveLayout: React.FC<SingleMarketVideoProps> = (
           />
         );
       case "outro":
-        return <Outro ctaUrl={ctaUrl} />;
+        return (
+          <Outro ctaUrl={ctaUrl} durationInFrames={seg.durationInFrames} />
+        );
       case "brand_padding":
         return <BrandOutroCard ctaUrl={ctaUrl} score={score} />;
       default:
@@ -194,6 +197,9 @@ export const LongFormDeepDiveLayout: React.FC<SingleMarketVideoProps> = (
   if (planSegments && planSegments.length > 0) {
     return (
       <>
+        {/* Persistent stage behind every non-full-bleed segment. The Mapbox
+            fly and MetroHeroStill paint their own full-frame visuals on top. */}
+        <MeshBackground />
         <Sequence from={0} durationInFrames={60}>
           <BrandBumper />
         </Sequence>
@@ -219,12 +225,8 @@ export const LongFormDeepDiveLayout: React.FC<SingleMarketVideoProps> = (
     resolvedMarket.geography === "metro" &&
     isMetroPopulationTop200(resolvedMarket.id) &&
     Boolean(resolveMetroHeroImageUrlForMarket(resolvedMarket));
-  const introBudgetMax =
-    mapIntroTarget + (canMetroHero ? heroCapFrames : 0);
-  const intro = Math.min(
-    introBudgetMax,
-    Math.max(1, rest - minBodyFrames),
-  );
+  const introBudgetMax = mapIntroTarget + (canMetroHero ? heroCapFrames : 0);
+  const intro = Math.min(introBudgetMax, Math.max(1, rest - minBodyFrames));
   const bodySplit = Math.max(0, rest - intro);
   const minBrandFrames = 60;
   const pool = Math.max(0, bodySplit - minBrandFrames);
@@ -257,6 +259,8 @@ export const LongFormDeepDiveLayout: React.FC<SingleMarketVideoProps> = (
 
   return (
     <>
+      {/* Persistent stage behind every non-full-bleed segment. */}
+      <MeshBackground />
       <Sequence from={0} durationInFrames={60}>
         <BrandBumper />
       </Sequence>
@@ -281,7 +285,7 @@ export const LongFormDeepDiveLayout: React.FC<SingleMarketVideoProps> = (
         {trendScene}
       </Sequence>
       <Sequence from={sOut} durationInFrames={outroF}>
-        <Outro ctaUrl={ctaUrl} />
+        <Outro ctaUrl={ctaUrl} durationInFrames={outroF} />
       </Sequence>
       <Sequence from={sBrand} durationInFrames={brandF}>
         <BrandOutroCard ctaUrl={ctaUrl} score={score} />

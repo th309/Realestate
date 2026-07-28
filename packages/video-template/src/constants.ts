@@ -5,6 +5,14 @@
 
 export const FPS = 30;
 
+/**
+ * Frame the narration starts on in EVERY format — the backend audio
+ * budget (duration_seconds - audio_buffer_seconds, buffer = 2s) assumes
+ * exactly this offset, so layouts must keep their opening bumper to 60
+ * frames regardless of format scale.
+ */
+export const NARRATION_START_FRAME = 60;
+
 /** Long-form deep-dive MP4 length ceiling (5 minutes @ 30fps). */
 export const LONG_FORM_MAX_DURATION_FRAMES = 5 * 60 * FPS;
 
@@ -26,26 +34,30 @@ export const LONG_FORM_FALLBACK_BODY_WEIGHTS = {
 } as const;
 
 // ── Brand colors ────────────────────────────────────────────────────────────
-export const COLORS = {
-  bg: "#0f172a",
-  bgCard: "#1e293b",
-  bgCardAlt: "#243146",
-  text: "#f8fafc",
-  textMuted: "#94a3b8",
-  textDim: "#475569",
-  accent: "#3b82f6",
-  accentGlow: "rgba(59,130,246,0.25)",
+// Derived from styles/tokens.ts — the only hex source in this package.
+// Keys are kept stable so every existing COLORS.* reference lands on-brand.
+import { PALETTE, brandFill, withAlpha } from "./styles/tokens";
 
-  // Score tier colors (match ticket spec)
-  tierRed: "#ef4444",
-  tierYellow: "#eab308",
-  tierGreen: "#22c55e",
-  tierBlue: "#3b82f6",
+export const COLORS = {
+  bg: PALETTE.stage,
+  bgCard: brandFill(PALETTE.container),
+  bgCardAlt: brandFill(PALETTE.indigoLight),
+  text: PALETTE.surface,
+  textMuted: PALETTE.indigoMuted,
+  textDim: PALETTE.indigoMedium,
+  accent: PALETTE.indigoMedium,
+  accentGlow: withAlpha(PALETTE.indigoMedium, 0.25),
+
+  // Score tier colors — momentum ladder, brand semantics
+  tierRed: PALETTE.negative,
+  tierYellow: PALETTE.warning,
+  tierGreen: PALETTE.positive,
+  tierBlue: PALETTE.indigoLight,
 
   // Trend arrows
-  trendUp: "#22c55e",
-  trendDown: "#ef4444",
-  trendStable: "#94a3b8",
+  trendUp: PALETTE.positive,
+  trendDown: PALETTE.negative,
+  trendStable: PALETTE.indigoMuted,
 } as const;
 
 // ── Score tier helpers ───────────────────────────────────────────────────────
@@ -69,6 +81,14 @@ export function scoreTierLabel(score: number): string {
   if (score >= 40) return "EASING";
   if (score >= 20) return "WEAK";
   return "VERY WEAK";
+}
+
+/** Momentum direction arrow — mirrors getScoreMomentumArrow (CLAUDE.md §9). */
+export function scoreMomentumArrow(score: number): string {
+  if (score >= 60) return "↑";
+  if (score >= 50) return "→";
+  if (score >= 40) return "↘";
+  return "↓";
 }
 
 // ── Scene timing (frames at 30fps) ──────────────────────────────────────────

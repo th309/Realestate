@@ -1,6 +1,6 @@
-// Brand colors hardcoded; Task 2.28 will move them to a shared variant module.
 import React from "react";
 import { useCurrentFrame, useVideoConfig } from "remotion";
+import { FONTS, PALETTE, withAlpha } from "../styles/tokens";
 import { useLayoutConfig } from "../layout/useLayoutConfig";
 
 export interface CaptionWord {
@@ -29,11 +29,11 @@ export const CaptionOverlay: React.FC<{ words: CaptionWord[] }> = ({
         left: 40 * scale,
         right: 40 * scale,
         textAlign: "center",
-        fontFamily: "Roboto",
+        fontFamily: FONTS.body,
         fontWeight: 700,
         fontSize: 42 * scale,
-        color: "#FFFFFF",
-        textShadow: "0 2px 8px rgba(0,0,0,0.8)",
+        color: PALETTE.surface,
+        textShadow: `0 2px 8px ${withAlpha(PALETTE.stageDeep, 0.85)}`,
       }}
     >
       {text}

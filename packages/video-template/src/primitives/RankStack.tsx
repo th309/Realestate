@@ -1,4 +1,12 @@
 import React from "react";
+import { AnimatedEntrance } from "../motion";
+import {
+  FONTS,
+  NUMERIC,
+  PALETTE,
+  brandBorder,
+  withAlpha,
+} from "../styles/tokens";
 
 interface StackEntry {
   rank: number;
@@ -28,6 +36,9 @@ interface RankStackProps {
  * stage. The stack only holds previously-revealed ranks. When the hero
  * transitions to the next row, the layout shifts the current row INTO
  * the stack at the bottom.
+ *
+ * Entries re-assemble on the house 4-frame stagger each time the hero
+ * advances, so the column reads as built rather than pasted.
  */
 export const RankStack: React.FC<RankStackProps> = ({
   history,
@@ -54,81 +65,95 @@ export const RankStack: React.FC<RankStackProps> = ({
       {visible.map((entry, idx) => {
         // Older entries (top of stack) fade and shrink slightly.
         const distanceFromBottom = visible.length - 1 - idx;
-        const opacity = Math.max(0.35, 1 - distanceFromBottom * 0.18);
-        const scale = 1 - distanceFromBottom * 0.04;
+        const depthOpacity = Math.max(0.35, 1 - distanceFromBottom * 0.18);
+        const depthScale = 1 - distanceFromBottom * 0.04;
+        const isLeading = idx === visible.length - 1;
         return (
-          <div
+          <AnimatedEntrance
             key={entry.rank}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 14,
-              padding: "10px 14px 10px 10px",
-              borderRadius: 12,
-              backgroundColor: "rgba(26, 35, 126, 0.45)",
-              backdropFilter: "blur(6px)",
-              borderLeft: `2px solid ${idx === visible.length - 1 ? accent : "#5C6BC0"}`,
-              opacity,
-              transform: `scale(${scale})`,
-              transformOrigin: "right center",
-              maxWidth: 260,
-            }}
+            index={idx}
+            delay={4}
+            from="right"
+            distance={32}
+            preset="gentle"
           >
+            {/* Depth fade lives on the card, not the wrapper: AnimatedEntrance
+                owns the wrapper's opacity/transform for the entrance itself. */}
             <div
               style={{
-                width: 44,
-                height: 44,
-                borderRadius: "50%",
-                backgroundColor:
-                  idx === visible.length - 1 ? accent : "#3949AB",
-                color: idx === visible.length - 1 ? "#08081A" : "#FFFFFF",
-                fontFamily: "'Roboto Mono', monospace",
-                fontWeight: 800,
-                fontSize: 20,
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
-              }}
-            >
-              {entry.rank}
-            </div>
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: 2,
-                minWidth: 0,
+                gap: 14,
+                opacity: depthOpacity,
+                padding: "10px 14px 10px 10px",
+                borderRadius: 12,
+                backgroundColor: withAlpha(PALETTE.indigoDark, 0.45),
+                backdropFilter: "blur(6px)",
+                borderLeft: brandBorder(
+                  isLeading ? accent : PALETTE.indigoMedium,
+                ),
+                transform: `scale(${depthScale})`,
+                transformOrigin: "right center",
+                maxWidth: 260,
               }}
             >
               <div
                 style={{
-                  fontFamily: "'Roboto', sans-serif",
-                  fontWeight: 700,
-                  fontSize: 18,
-                  color: "#FFFFFF",
-                  lineHeight: 1.1,
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
+                  width: 44,
+                  height: 44,
+                  borderRadius: "50%",
+                  backgroundColor: isLeading ? accent : PALETTE.indigo,
+                  color: isLeading ? PALETTE.stageDeep : PALETTE.surface,
+                  fontFamily: FONTS.mono,
+                  fontWeight: 800,
+                  fontSize: 20,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                  ...NUMERIC,
                 }}
               >
-                {entry.marketName}
+                {entry.rank}
               </div>
               <div
                 style={{
-                  fontFamily: "'Roboto Mono', monospace",
-                  fontWeight: 500,
-                  fontSize: 13,
-                  color: "#9FA8DA",
-                  letterSpacing: "0.08em",
-                  whiteSpace: "nowrap",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 2,
+                  minWidth: 0,
                 }}
               >
-                {entry.state} · {entry.valueFormatted}
+                <div
+                  style={{
+                    fontFamily: FONTS.body,
+                    fontWeight: 700,
+                    fontSize: 18,
+                    color: PALETTE.surface,
+                    lineHeight: 1.1,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
+                  {entry.marketName}
+                </div>
+                <div
+                  style={{
+                    fontFamily: FONTS.mono,
+                    fontWeight: 500,
+                    fontSize: 13,
+                    color: PALETTE.indigoMuted,
+                    letterSpacing: "0.08em",
+                    whiteSpace: "nowrap",
+                    ...NUMERIC,
+                  }}
+                >
+                  {entry.state} · {entry.valueFormatted}
+                </div>
               </div>
             </div>
-          </div>
+          </AnimatedEntrance>
         );
       })}
     </div>

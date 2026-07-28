@@ -1,5 +1,6 @@
 import React from "react";
 import { AbsoluteFill, useCurrentFrame, useVideoConfig } from "remotion";
+import { PALETTE, withAlpha } from "../styles/tokens";
 
 /**
  * Slow-drifting indigo gradient with a faint grid overlay. Replaces the dead
@@ -26,7 +27,9 @@ export const MeshBackground: React.FC = () => {
   const blobBY = 70 + driftB * 20; // 70%–90%
 
   return (
-    <AbsoluteFill style={{ overflow: "hidden", backgroundColor: "#08081A" }}>
+    <AbsoluteFill
+      style={{ overflow: "hidden", backgroundColor: PALETTE.stageDeep }}
+    >
       {/* Indigo bloom — primary atmosphere layer */}
       <div
         style={{
@@ -34,8 +37,8 @@ export const MeshBackground: React.FC = () => {
           inset: 0,
           background: `radial-gradient(
             ellipse 70% 55% at ${blobAX}% ${blobAY}%,
-            rgba(57, 73, 171, 0.55) 0%,
-            rgba(57, 73, 171, 0.12) 40%,
+            ${withAlpha(PALETTE.indigo, 0.55)} 0%,
+            ${withAlpha(PALETTE.indigo, 0.12)} 40%,
             transparent 70%
           )`,
         }}
@@ -47,8 +50,8 @@ export const MeshBackground: React.FC = () => {
           inset: 0,
           background: `radial-gradient(
             ellipse 60% 45% at ${blobBX}% ${blobBY}%,
-            rgba(26, 35, 126, 0.65) 0%,
-            rgba(26, 35, 126, 0.1) 50%,
+            ${withAlpha(PALETTE.indigoDark, 0.65)} 0%,
+            ${withAlpha(PALETTE.indigoDark, 0.1)} 50%,
             transparent 75%
           )`,
         }}
@@ -71,20 +74,37 @@ export const MeshBackground: React.FC = () => {
             <path
               d="M 40 0 L 0 0 0 40"
               fill="none"
-              stroke="#C5CAE9"
+              stroke={PALETTE.indigoLight}
               strokeWidth="1"
             />
           </pattern>
+          {/* Static film-grain so large fills never read as flat vector */}
+          <filter id="mesh-noise">
+            <feTurbulence
+              type="fractalNoise"
+              baseFrequency="0.9"
+              numOctaves="2"
+              stitchTiles="stitch"
+              seed="7"
+            />
+            <feColorMatrix type="saturate" values="0" />
+          </filter>
         </defs>
         <rect width={width} height={height} fill="url(#grid)" />
+      </svg>
+      <svg
+        width={width}
+        height={height}
+        style={{ position: "absolute", inset: 0, opacity: 0.045 }}
+      >
+        <rect width={width} height={height} filter="url(#mesh-noise)" />
       </svg>
       {/* Vignette — pulls attention to the centre hero region */}
       <div
         style={{
           position: "absolute",
           inset: 0,
-          background:
-            "radial-gradient(ellipse 100% 80% at 50% 50%, transparent 50%, rgba(8, 8, 26, 0.55) 100%)",
+          background: `radial-gradient(ellipse 100% 80% at 50% 50%, transparent 50%, ${withAlpha(PALETTE.stageDeep, 0.55)} 100%)`,
         }}
       />
     </AbsoluteFill>

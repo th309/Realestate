@@ -2,6 +2,7 @@ import React from "react";
 import { Sequence } from "remotion";
 import { BrandBumper } from "../primitives/BrandBumper";
 import { BrandOutroCard } from "../primitives/BrandOutroCard";
+import { MeshBackground } from "../primitives/MeshBackground";
 import { Comparison } from "../scenes/Comparison";
 import { Intro } from "../scenes/Intro";
 import { Outro } from "../scenes/Outro";
@@ -18,6 +19,8 @@ export const HeadToHeadLayout: React.FC<SingleMarketVideoProps> = (props) => {
   const secondary = coerceComparisonMarket(b, "Market B");
   return (
     <>
+      {/* Persistent stage — scenes paint no solid fills of their own. */}
+      <MeshBackground />
       <Sequence from={0} durationInFrames={60}>
         <BrandBumper />
       </Sequence>
@@ -29,13 +32,14 @@ export const HeadToHeadLayout: React.FC<SingleMarketVideoProps> = (props) => {
         */}
         <Intro
           marketName={`${primary.market.split(",")[0].trim()} vs ${secondary.market.split(",")[0].trim()}`}
+          durationInFrames={90}
         />
       </Sequence>
       <Sequence from={150} durationInFrames={1500}>
         <Comparison primary={primary} others={[secondary]} />
       </Sequence>
       <Sequence from={1650} durationInFrames={90}>
-        <Outro ctaUrl={props.ctaUrl} />
+        <Outro ctaUrl={props.ctaUrl} durationInFrames={90} />
       </Sequence>
       <Sequence from={1740} durationInFrames={60}>
         <BrandOutroCard ctaUrl={props.ctaUrl} score={primary.score} />

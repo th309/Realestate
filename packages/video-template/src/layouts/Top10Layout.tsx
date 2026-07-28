@@ -8,6 +8,7 @@ import { HookHeadline } from "../primitives/HookHeadline";
 import { MeshBackground } from "../primitives/MeshBackground";
 import { OutroSummary } from "../primitives/OutroSummary";
 import { RankStack } from "../primitives/RankStack";
+import { PALETTE } from "../styles/tokens";
 import type { RankingVideoProps } from "../types";
 import {
   BRAND_OUTRO_FRAMES,
@@ -17,9 +18,12 @@ import {
   shortenLabel,
 } from "./top10-timing";
 
+// A countdown's accent carries the judgement: the "top" board reads as
+// upward momentum (positive), the "bottom" board as caution (warning).
+// Never a third hue — these are the only two brand semantics in play.
 const ACCENT_BY_THEME = {
-  top: "#00C853",
-  bottom: "#FF8F00",
+  top: PALETTE.positive,
+  bottom: PALETTE.warning,
 } as const;
 
 const LABEL_BY_THEME = {

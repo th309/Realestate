@@ -4,6 +4,7 @@ import { AbsoluteFill, Sequence } from "remotion";
 import { BrandBumper } from "../primitives/BrandBumper";
 import { BrandOutroCard } from "../primitives/BrandOutroCard";
 import { FarmAreaGrid } from "../primitives/FarmAreaGrid";
+import { MeshBackground } from "../primitives/MeshBackground";
 import { Intro } from "../scenes/Intro";
 import { Outro } from "../scenes/Outro";
 import type { SingleMarketVideoProps } from "../types";
@@ -45,23 +46,42 @@ function coerceAreas(bundle: Record<string, unknown>): FarmAreaGridArea[] {
   }));
 }
 
+/**
+ * Beat table for the farm-area spotlight. Exported so `audio/sfx-cues.ts`
+ * frame-locks its cues to the SAME numbers the layout renders from.
+ */
+export const FARM_AREA_BEATS = {
+  bumper: { from: 0, duration: 60 },
+  intro: { from: 60, duration: 90 },
+  grid: { from: 150, duration: 1350 },
+  outro: { from: 1500, duration: 210 },
+  brand: { from: 1710, duration: 90 },
+} as const;
+
+/** Cards in the grid — the fallback and the real slice are both capped at 3. */
+export const FARM_AREA_CARD_COUNT = 3;
+
 export const FarmAreaSpotlightLayout: React.FC<SingleMarketVideoProps> = (
   props,
 ) => {
   const bundle = (props.dataBundle ?? {}) as Record<string, unknown>;
   const areas = coerceAreas(bundle);
+  const beats = FARM_AREA_BEATS;
   return (
     <>
-      <Sequence from={0} durationInFrames={60}>
+      <MeshBackground />
+      <Sequence
+        from={beats.bumper.from}
+        durationInFrames={beats.bumper.duration}
+      >
         <BrandBumper />
       </Sequence>
-      <Sequence from={60} durationInFrames={90}>
+      <Sequence from={beats.intro.from} durationInFrames={beats.intro.duration}>
         <Intro marketName={props.resolvedMarket.canonical_name} />
       </Sequence>
-      <Sequence from={150} durationInFrames={1350}>
+      <Sequence from={beats.grid.from} durationInFrames={beats.grid.duration}>
         <AbsoluteFill
           style={{
-            backgroundColor: "#1A1A2E",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -73,10 +93,10 @@ export const FarmAreaSpotlightLayout: React.FC<SingleMarketVideoProps> = (
           </div>
         </AbsoluteFill>
       </Sequence>
-      <Sequence from={1500} durationInFrames={210}>
+      <Sequence from={beats.outro.from} durationInFrames={beats.outro.duration}>
         <Outro ctaUrl={props.ctaUrl} />
       </Sequence>
-      <Sequence from={1710} durationInFrames={90}>
+      <Sequence from={beats.brand.from} durationInFrames={beats.brand.duration}>
         <BrandOutroCard ctaUrl={props.ctaUrl} />
       </Sequence>
     </>

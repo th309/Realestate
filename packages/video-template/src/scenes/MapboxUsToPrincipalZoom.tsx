@@ -4,7 +4,6 @@ import {
   continueRender,
   delayRender,
   interpolate,
-  Easing,
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
@@ -16,6 +15,8 @@ import {
   US_MAP_START_ZOOM,
 } from "../constants/map-camera";
 import { COLORS } from "../constants";
+import { AnimatedEntrance, EASINGS } from "../motion";
+import { FONTS, PALETTE, withAlpha } from "../styles/tokens";
 import { Intro } from "./Intro";
 
 type MapboxUsToPrincipalZoomProps = {
@@ -43,12 +44,9 @@ function getMapboxToken(): string | undefined {
  * Camera interpolates from a continental US view to the resolved geography
  * point (`geographies.latitude/longitude` from the pipeline — shared with map fly-to).
  */
-export const MapboxUsToPrincipalZoom: React.FC<MapboxUsToPrincipalZoomProps> = ({
-  durationInFrames,
-  targetLongitude,
-  targetLatitude,
-  marketLabel,
-}) => {
+export const MapboxUsToPrincipalZoom: React.FC<
+  MapboxUsToPrincipalZoomProps
+> = ({ durationInFrames, targetLongitude, targetLatitude, marketLabel }) => {
   const token = getMapboxToken();
   if (!token) {
     return <Intro marketName={marketLabel} />;
@@ -84,8 +82,9 @@ const MapboxUsToPrincipalZoomInner: React.FC<
   const safeDuration = Math.max(1, durationInFrames);
   const easeEndFrame = Math.max(1, Math.floor(safeDuration * 0.92));
 
+  // Scripted camera move — M3 standard easing, no spring bounce on a map fly.
   const t = interpolate(frame, [0, easeEndFrame], [0, 1], {
-    easing: Easing.inOut(Easing.cubic),
+    easing: EASINGS.standard,
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
@@ -129,7 +128,9 @@ const MapboxUsToPrincipalZoomInner: React.FC<
 
     const failSafe = window.setTimeout(() => {
       // eslint-disable-next-line no-console
-      console.warn("[MapboxUsToPrincipalZoom] Map load timed out — unblocking render.");
+      console.warn(
+        "[MapboxUsToPrincipalZoom] Map load timed out — unblocking render.",
+      );
       unblock();
     }, 15_000);
 
@@ -161,7 +162,7 @@ const MapboxUsToPrincipalZoomInner: React.FC<
     });
   }, [mapLoaded, centerLng, centerLat, zoom]);
 
-  const labelShadow = useMemo(() => `0 2px 12px ${COLORS.bg}`, []);
+  const labelShadow = `0 2px 12px ${withAlpha(PALETTE.stageDeep, 0.9)}`;
 
   return (
     <AbsoluteFill style={{ backgroundColor: COLORS.bg }}>
@@ -175,23 +176,33 @@ const MapboxUsToPrincipalZoomInner: React.FC<
           top: 0,
         }}
       />
-      <div
+      <AnimatedEntrance
+        index={0}
+        delay={12}
+        from="rise"
+        preset="gentle"
+        distance={20}
         style={{
           position: "absolute",
           bottom: 48,
           left: 0,
           right: 0,
-          textAlign: "center",
-          pointerEvents: "none",
-          fontFamily: "'Inter', 'Segoe UI', sans-serif",
-          fontSize: 26,
-          fontWeight: 700,
-          color: COLORS.text,
-          textShadow: labelShadow,
         }}
       >
-        {marketLabel}
-      </div>
+        <div
+          style={{
+            textAlign: "center",
+            pointerEvents: "none",
+            fontFamily: FONTS.body,
+            fontSize: 26,
+            fontWeight: 700,
+            color: COLORS.text,
+            textShadow: labelShadow,
+          }}
+        >
+          {marketLabel}
+        </div>
+      </AnimatedEntrance>
     </AbsoluteFill>
   );
 };

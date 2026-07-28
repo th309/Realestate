@@ -10,8 +10,8 @@
   },
   "scripts": {
     "start": "npx remotion studio",
-    "render": "npx remotion render grade_reveal out.mp4",
-    "render:shorts": "npx remotion render grade_reveal out-shorts.mp4",
+    "render": "npx remotion render grade-reveal out.mp4",
+    "render:shorts": "npx remotion render grade-reveal out-shorts.mp4",
     "build": "npx remotion bundle",
     "gen:metro-top-200": "node scripts/gen-top-200-metro-cbsa.mjs",
     "build:cli": "tsc --project tsconfig.json",

@@ -1,5 +1,13 @@
 import React from "react";
-import { AbsoluteFill, interpolate, useCurrentFrame } from "remotion";
+import { AbsoluteFill } from "remotion";
+import { AnimatedEntrance } from "../motion";
+import {
+  BORDER_WIDTH,
+  FONTS,
+  NUMERIC,
+  PALETTE,
+  brandBorder,
+} from "../styles/tokens";
 
 interface OutroSummaryEntry {
   rank: number;
@@ -16,6 +24,9 @@ interface OutroSummaryProps {
   themeLabel: string;
 }
 
+/** Frames the header holds before the first recap row starts assembling. */
+const ROW_BASE_DELAY = 8;
+
 /**
  * Final all-ranks recap shown during the outro voice-over. Reverses the
  * countdown so the audience sees the leaderboard in best-to-worst order
@@ -23,20 +34,14 @@ interface OutroSummaryProps {
  *
  * Sized to fill the full 1080×1920 frame minus the persistent CornerBug
  * region. Each row gets ~150px of vertical space so the recap reads as a
- * confident editorial table, not a cramped tooltip. Stagger-fades each row
- * in sequence (~80ms apart) so the leaderboard feels assembled, not
- * dropped.
+ * confident editorial table, not a cramped tooltip. Rows enter on the house
+ * 4-frame stagger so the leaderboard feels assembled, not dropped.
  */
 export const OutroSummary: React.FC<OutroSummaryProps> = ({
   markets,
   accent,
   themeLabel,
 }) => {
-  const frame = useCurrentFrame();
-  const headerOpacity = interpolate(frame, [0, 12], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
   const summary = [...markets].reverse();
   return (
     <AbsoluteFill
@@ -50,37 +55,39 @@ export const OutroSummary: React.FC<OutroSummaryProps> = ({
         padding: "240px 80px 80px 80px",
       }}
     >
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "flex-start",
-          gap: 20,
-          marginBottom: 50,
-          opacity: headerOpacity,
-        }}
-      >
+      <AnimatedEntrance index={0} from="left" distance={32} preset="gentle">
         <div
           style={{
-            fontFamily: "'Roboto Mono', monospace",
-            fontWeight: 700,
-            fontSize: 56,
-            letterSpacing: "0.28em",
-            color: accent,
-            textTransform: "uppercase",
-            lineHeight: 1,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "flex-start",
+            gap: 20,
+            marginBottom: 50,
           }}
         >
-          {themeLabel}
+          <div
+            style={{
+              fontFamily: FONTS.mono,
+              fontWeight: 700,
+              fontSize: 56,
+              letterSpacing: "0.28em",
+              color: accent,
+              textTransform: "uppercase",
+              lineHeight: 1,
+              ...NUMERIC,
+            }}
+          >
+            {themeLabel}
+          </div>
+          <div
+            style={{
+              height: BORDER_WIDTH,
+              width: "100%",
+              backgroundColor: PALETTE.indigoMedium,
+            }}
+          />
         </div>
-        <div
-          style={{
-            height: 3,
-            width: "100%",
-            backgroundColor: "#5C6BC0",
-          }}
-        />
-      </div>
+      </AnimatedEntrance>
 
       <div
         style={{
@@ -90,43 +97,27 @@ export const OutroSummary: React.FC<OutroSummaryProps> = ({
           justifyContent: "space-between",
         }}
       >
-        {summary.map((m, i) => {
-          const rowDelay = 14 + i * 2; // ~67ms stagger at 30fps
-          const rowOpacity = interpolate(
-            frame,
-            [rowDelay, rowDelay + 8],
-            [0, 1],
-            {
-              extrapolateLeft: "clamp",
-              extrapolateRight: "clamp",
-            },
-          );
-          const rowRise = interpolate(
-            frame,
-            [rowDelay, rowDelay + 10],
-            [16, 0],
-            {
-              extrapolateLeft: "clamp",
-              extrapolateRight: "clamp",
-            },
-          );
-          return (
+        {summary.map((m, i) => (
+          <AnimatedEntrance
+            key={m.region_id ?? `${m.rank}-${m.region_name}`}
+            index={i}
+            delay={ROW_BASE_DELAY}
+            from="rise"
+            distance={16}
+          >
             <div
-              key={m.region_id ?? `${m.rank}-${m.region_name}`}
               style={{
                 display: "flex",
                 alignItems: "center",
                 gap: 32,
-                color: "#FFFFFF",
-                borderBottom: "1px solid rgba(92, 107, 192, 0.32)",
+                color: PALETTE.surface,
+                borderBottom: brandBorder(PALETTE.indigoMedium, 0.32),
                 paddingBottom: 14,
-                opacity: rowOpacity,
-                transform: `translateY(${rowRise}px)`,
               }}
             >
               <span
                 style={{
-                  fontFamily: "'Roboto Mono', monospace",
+                  fontFamily: FONTS.mono,
                   fontWeight: 800,
                   fontSize: 88,
                   lineHeight: 1,
@@ -134,6 +125,7 @@ export const OutroSummary: React.FC<OutroSummaryProps> = ({
                   width: 130,
                   textAlign: "right",
                   letterSpacing: "-0.04em",
+                  ...NUMERIC,
                 }}
               >
                 {m.rank}
@@ -141,7 +133,7 @@ export const OutroSummary: React.FC<OutroSummaryProps> = ({
               <span
                 style={{
                   flex: 1,
-                  fontFamily: "'Roboto', sans-serif",
+                  fontFamily: FONTS.display,
                   fontWeight: 800,
                   fontSize: 64,
                   lineHeight: 1,
@@ -154,10 +146,10 @@ export const OutroSummary: React.FC<OutroSummaryProps> = ({
                 {m.region_name}
                 <span
                   style={{
-                    fontFamily: "'Roboto Mono', monospace",
+                    fontFamily: FONTS.mono,
                     fontWeight: 500,
                     fontSize: 40,
-                    color: "#9FA8DA",
+                    color: PALETTE.indigoMuted,
                     marginLeft: 18,
                   }}
                 >
@@ -166,21 +158,22 @@ export const OutroSummary: React.FC<OutroSummaryProps> = ({
               </span>
               <span
                 style={{
-                  fontFamily: "'Roboto Mono', monospace",
+                  fontFamily: FONTS.mono,
                   fontWeight: 700,
                   fontSize: 80,
                   lineHeight: 1,
-                  color: "#FFFFFF",
+                  color: PALETTE.surface,
                   letterSpacing: "-0.02em",
                   textAlign: "right",
                   minWidth: 180,
+                  ...NUMERIC,
                 }}
               >
                 {m.value_formatted}
               </span>
             </div>
-          );
-        })}
+          </AnimatedEntrance>
+        ))}
       </div>
     </AbsoluteFill>
   );

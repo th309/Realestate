@@ -1,12 +1,18 @@
 import React from "react";
-import { AbsoluteFill, Audio, Sequence } from "remotion";
+import { AbsoluteFill, useVideoConfig } from "remotion";
 import {
   VideoProps,
   RankingVideoProps,
   SingleMarketVideoProps,
   FORMAT_CONFIGS,
 } from "./types";
-import { LONG_FORM_MAX_DURATION_FRAMES } from "./constants";
+import { AudioMix } from "./audio/AudioMix";
+import { buildSfxCues } from "./audio/sfx-cues";
+import { PALETTE } from "./styles/tokens";
+import {
+  LONG_FORM_MAX_DURATION_FRAMES,
+  NARRATION_START_FRAME,
+} from "./constants";
 import {
   BRAND_OUTRO_FRAMES,
   computeRankingTiming,
@@ -88,9 +94,10 @@ import { CaptionOverlay } from "./primitives/CaptionOverlay";
 
 export const PropertyIQVideo: React.FC<VideoProps> = (props) => {
   const cfg = FORMAT_CONFIGS[props.format];
+  const { durationInFrames } = useVideoConfig();
   return (
     <VideoLayout config={cfg}>
-      <AbsoluteFill style={{ backgroundColor: "#1A1A2E" }}>
+      <AbsoluteFill style={{ backgroundColor: PALETTE.stage }}>
         {props.format === "grade_reveal" && <GradeRevealLayout {...props} />}
         {props.format === "top_10_ranking" && <Top10Layout {...props} />}
         {props.format === "bottom_10_ranking" && (
@@ -123,18 +130,18 @@ export const PropertyIQVideo: React.FC<VideoProps> = (props) => {
           )}
       </AbsoluteFill>
       {/*
-        Delay voice-over until after the 2-second BrandBumper (60 frames
-        @ 30fps) so the brand sting plays clean, without the narrator
-        talking over the intro logo. Audio plays from its start through
-        to its natural end (ffprobe cap in synthesize-audio.handler
-        ensures audio_length <= duration - audio_buffer_seconds, so even
-        the longest legal audio still ends before the video does).
+        Full program mix: narration (delayed 60 frames past the
+        BrandBumper so the sting plays clean), sidechain-ducked music bed,
+        room tone, and entrance SFX frame-locked to the layout beats.
+        Narration still ends before the video does (ffprobe cap in
+        synthesize-audio.handler enforces the audio budget).
       */}
-      {props.audioUrl && (
-        <Sequence from={60}>
-          <Audio src={props.audioUrl} />
-        </Sequence>
-      )}
+      <AudioMix
+        audioUrl={props.audioUrl}
+        captionWords={props.captionWords}
+        narrationStartFrame={NARRATION_START_FRAME}
+        cues={buildSfxCues(props, durationInFrames)}
+      />
     </VideoLayout>
   );
 };
