@@ -117,6 +117,7 @@ export class RetentionAnalyticsService {
     const { data: sessions } = await client
       .from('user_sessions')
       .select('visitor_id, started_at, user_tier')
+      .eq('is_bot', false)
       .gte(
         'started_at',
         new Date(now - 30 * 24 * 60 * 60 * 1000).toISOString(),
@@ -239,6 +240,7 @@ export class RetentionAnalyticsService {
     const { data: sessions } = await client
       .from('user_sessions')
       .select('visitor_id, started_at, user_tier')
+      .eq('is_bot', false)
       .gte('started_at', startDate);
 
     if (!sessions?.length) return [];

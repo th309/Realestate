@@ -16,6 +16,10 @@ import {
   computeAvgPagesPerSession,
   bucketSessionDurations,
 } from './journey-session-aggregators';
+import {
+  resolveDeviceSessionIds,
+  queryOutboundDestinations,
+} from './journey-outbound-queries';
 
 const CACHE_TTL_SECONDS = 900;
 
@@ -39,17 +43,29 @@ export class JourneyAnalyticsService {
     const startDate = new Date(Date.now() - days * 86400000).toISOString();
     const client = this.supabase.getClient();
 
+    // `user_events` has no device_type column, so a device filter has to be
+    // resolved to a session-id set from `user_sessions` and applied in memory.
+    // Previously these queries filtered user_events on device_type directly,
+    // which errored (42703) and silently returned [] for the whole tab.
+    const deviceSessionIds = await resolveDeviceSessionIds(
+      client,
+      startDate,
+      filters,
+    );
+
     const [
       navigationFlows,
       { landingPages, avgPagesPerSession, sessionDurationDistribution },
       exitPages,
       commonPaths,
+      outboundDestinations,
       annotations,
     ] = await Promise.all([
-      this.fetchNavigationFlows(client, startDate, filters),
+      this.fetchNavigationFlows(client, startDate, filters, deviceSessionIds),
       this.fetchSessionAggregates(client, startDate, filters),
       this.fetchExitPages(client, startDate, filters),
-      this.fetchCommonPaths(client, startDate, filters),
+      this.fetchCommonPaths(client, startDate, filters, deviceSessionIds),
+      queryOutboundDestinations(client, startDate, filters, deviceSessionIds),
       this.fetchAnnotations(client, startDate),
     ]);
 
@@ -58,6 +74,7 @@ export class JourneyAnalyticsService {
       landingPages,
       exitPages,
       commonPaths,
+      outboundDestinations,
       avgPagesPerSession,
       sessionDurationDistribution,
       annotations,
@@ -71,17 +88,18 @@ export class JourneyAnalyticsService {
     client: ReturnType<SupabaseService['getClient']>,
     startDate: string,
     filters: AnalyticsFilters,
+    deviceSessionIds: Set<string> | null,
   ): Promise<NavigationFlow[]> {
     let query = client
       .from('user_events')
-      .select('page_path, previous_page_path')
+      .select('session_id, page_path, previous_page_path')
       .eq('event_category', 'pageview')
+      .eq('is_bot', false)
       .not('previous_page_path', 'is', null)
       .gte('created_at', startDate)
       .limit(5000);
 
     if (filters.tier) query = query.eq('user_tier', filters.tier);
-    if (filters.device) query = query.eq('device_type', filters.device);
 
     const { data: flowEvents, error } = await query;
     if (error) {
@@ -93,6 +111,7 @@ export class JourneyAnalyticsService {
 
     const transitionCounts = new Map<string, number>();
     for (const row of flowEvents ?? []) {
+      if (deviceSessionIds && !deviceSessionIds.has(row.session_id)) continue;
       const key = `${row.previous_page_path}|||${row.page_path}`;
       transitionCounts.set(key, (transitionCounts.get(key) ?? 0) + 1);
     }
@@ -118,6 +137,7 @@ export class JourneyAnalyticsService {
     let query = client
       .from('user_sessions')
       .select('landing_page, is_bounce, duration_seconds, page_count')
+      .eq('is_bot', false)
       .gte('started_at', startDate)
       .not('landing_page', 'is', null)
       .limit(5000);
@@ -153,6 +173,7 @@ export class JourneyAnalyticsService {
     let query = client
       .from('user_sessions')
       .select('exit_page')
+      .eq('is_bot', false)
       .gte('started_at', startDate)
       .not('exit_page', 'is', null)
       .limit(5000);
@@ -181,17 +202,18 @@ export class JourneyAnalyticsService {
     client: ReturnType<SupabaseService['getClient']>,
     startDate: string,
     filters: AnalyticsFilters,
+    deviceSessionIds: Set<string> | null,
   ): Promise<PathSequence[]> {
     let query = client
       .from('user_events')
       .select('session_id, page_path, created_at')
       .eq('event_category', 'pageview')
+      .eq('is_bot', false)
       .gte('created_at', startDate)
       .order('created_at', { ascending: true })
       .limit(10000);
 
     if (filters.tier) query = query.eq('user_tier', filters.tier);
-    if (filters.device) query = query.eq('device_type', filters.device);
 
     const { data: pathEvents, error } = await query;
     if (error) {
@@ -201,6 +223,7 @@ export class JourneyAnalyticsService {
 
     const sessionPages = new Map<string, string[]>();
     for (const row of pathEvents ?? []) {
+      if (deviceSessionIds && !deviceSessionIds.has(row.session_id)) continue;
       const pages = sessionPages.get(row.session_id) ?? [];
       pages.push(row.page_path);
       sessionPages.set(row.session_id, pages);

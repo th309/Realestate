@@ -36,6 +36,7 @@ interface AnalyticsEvent {
   properties: Record<string, unknown>;
   user_tier?: string;
   page_path?: string;
+  previous_page_path?: string;
   session_id?: string;
   timestamp: string;
 }
@@ -152,6 +153,13 @@ export function trackEvent(
     properties: enrichedProperties,
     user_tier: getUserTier(),
     page_path: getPagePath(),
+    // Promoted out of `properties` so the backend can persist it to its own
+    // column — validateEvents() reads it top-level. It stays in `properties`
+    // too, so nothing that already queries the JSONB breaks.
+    previous_page_path:
+      typeof enrichedProperties.previous_page_path === "string"
+        ? enrichedProperties.previous_page_path
+        : undefined,
     session_id: getSessionId(),
     timestamp: new Date().toISOString(),
   };

@@ -17,7 +17,10 @@ export async function POST(request: NextRequest): Promise<Response> {
 
   fetch(`${BACKEND_URL}/api/usage/heartbeat`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "x-client-user-agent": request.headers.get("user-agent") ?? "",
+    },
     body,
     keepalive: true,
   }).catch((err) => {

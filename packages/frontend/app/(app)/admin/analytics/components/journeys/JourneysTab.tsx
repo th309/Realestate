@@ -25,6 +25,7 @@ import { ExitPagesTable } from "./ExitPagesTable";
 import { ProgressiveFlow } from "./ProgressiveFlow";
 import { CommonPathsTable } from "./CommonPathsTable";
 import { SessionDurationDist } from "./SessionDurationDist";
+import { OutboundDestinationsTable } from "./OutboundDestinationsTable";
 
 function mergeAnnotations(
   fromResponse: Annotation[],
@@ -96,6 +97,12 @@ export function JourneysTab({
         <CommonPathsTable paths={data.commonPaths} onDrillDown={onDrillDown} />
         <SessionDurationDist buckets={data.sessionDurationDistribution} />
       </div>
+
+      {/* Row 4: Where visitors go when they leave */}
+      <OutboundDestinationsTable
+        destinations={data.outboundDestinations ?? []}
+        onDrillDown={onDrillDown}
+      />
     </div>
   );
 }
