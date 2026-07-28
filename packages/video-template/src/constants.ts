@@ -6,12 +6,28 @@
 export const FPS = 30;
 
 /**
- * Frame the narration starts on in EVERY format — the backend audio
- * budget (duration_seconds - audio_buffer_seconds, buffer = 2s) assumes
- * exactly this offset, so layouts must keep their opening bumper to 60
- * frames regardless of format scale.
+ * Length of the opening BrandBumper sting, when a format has one.
+ *
+ * Never scaled: a scaled bumper would put the narrator over the logo.
+ * Only formats with `openWithBumper` pay this cost — see below.
  */
-export const NARRATION_START_FRAME = 60;
+export const BUMPER_FRAMES = 60;
+
+/**
+ * Frame narration starts on, per format.
+ *
+ * Bumper'd formats (16:9 long-form) start after the sting. Vertical
+ * short-form starts at 0 — on TikTok/Reels/Shorts, two seconds of logo
+ * before the first spoken word loses the scroll.
+ *
+ * Safe against the backend audio budget either way: that budget caps
+ * narration LENGTH at (duration_seconds - audio_buffer_seconds), so
+ * starting earlier only ends narration earlier, leaving more outro room.
+ * It never overruns the composition.
+ */
+export function narrationStartFrame(cfg: { openWithBumper: boolean }): number {
+  return cfg.openWithBumper ? BUMPER_FRAMES : 0;
+}
 
 /** Long-form deep-dive MP4 length ceiling (5 minutes @ 30fps). */
 export const LONG_FORM_MAX_DURATION_FRAMES = 5 * 60 * FPS;

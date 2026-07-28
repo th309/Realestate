@@ -10,6 +10,12 @@
 
 export const FPS = 30;
 export const BUMPER_FRAMES = 60;
+/**
+ * Frames between frame 0 and the first narrated word. Equals the bumper
+ * length on bumper'd formats and 0 on vertical short-form (which opens
+ * straight on the hook). Row reveals are keyed off narration, so this MUST
+ * track the actual narration start or every "Number N" row fires late.
+ */
 export const AUDIO_OFFSET_FRAMES = 60;
 export const BRAND_OUTRO_FRAMES = 90;
 
@@ -33,13 +39,17 @@ export interface CaptionWord {
   endMs: number;
 }
 
-const msToFrame = (ms: number): number =>
-  AUDIO_OFFSET_FRAMES + Math.round((ms * FPS) / 1000);
-
 export function computeRankingTiming(
   rowCount: number,
   captionWords: ReadonlyArray<CaptionWord> | undefined,
+  openWithBumper = false,
 ): RankingTiming {
+  // Narration (and therefore every row reveal) starts after the sting only
+  // when there IS a sting; otherwise at frame 0.
+  const audioOffsetFrames = openWithBumper ? AUDIO_OFFSET_FRAMES : 0;
+  const msToFrame = (ms: number): number =>
+    audioOffsetFrames + Math.round((ms * FPS) / 1000);
+
   if (captionWords && captionWords.length > 0) {
     const numberStartsMs = captionWords
       .filter((w) => /^number/i.test(stripPunct(w.word)))
@@ -48,7 +58,7 @@ export function computeRankingTiming(
       const rowStartFrames = numberStartsMs.slice(0, rowCount).map(msToFrame);
       const lastWordEndMs = captionWords[captionWords.length - 1].endMs;
       const audioEndFrame = msToFrame(lastWordEndMs);
-      const hookStartFrame = BUMPER_FRAMES;
+      const hookStartFrame = audioOffsetFrames;
       const hookDurationFrames = Math.max(
         1,
         rowStartFrames[0] - hookStartFrame,
@@ -72,7 +82,7 @@ export function computeRankingTiming(
     }
   }
 
-  const hookStartFrame = BUMPER_FRAMES;
+  const hookStartFrame = audioOffsetFrames;
   const hookDurationFrames = FALLBACK_HOOK_FRAMES;
   const firstRowStart = hookStartFrame + hookDurationFrames;
   const rowStartFrames = Array.from(

@@ -4,13 +4,14 @@
  * consumed by BOTH the layout (Sequence frames) and the SFX cue builder
  * (audio/sfx-cues.ts) so sound triggers can never drift from the visuals.
  *
- * The bumper is NEVER scaled: narration starts at NARRATION_START_FRAME
- * (60) in every format — that's the backend audio-budget contract
- * (audio_buffer_seconds = 2s = the bumper) — so a scaled bumper would put
- * the narrator over the logo. Content beats stretch to fill the format's
- * remaining duration instead.
+ * The bumper is NEVER scaled — a scaled bumper would put the narrator over
+ * the logo. Content beats stretch to fill the format's remaining duration.
+ *
+ * On formats that don't open with a bumper (all vertical short-form), the
+ * bumper beat collapses to zero and its frames are handed to the content
+ * beats, so the hook lands at frame 0 rather than leaving dead air.
  */
-import { NARRATION_START_FRAME } from "../constants";
+import { BUMPER_FRAMES } from "../constants";
 
 export interface SceneBeat {
   from: number;
@@ -28,7 +29,6 @@ export interface GradeRevealBeats {
 
 /** Base (scale=1) composition length in frames — grade_reveal's 900. */
 const BASE_TOTAL = 900;
-const BUMPER_FRAMES = NARRATION_START_FRAME;
 
 /** Content beats after the bumper, in order, at scale 1 (sum = 840). */
 const CONTENT: Array<[keyof Omit<GradeRevealBeats, "bumper">, number]> = [
@@ -39,16 +39,20 @@ const CONTENT: Array<[keyof Omit<GradeRevealBeats, "bumper">, number]> = [
   ["brand", 90],
 ];
 
-export function buildGradeRevealBeats(scale = 1): GradeRevealBeats {
+export function buildGradeRevealBeats(
+  scale = 1,
+  openWithBumper = false,
+): GradeRevealBeats {
   const total = Math.round(BASE_TOTAL * scale);
+  const bumperFrames = openWithBumper ? BUMPER_FRAMES : 0;
   const contentBase = CONTENT.reduce((sum, [, d]) => sum + d, 0);
-  const contentScale = (total - BUMPER_FRAMES) / contentBase;
+  const contentScale = (total - bumperFrames) / contentBase;
 
   const beats = {
-    bumper: { from: 0, duration: BUMPER_FRAMES },
+    bumper: { from: 0, duration: bumperFrames },
   } as GradeRevealBeats;
 
-  let cursor = BUMPER_FRAMES;
+  let cursor = bumperFrames;
   for (const [key, baseDuration] of CONTENT) {
     const duration = Math.round(baseDuration * contentScale);
     beats[key] = { from: cursor, duration };

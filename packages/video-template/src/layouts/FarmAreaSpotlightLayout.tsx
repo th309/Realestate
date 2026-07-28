@@ -7,6 +7,7 @@ import { FarmAreaGrid } from "../primitives/FarmAreaGrid";
 import { MeshBackground } from "../primitives/MeshBackground";
 import { Intro } from "../scenes/Intro";
 import { Outro } from "../scenes/Outro";
+import { useLayoutConfig } from "../layout/useLayoutConfig";
 import type { SingleMarketVideoProps } from "../types";
 
 interface FarmAreaRaw {
@@ -50,13 +51,22 @@ function coerceAreas(bundle: Record<string, unknown>): FarmAreaGridArea[] {
  * Beat table for the farm-area spotlight. Exported so `audio/sfx-cues.ts`
  * frame-locks its cues to the SAME numbers the layout renders from.
  */
-export const FARM_AREA_BEATS = {
-  bumper: { from: 0, duration: 60 },
-  intro: { from: 60, duration: 90 },
-  grid: { from: 150, duration: 1350 },
-  outro: { from: 1500, duration: 210 },
-  brand: { from: 1710, duration: 90 },
-} as const;
+/**
+ * Beats for farm_area_spotlight's 1800-frame composition. Without a bumper
+ * the open shifts to frame 0 and the grid beat absorbs the freed frames.
+ */
+export function buildFarmAreaBeats(openWithBumper = false) {
+  const bumperDuration = openWithBumper ? 60 : 0;
+  const introFrom = bumperDuration;
+  const gridFrom = introFrom + 90;
+  return {
+    bumper: { from: 0, duration: bumperDuration },
+    intro: { from: introFrom, duration: 90 },
+    grid: { from: gridFrom, duration: 1500 - gridFrom },
+    outro: { from: 1500, duration: 210 },
+    brand: { from: 1710, duration: 90 },
+  };
+}
 
 /** Cards in the grid — the fallback and the real slice are both capped at 3. */
 export const FARM_AREA_CARD_COUNT = 3;
@@ -66,16 +76,19 @@ export const FarmAreaSpotlightLayout: React.FC<SingleMarketVideoProps> = (
 ) => {
   const bundle = (props.dataBundle ?? {}) as Record<string, unknown>;
   const areas = coerceAreas(bundle);
-  const beats = FARM_AREA_BEATS;
+  const { format } = useLayoutConfig();
+  const beats = buildFarmAreaBeats(format.openWithBumper);
   return (
     <>
       <MeshBackground />
-      <Sequence
-        from={beats.bumper.from}
-        durationInFrames={beats.bumper.duration}
-      >
-        <BrandBumper />
-      </Sequence>
+      {format.openWithBumper && (
+        <Sequence
+          from={beats.bumper.from}
+          durationInFrames={beats.bumper.duration}
+        >
+          <BrandBumper />
+        </Sequence>
+      )}
       <Sequence from={beats.intro.from} durationInFrames={beats.intro.duration}>
         <Intro marketName={props.resolvedMarket.canonical_name} />
       </Sequence>

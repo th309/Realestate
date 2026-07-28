@@ -9,21 +9,22 @@ import { computeRankingTiming } from "../layouts/top10-timing";
 import {
   DELTA_SETTLE_FRAMES,
   DELTA_TICK_DELAY,
-  SCORE_MOVER_BEATS,
+  buildScoreMoverBeats,
 } from "../layouts/ScoreMoverLayout";
 import {
-  FARM_AREA_BEATS,
+  buildFarmAreaBeats,
   FARM_AREA_CARD_COUNT,
 } from "../layouts/FarmAreaSpotlightLayout";
 import { SCORE_DIAL_DELAY } from "../scenes/ScoreReveal";
 import { STAGGER_FRAMES } from "../motion/presets";
+import { FORMAT_CONFIGS } from "../types";
 import type { RankingVideoProps, VideoProps } from "../types";
 
 /** Approx. frames from dial-sweep start until the counter spring settles. */
 const DIAL_SETTLE_FRAMES = 76;
 
-function gradeFamilyCues(scale: number): SfxCue[] {
-  const beats = buildGradeRevealBeats(scale);
+function gradeFamilyCues(scale: number, openWithBumper: boolean): SfxCue[] {
+  const beats = buildGradeRevealBeats(scale, openWithBumper);
   const cues: SfxCue[] = [
     { frame: beats.intro.from, sound: "whoosh" },
     { frame: beats.score.from, sound: "whoosh" },
@@ -73,8 +74,8 @@ function rankingCues(props: RankingVideoProps): SfxCue[] {
  * `counter` spring settles on the new score, whoosh on every scene change.
  * Frames come from SCORE_MOVER_BEATS — the layout's own beat table.
  */
-function scoreMoverCues(): SfxCue[] {
-  const b = SCORE_MOVER_BEATS;
+function scoreMoverCues(openWithBumper: boolean): SfxCue[] {
+  const b = buildScoreMoverBeats(openWithBumper);
   const tickStart = b.delta.from + DELTA_TICK_DELAY;
   return [
     { frame: b.intro.from, sound: "whoosh" },
@@ -92,8 +93,8 @@ function scoreMoverCues(): SfxCue[] {
  * per card on its staggered entrance frame (FarmAreaGrid uses the house
  * index * STAGGER_FRAMES offset with no extra base delay).
  */
-function farmAreaCues(): SfxCue[] {
-  const b = FARM_AREA_BEATS;
+function farmAreaCues(openWithBumper: boolean): SfxCue[] {
+  const b = buildFarmAreaBeats(openWithBumper);
   const cues: SfxCue[] = [
     { frame: b.intro.from, sound: "whoosh" },
     { frame: b.grid.from, sound: "whoosh" },
@@ -118,23 +119,26 @@ export function buildSfxCues(
   props: VideoProps,
   durationInFrames: number,
 ): SfxCue[] {
+  // Read from the same format config the layout builds its beats from, so a
+  // bumper-less format's cues shift with its visuals instead of drifting.
+  const { openWithBumper } = FORMAT_CONFIGS[props.format];
   switch (props.format) {
     case "grade_reveal":
-      return gradeFamilyCues(1);
+      return gradeFamilyCues(1, openWithBumper);
     case "brokerage_market_share":
-      return gradeFamilyCues(2.5);
+      return gradeFamilyCues(2.5, openWithBumper);
     case "recruitment_angle":
-      return gradeFamilyCues(3);
+      return gradeFamilyCues(3, openWithBumper);
     case "top_10_ranking":
     case "bottom_10_ranking":
       return rankingCues(props);
     case "score_mover":
-      return scoreMoverCues();
+      return scoreMoverCues(openWithBumper);
     case "farm_area_spotlight":
-      return farmAreaCues();
+      return farmAreaCues(openWithBumper);
     default:
       return [
-        { frame: 60, sound: "whoosh" },
+        { frame: openWithBumper ? 60 : 0, sound: "whoosh" },
         { frame: Math.max(90, durationInFrames - 80), sound: "chime" },
       ];
   }

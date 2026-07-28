@@ -6,8 +6,7 @@
  */
 
 import { z } from "zod";
-
-import { LONG_FORM_MAX_DURATION_FRAMES } from "./constants";
+import { MUSIC_BED_NAMES } from "./audio/levels";
 
 export type ScoreTier =
   | "excellent"
@@ -69,91 +68,11 @@ export interface ComparisonMarket {
 
 // Format configuration for the expanded content pipeline
 // ---------------------------------------------------------------------------
+// Lives in ./formats/format-configs.ts; re-exported here so existing
+// `from "./types"` imports keep working.
 
-export type FormatKey =
-  | "grade_reveal"
-  | "top_10_ranking"
-  | "bottom_10_ranking"
-  | "score_mover"
-  | "head_to_head"
-  | "long_form_deep_dive"
-  | "farm_area_spotlight"
-  | "brokerage_market_share"
-  | "recruitment_angle";
-
-export interface FormatConfig {
-  key: FormatKey;
-  width: number;
-  height: number;
-  fps: number;
-  durationInFrames: number;
-}
-
-export const FORMAT_CONFIGS: Record<FormatKey, FormatConfig> = {
-  grade_reveal: {
-    key: "grade_reveal",
-    width: 1080,
-    height: 1920,
-    fps: 30,
-    durationInFrames: 900,
-  },
-  top_10_ranking: {
-    key: "top_10_ranking",
-    width: 1080,
-    height: 1920,
-    fps: 30,
-    durationInFrames: 1800,
-  },
-  bottom_10_ranking: {
-    key: "bottom_10_ranking",
-    width: 1080,
-    height: 1920,
-    fps: 30,
-    durationInFrames: 1800,
-  },
-  score_mover: {
-    key: "score_mover",
-    width: 1080,
-    height: 1920,
-    fps: 30,
-    durationInFrames: 900,
-  },
-  head_to_head: {
-    key: "head_to_head",
-    width: 1080,
-    height: 1920,
-    fps: 30,
-    durationInFrames: 1800,
-  },
-  long_form_deep_dive: {
-    key: "long_form_deep_dive",
-    width: 1920,
-    height: 1080,
-    fps: 30,
-    durationInFrames: LONG_FORM_MAX_DURATION_FRAMES,
-  },
-  farm_area_spotlight: {
-    key: "farm_area_spotlight",
-    width: 1080,
-    height: 1920,
-    fps: 30,
-    durationInFrames: 1800,
-  },
-  brokerage_market_share: {
-    key: "brokerage_market_share",
-    width: 1080,
-    height: 1920,
-    fps: 30,
-    durationInFrames: 2250,
-  },
-  recruitment_angle: {
-    key: "recruitment_angle",
-    width: 1080,
-    height: 1920,
-    fps: 30,
-    durationInFrames: 2700,
-  },
-};
+export type { FormatKey, FormatConfig } from "./formats/format-configs";
+export { FORMAT_CONFIGS } from "./formats/format-configs";
 
 export interface ResolvedMarket {
   rank: number;
@@ -238,6 +157,11 @@ const ResolvedMarketShape = z.object({
 const sharedShape = {
   ctaUrl: z.string(),
   styleVariant: z.string().optional(),
+  /**
+   * Per-run music bed override. Falls back to the format's default, then
+   * the house default. Keys come from audio/levels MUSIC_BEDS.
+   */
+  musicBed: z.enum(MUSIC_BED_NAMES).optional(),
   audioUrl: z.string().url().optional(),
   captionWords: z
     .array(

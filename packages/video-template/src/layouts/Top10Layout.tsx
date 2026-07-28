@@ -9,6 +9,7 @@ import { MeshBackground } from "../primitives/MeshBackground";
 import { OutroSummary } from "../primitives/OutroSummary";
 import { RankStack } from "../primitives/RankStack";
 import { PALETTE } from "../styles/tokens";
+import { useLayoutConfig } from "../layout/useLayoutConfig";
 import type { RankingVideoProps } from "../types";
 import {
   BRAND_OUTRO_FRAMES,
@@ -73,20 +74,29 @@ export const Top10Layout: React.FC<Top10LayoutProps> = (props) => {
   // Reveal cadence: count down #N → #1, so ordered[0] is the lowest-rank
   // market the audience sees first.
   const ordered = [...params.resolved_markets].slice(0, 10).reverse();
-  const timing = computeRankingTiming(ordered.length, props.captionWords);
+  const { format } = useLayoutConfig();
+  const openWithBumper = format.openWithBumper;
+  const bumperFrames = openWithBumper ? BUMPER_FRAMES : 0;
+  const timing = computeRankingTiming(
+    ordered.length,
+    props.captionWords,
+    openWithBumper,
+  );
   const totalFrames = timing.totalFrames + BRAND_OUTRO_FRAMES;
 
   return (
     <AbsoluteFill>
       <MeshBackground />
 
-      <Sequence from={0} durationInFrames={BUMPER_FRAMES}>
-        <BrandBumper />
-      </Sequence>
+      {openWithBumper && (
+        <Sequence from={0} durationInFrames={BUMPER_FRAMES}>
+          <BrandBumper />
+        </Sequence>
+      )}
 
       <Sequence
-        from={BUMPER_FRAMES}
-        durationInFrames={totalFrames - BUMPER_FRAMES}
+        from={bumperFrames}
+        durationInFrames={totalFrames - bumperFrames}
       >
         <CornerBug
           label={`${themeLabel} ${shortenLabel(metricLabel)}`}

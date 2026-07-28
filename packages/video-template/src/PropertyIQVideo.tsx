@@ -11,7 +11,7 @@ import { buildSfxCues } from "./audio/sfx-cues";
 import { PALETTE } from "./styles/tokens";
 import {
   LONG_FORM_MAX_DURATION_FRAMES,
-  NARRATION_START_FRAME,
+  narrationStartFrame,
 } from "./constants";
 import {
   BRAND_OUTRO_FRAMES,
@@ -130,17 +130,18 @@ export const PropertyIQVideo: React.FC<VideoProps> = (props) => {
           )}
       </AbsoluteFill>
       {/*
-        Full program mix: narration (delayed 60 frames past the
-        BrandBumper so the sting plays clean), sidechain-ducked music bed,
-        room tone, and entrance SFX frame-locked to the layout beats.
-        Narration still ends before the video does (ffprobe cap in
-        synthesize-audio.handler enforces the audio budget).
+        Full program mix: narration, sidechain-ducked music bed, room tone,
+        and entrance SFX frame-locked to the layout beats. Narration starts
+        at frame 0 on vertical short-form and after the sting on bumper'd
+        long-form (see narrationStartFrame). It still ends before the video
+        does (ffprobe cap in synthesize-audio.handler enforces the budget).
       */}
       <AudioMix
         audioUrl={props.audioUrl}
         captionWords={props.captionWords}
-        narrationStartFrame={NARRATION_START_FRAME}
+        narrationStartFrame={narrationStartFrame(cfg)}
         cues={buildSfxCues(props, durationInFrames)}
+        musicBed={props.musicBed ?? cfg.musicBed}
       />
     </VideoLayout>
   );

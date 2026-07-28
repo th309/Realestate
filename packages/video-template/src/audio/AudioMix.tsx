@@ -6,7 +6,13 @@ import {
   staticFile,
   useVideoConfig,
 } from "remotion";
-import { AUDIO_ASSETS, AUDIO_LEVELS, SfxName } from "./levels";
+import {
+  AUDIO_ASSETS,
+  AUDIO_LEVELS,
+  musicBedPath,
+  SfxName,
+  type MusicBedName,
+} from "./levels";
 import { buildSpeechRegions, musicVolumeAt } from "./ducking";
 
 export interface SfxCue {
@@ -27,10 +33,15 @@ export interface AudioMixProps {
   audioUrl?: string;
   /** Word timings driving the sidechain duck. */
   captionWords?: readonly CaptionWordLike[];
-  /** Frame the narration <Sequence> starts at (after the brand bumper). */
+  /**
+   * Frame the narration <Sequence> starts at — after the brand bumper on
+   * formats that have one, otherwise 0.
+   */
   narrationStartFrame: number;
   /** UI sounds tied to the same frames as visual entrances. */
   cues?: readonly SfxCue[];
+  /** Which bed to play. Omit for the default. */
+  musicBed?: MusicBedName;
 }
 
 /**
@@ -44,6 +55,7 @@ export const AudioMix: React.FC<AudioMixProps> = ({
   captionWords,
   narrationStartFrame,
   cues,
+  musicBed,
 }) => {
   const { fps, durationInFrames } = useVideoConfig();
 
@@ -66,7 +78,7 @@ export const AudioMix: React.FC<AudioMixProps> = ({
       {/* Music bed: sidechain-ducked under speech, eased out at the tail. */}
       <Audio
         loop
-        src={staticFile(AUDIO_ASSETS.musicBed)}
+        src={staticFile(musicBedPath(musicBed))}
         volume={(f) =>
           musicVolumeAt(f, speechRegions) *
           interpolate(

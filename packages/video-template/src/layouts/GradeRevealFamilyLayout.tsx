@@ -10,6 +10,7 @@ import { Outro } from "../scenes/Outro";
 import type { SingleMarketVideoProps, TrendDirection } from "../types";
 import { num, coerceStats } from "./helpers";
 import { buildGradeRevealBeats } from "./grade-reveal-beats";
+import { useLayoutConfig } from "../layout/useLayoutConfig";
 
 interface GradeRevealFamilyLayoutProps {
   videoProps: SingleMarketVideoProps;
@@ -46,17 +47,20 @@ export const GradeRevealFamilyLayout: React.FC<
       ? homeValueObj.period_date
       : new Date().toISOString().slice(0, 10);
   const stats = coerceStats(bundle);
-  const beats = buildGradeRevealBeats(scale);
+  const { format } = useLayoutConfig();
+  const beats = buildGradeRevealBeats(scale, format.openWithBumper);
 
   return (
     <>
       <MeshBackground />
-      <Sequence
-        from={beats.bumper.from}
-        durationInFrames={beats.bumper.duration}
-      >
-        <BrandBumper />
-      </Sequence>
+      {format.openWithBumper && (
+        <Sequence
+          from={beats.bumper.from}
+          durationInFrames={beats.bumper.duration}
+        >
+          <BrandBumper />
+        </Sequence>
+      )}
       <Sequence from={beats.intro.from} durationInFrames={beats.intro.duration}>
         <Intro
           marketName={resolvedMarket.canonical_name}

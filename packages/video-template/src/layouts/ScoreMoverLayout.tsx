@@ -27,14 +27,24 @@ import { num, coerceStats } from "./helpers";
  * frame-lock its cues to the SAME numbers the layout renders from — audio
  * and motion can never drift apart.
  */
-export const SCORE_MOVER_BEATS = {
-  bumper: { from: 0, duration: 60 },
-  intro: { from: 60, duration: 90 },
-  delta: { from: 150, duration: 300 },
-  stats: { from: 450, duration: 270 },
-  outro: { from: 720, duration: 90 },
-  brand: { from: 810, duration: 90 },
-} as const;
+/**
+ * Beats for score_mover's 900-frame composition. Without a bumper the open
+ * shifts to frame 0 and the delta beat — the payload of this format —
+ * absorbs the freed frames; stats/outro/brand stay anchored to the tail.
+ */
+export function buildScoreMoverBeats(openWithBumper = false) {
+  const bumperDuration = openWithBumper ? 60 : 0;
+  const introFrom = bumperDuration;
+  const deltaFrom = introFrom + 90;
+  return {
+    bumper: { from: 0, duration: bumperDuration },
+    intro: { from: introFrom, duration: 90 },
+    delta: { from: deltaFrom, duration: 450 - deltaFrom },
+    stats: { from: 450, duration: 270 },
+    outro: { from: 720, duration: 90 },
+    brand: { from: 810, duration: 90 },
+  };
+}
 
 /** Frames into the delta scene before the number starts ticking. */
 export const DELTA_TICK_DELAY = 15;
@@ -175,16 +185,19 @@ export const ScoreMoverLayout: React.FC<SingleMarketVideoProps> = (props) => {
   const delta = num(scoreObj.score_delta, 0);
   const windowCaption = scoreObj.window_caption ?? "";
   const stats = coerceStats(bundle);
-  const beats = SCORE_MOVER_BEATS;
+  const { format } = useLayoutConfig();
+  const beats = buildScoreMoverBeats(format.openWithBumper);
   return (
     <>
       <MeshBackground />
-      <Sequence
-        from={beats.bumper.from}
-        durationInFrames={beats.bumper.duration}
-      >
-        <BrandBumper />
-      </Sequence>
+      {format.openWithBumper && (
+        <Sequence
+          from={beats.bumper.from}
+          durationInFrames={beats.bumper.duration}
+        >
+          <BrandBumper />
+        </Sequence>
+      )}
       <Sequence from={beats.intro.from} durationInFrames={beats.intro.duration}>
         <Intro marketName={props.resolvedMarket.canonical_name} />
       </Sequence>

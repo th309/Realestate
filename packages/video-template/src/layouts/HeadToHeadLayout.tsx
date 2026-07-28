@@ -8,6 +8,11 @@ import { Intro } from "../scenes/Intro";
 import { Outro } from "../scenes/Outro";
 import type { SingleMarketVideoProps } from "../types";
 import { coerceMarketData, coerceComparisonMarket } from "./helpers";
+import { useLayoutConfig } from "../layout/useLayoutConfig";
+
+/** Fixed beats for head_to_head's 1800-frame composition. */
+const INTRO_FRAMES = 90;
+const OUTRO_FROM = 1650;
 
 export const HeadToHeadLayout: React.FC<SingleMarketVideoProps> = (props) => {
   const bundle = (props.dataBundle ?? {}) as Record<string, any>;
@@ -17,14 +22,22 @@ export const HeadToHeadLayout: React.FC<SingleMarketVideoProps> = (props) => {
   const b = arr[1] ?? bundle.secondary ?? null;
   const primary = coerceMarketData(a, "Market A");
   const secondary = coerceComparisonMarket(b, "Market B");
+  const { format } = useLayoutConfig();
+  // Without a bumper the whole opening shifts to frame 0 and the freed
+  // frames go to the comparison beat — the content people came for.
+  const bumperFrames = format.openWithBumper ? 60 : 0;
+  const introFrom = bumperFrames;
+  const comparisonFrom = introFrom + INTRO_FRAMES;
   return (
     <>
       {/* Persistent stage — scenes paint no solid fills of their own. */}
       <MeshBackground />
-      <Sequence from={0} durationInFrames={60}>
-        <BrandBumper />
-      </Sequence>
-      <Sequence from={60} durationInFrames={90}>
+      {format.openWithBumper && (
+        <Sequence from={0} durationInFrames={bumperFrames}>
+          <BrandBumper />
+        </Sequence>
+      )}
+      <Sequence from={introFrom} durationInFrames={INTRO_FRAMES}>
         {/*
           Strip the state suffix from each market name for the intro so the
           comma-split inside `Intro` doesn't render "Cleveland / OH vs Austin, TX".
@@ -32,16 +45,19 @@ export const HeadToHeadLayout: React.FC<SingleMarketVideoProps> = (props) => {
         */}
         <Intro
           marketName={`${primary.market.split(",")[0].trim()} vs ${secondary.market.split(",")[0].trim()}`}
-          durationInFrames={90}
+          durationInFrames={INTRO_FRAMES}
         />
       </Sequence>
-      <Sequence from={150} durationInFrames={1500}>
+      <Sequence
+        from={comparisonFrom}
+        durationInFrames={OUTRO_FROM - comparisonFrom}
+      >
         <Comparison primary={primary} others={[secondary]} />
       </Sequence>
-      <Sequence from={1650} durationInFrames={90}>
+      <Sequence from={OUTRO_FROM} durationInFrames={90}>
         <Outro ctaUrl={props.ctaUrl} durationInFrames={90} />
       </Sequence>
-      <Sequence from={1740} durationInFrames={60}>
+      <Sequence from={OUTRO_FROM + 90} durationInFrames={60}>
         <BrandOutroCard ctaUrl={props.ctaUrl} score={primary.score} />
       </Sequence>
     </>
