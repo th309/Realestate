@@ -39,6 +39,7 @@ export class DailyRollupService {
         .select(
           'visitor_id, duration_seconds, is_bounce, page_count, converted, user_tier',
         )
+        .eq('is_bot', false)
         .gte('started_at', dayStart)
         .lte('started_at', dayEnd);
 

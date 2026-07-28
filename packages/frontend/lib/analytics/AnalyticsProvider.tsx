@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { usePageviewTracker } from "./pageview-tracker";
 import { useHeartbeat } from "./heartbeat";
+import { useOutboundTracker } from "./outbound-tracker";
 import { setUserId, setTrackingExcluded } from "./tracker";
 import { useAuth } from "@/lib/auth";
 
@@ -19,5 +20,6 @@ export function AnalyticsProvider({ children }: { children: React.ReactNode }) {
 
   usePageviewTracker();
   useHeartbeat();
+  useOutboundTracker();
   return <>{children}</>;
 }

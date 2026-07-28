@@ -7,6 +7,8 @@ export interface BlogFrontmatter {
   authorTitle?: string;
   category: "market-analysis" | "investment" | "methodology" | "news";
   tags: string[];
+  /** USPS state codes this post covers; [] = national/multi-market. */
+  states: string[];
   targetKeyword: string;
   image?: string;
   keywords?: string[];

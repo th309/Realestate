@@ -4,8 +4,10 @@ import { AbsoluteFill, Sequence } from "remotion";
 import { BrandBumper } from "../primitives/BrandBumper";
 import { BrandOutroCard } from "../primitives/BrandOutroCard";
 import { FarmAreaGrid } from "../primitives/FarmAreaGrid";
+import { MeshBackground } from "../primitives/MeshBackground";
 import { Intro } from "../scenes/Intro";
 import { Outro } from "../scenes/Outro";
+import { useLayoutConfig } from "../layout/useLayoutConfig";
 import type { SingleMarketVideoProps } from "../types";
 
 interface FarmAreaRaw {
@@ -45,23 +47,54 @@ function coerceAreas(bundle: Record<string, unknown>): FarmAreaGridArea[] {
   }));
 }
 
+/**
+ * Beat table for the farm-area spotlight. Exported so `audio/sfx-cues.ts`
+ * frame-locks its cues to the SAME numbers the layout renders from.
+ */
+/**
+ * Beats for farm_area_spotlight's 1800-frame composition. Without a bumper
+ * the open shifts to frame 0 and the grid beat absorbs the freed frames.
+ */
+export function buildFarmAreaBeats(openWithBumper = false) {
+  const bumperDuration = openWithBumper ? 60 : 0;
+  const introFrom = bumperDuration;
+  const gridFrom = introFrom + 90;
+  return {
+    bumper: { from: 0, duration: bumperDuration },
+    intro: { from: introFrom, duration: 90 },
+    grid: { from: gridFrom, duration: 1500 - gridFrom },
+    outro: { from: 1500, duration: 210 },
+    brand: { from: 1710, duration: 90 },
+  };
+}
+
+/** Cards in the grid — the fallback and the real slice are both capped at 3. */
+export const FARM_AREA_CARD_COUNT = 3;
+
 export const FarmAreaSpotlightLayout: React.FC<SingleMarketVideoProps> = (
   props,
 ) => {
   const bundle = (props.dataBundle ?? {}) as Record<string, unknown>;
   const areas = coerceAreas(bundle);
+  const { format } = useLayoutConfig();
+  const beats = buildFarmAreaBeats(format.openWithBumper);
   return (
     <>
-      <Sequence from={0} durationInFrames={60}>
-        <BrandBumper />
-      </Sequence>
-      <Sequence from={60} durationInFrames={90}>
+      <MeshBackground />
+      {format.openWithBumper && (
+        <Sequence
+          from={beats.bumper.from}
+          durationInFrames={beats.bumper.duration}
+        >
+          <BrandBumper />
+        </Sequence>
+      )}
+      <Sequence from={beats.intro.from} durationInFrames={beats.intro.duration}>
         <Intro marketName={props.resolvedMarket.canonical_name} />
       </Sequence>
-      <Sequence from={150} durationInFrames={1350}>
+      <Sequence from={beats.grid.from} durationInFrames={beats.grid.duration}>
         <AbsoluteFill
           style={{
-            backgroundColor: "#1A1A2E",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -73,10 +106,10 @@ export const FarmAreaSpotlightLayout: React.FC<SingleMarketVideoProps> = (
           </div>
         </AbsoluteFill>
       </Sequence>
-      <Sequence from={1500} durationInFrames={210}>
+      <Sequence from={beats.outro.from} durationInFrames={beats.outro.duration}>
         <Outro ctaUrl={props.ctaUrl} />
       </Sequence>
-      <Sequence from={1710} durationInFrames={90}>
+      <Sequence from={beats.brand.from} durationInFrames={beats.brand.duration}>
         <BrandOutroCard ctaUrl={props.ctaUrl} />
       </Sequence>
     </>

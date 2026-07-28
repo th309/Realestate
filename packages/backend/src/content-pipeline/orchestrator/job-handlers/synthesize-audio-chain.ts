@@ -20,12 +20,51 @@ import {
   WordTiming,
 } from '../../drivers/tts-driver.interface';
 import { EdgeTTSDriver } from '../../drivers/edge-tts-driver';
+import { NarrationSegmentPlan, offsetTimings } from './narration-timing';
 
 // When falling through to OpenAI from an Azure/Edge primary, the user's
 // stored voiceId is from a different catalog (en-US-JennyNeural, etc.) so we
 // override to OpenAI's default voice. Future work could store an OpenAI voice
 // mapping per row in tts_voices; out of P2 scope.
 const OPENAI_FALLBACK_VOICE = 'alloy';
+
+/**
+ * The voice a given driver in the chain should speak with. Shared by the
+ * single-blob and segmented paths so a narration never changes catalog
+ * mid-run.
+ */
+export function resolveDriverVoiceId(
+  chain: TTSDriver[],
+  driver: TTSDriver,
+  primaryVoiceId: string,
+): string {
+  return driver.provider === 'openai' && chain[0].provider !== 'openai'
+    ? OPENAI_FALLBACK_VOICE
+    : primaryVoiceId;
+}
+
+/** Log + persist the hop when the primary driver gave out. */
+export async function recordTtsFallback(
+  client: SupabaseClient,
+  logger: Logger,
+  runId: string,
+  chain: TTSDriver[],
+  driver: TTSDriver,
+  lastErr: Error | null,
+): Promise<void> {
+  await client.from('content_run_events').insert({
+    run_id: runId,
+    event_type: 'tts_fallback',
+    payload: {
+      from: chain[0].provider,
+      to: driver.provider,
+      reason: lastErr?.message?.slice(0, 500) ?? null,
+    },
+  });
+  logger.warn(
+    `[PIPE] synthesize-audio run=${runId} fell back ${chain[0].provider}→${driver.provider}`,
+  );
+}
 
 /**
  * Walk the priority-ordered driver chain. The first driver is the primary;
@@ -45,31 +84,16 @@ export async function synthesizeWithFallback(
   let lastErr: Error | null = null;
   for (let i = 0; i < chain.length; i++) {
     const driver = chain[i];
-    const voiceId =
-      driver.provider === 'openai' && chain[0].provider !== 'openai'
-        ? OPENAI_FALLBACK_VOICE
-        : primaryVoiceId;
     const req: TTSSynthesisRequest = {
       text,
-      voiceId,
+      voiceId: resolveDriverVoiceId(chain, driver, primaryVoiceId),
       outputPath,
       format: 'mp3',
     };
     try {
       const result = await synthesizeWithRetry(logger, driver, req);
       if (i > 0) {
-        await client.from('content_run_events').insert({
-          run_id: runId,
-          event_type: 'tts_fallback',
-          payload: {
-            from: chain[0].provider,
-            to: driver.provider,
-            reason: lastErr?.message?.slice(0, 500) ?? null,
-          },
-        });
-        logger.warn(
-          `[PIPE] synthesize-audio run=${runId} fell back ${chain[0].provider}→${driver.provider}`,
-        );
+        await recordTtsFallback(client, logger, runId, chain, driver, lastErr);
       }
       return { driver, result };
     } catch (err) {
@@ -89,7 +113,10 @@ export async function synthesizeWithFallback(
  *   - Edge native: result.wordTimings already populated; just persist.
  *   - Azure REST: REST endpoint emits no boundaries. Fall through to Edge
  *     shadow capture (same Microsoft backend, same voice catalog → near-
- *     identical timings to the Azure audio).
+ *     identical timings to the Azure audio). With a segment plan the shadow
+ *     runs per segment and each clip's timings are shifted by the *Azure*
+ *     audio's measured offsets, so Edge-vs-Azure pace drift resets at every
+ *     segment boundary instead of accumulating across the whole narration.
  *   - OpenAI: no native mechanism. Returns null source; caller leaves the
  *     captions_timings asset unwritten so time-captions handler runs Whisper.
  *
@@ -106,6 +133,7 @@ export async function captureNativeCaptions(
   voiceId: string,
   spokenText: string,
   initialTimings: WordTiming[] | undefined,
+  segmentPlan?: NarrationSegmentPlan | null,
 ): Promise<{
   source: 'edge_native' | 'edge_shadow' | null;
   count: number;
@@ -119,10 +147,14 @@ export async function captureNativeCaptions(
     const edge = chain.find((d) => d instanceof EdgeTTSDriver);
     if (edge?.isConfigured()) {
       try {
-        timings = await edge.captureTimingsOnly(voiceId, spokenText);
+        timings = segmentPlan
+          ? await shadowCaptureSegments(edge, voiceId, segmentPlan)
+          : await edge.captureTimingsOnly(voiceId, spokenText);
         source = 'edge_shadow';
         logger.log(
-          `[PIPE] captions chain run=${runId} edge_shadow captured ${timings.length} word timings`,
+          `[PIPE] captions chain run=${runId} edge_shadow captured ${timings.length} word timings${
+            segmentPlan ? ` across ${segmentPlan.segments.length} segments` : ''
+          }`,
         );
       } catch (err) {
         logger.warn(
@@ -153,6 +185,26 @@ export async function captureNativeCaptions(
   });
 
   return { source, count: timings.length };
+}
+
+/**
+ * Shadow-synthesize each narration segment through Edge and shift its word
+ * timings onto the assembled Azure audio's timeline.
+ */
+async function shadowCaptureSegments(
+  edge: EdgeTTSDriver,
+  voiceId: string,
+  plan: NarrationSegmentPlan,
+): Promise<WordTiming[]> {
+  const merged: WordTiming[] = [];
+  for (let i = 0; i < plan.segments.length; i++) {
+    const timings = await edge.captureTimingsOnly(
+      voiceId,
+      plan.segments[i].text,
+    );
+    merged.push(...offsetTimings(timings, plan.offsetsMs[i] ?? 0));
+  }
+  return merged;
 }
 
 /**

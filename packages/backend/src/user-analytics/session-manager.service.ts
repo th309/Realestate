@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { IngestableEvent } from './user-analytics.types';
+import { classifyAsBot } from './bot-detection';
 
 @Injectable()
 export class SessionManagerService {
@@ -11,12 +12,16 @@ export class SessionManagerService {
   async upsertSession(
     sessionId: string,
     events: IngestableEvent[],
+    clientUserAgent = '',
+    isRetry = false,
   ): Promise<void> {
     const client = this.supabase.getClient();
 
     const { data: existing, error: selectError } = await client
       .from('user_sessions')
-      .select('session_id, page_count, feature_events_count')
+      .select(
+        'session_id, page_count, feature_events_count, landing_page, entry_type, referrer, referrer_domain, utm_source, utm_medium, utm_campaign',
+      )
       .eq('session_id', sessionId)
       .maybeSingle();
 
@@ -42,18 +47,37 @@ export class SessionManagerService {
       pageviewEvents[0]?.page_path ?? firstEvent?.page_path ?? null;
     const exitPage = lastEvent?.page_path ?? null;
 
+    // Only a completed signup counts. The `conversion` category also carries
+    // funnel-progress events (pricing_page_view, signup_start), so keying on the
+    // category alone would mark browsers as converted. Matches the
+    // signup_complete trigger used for identity stitching.
+    const conversionEvent = events.find(
+      (e) => e.event_action === 'signup_complete',
+    );
+
     if (!existing) {
       const { error: insertError } = await client.from('user_sessions').insert({
         session_id: sessionId,
         visitor_id: firstEvent?.visitor_id ?? null,
         user_id: firstEvent?.user_id ?? null,
-        user_tier: firstEvent?.user_tier ?? null,
+        // Default matches the events table, which writes 'anonymous' rather
+        // than null. Without it every session had a null tier and the
+        // dashboard's Tier filter matched nothing.
+        user_tier: firstEvent?.user_tier ?? 'anonymous',
         started_at: new Date().toISOString(),
         last_activity_at: new Date().toISOString(),
         landing_page: landingPage,
         exit_page: exitPage,
         page_count: pageviewCount,
         is_bounce: pageviewCount <= 1,
+        converted: !!conversionEvent,
+        conversion_type: conversionEvent?.event_action ?? null,
+        // Classified once, at insert. The User-Agent is only available on the
+        // first batch, and a crawler does not become human later.
+        is_bot: classifyAsBot({
+          userAgent: clientUserAgent,
+          pageCount: pageviewCount,
+        }),
         device_type: props['device_type'] ?? null,
         screen_width: props['screen_width']
           ? Number(props['screen_width'])
@@ -69,6 +93,20 @@ export class SessionManagerService {
       });
 
       if (insertError) {
+        // A concurrent batch for the same new session can win the insert: both
+        // callers read `existing === null`, both insert, and the loser hits the
+        // session_id primary key. Previously that batch was logged and dropped,
+        // losing its pageviews and feature counts even though its events landed
+        // in user_events. Re-run once so the row is found and merged through the
+        // update path instead. 23505 is the Postgres unique-violation code.
+        if (insertError.code === '23505' && !isRetry) {
+          // Logged so the frequency of this race — and the attribution
+          // backfill it triggers below — is measurable rather than theoretical.
+          this.logger.warn(
+            `Concurrent insert for session ${sessionId}; merging via update path`,
+          );
+          return this.upsertSession(sessionId, events, clientUserAgent, true);
+        }
         this.logger.error(
           `Failed to insert session ${sessionId}: ${insertError.message}`,
         );
@@ -98,6 +136,49 @@ export class SessionManagerService {
       updatePayload['had_frustration_event'] = true;
     }
 
+    // Only ever set converted true — never clear it. A later batch from the
+    // same session must not un-convert a signup that already happened.
+    if (conversionEvent) {
+      updatePayload['converted'] = true;
+      updatePayload['conversion_type'] = conversionEvent.event_action;
+    }
+
+    // Backfill acquisition fields the update path otherwise never writes.
+    // These are set only by whichever batch wins the insert, so if the loser
+    // was the session's chronologically first batch they would be discarded
+    // permanently — silently corrupting the attribution the acquisition
+    // dashboard reports on. Fill only where the existing row is null, so a
+    // winner's real value is never overwritten.
+    //
+    // ONLY session-invariant fields are eligible. Every value here comes from
+    // getSessionContext(), which computes once per browser session and caches
+    // in sessionStorage, so every batch of a given session carries an identical
+    // copy. Backfilling from an arbitrary batch therefore cannot pick a "wrong"
+    // value — there is only one.
+    //
+    // landing_page is deliberately EXCLUDED. It is derived from whichever
+    // pageview happens to be in the current batch, so it is order-dependent:
+    // if the row was created by a batch carrying no pageview, two later batches
+    // could race and whichever UPDATE commits first while the column is still
+    // null would win regardless of chronology. That would turn a merely missing
+    // landing page into a confidently wrong one, which is worse. A null
+    // landing_page is honest and is already excluded by the
+    // `.not('landing_page', 'is', null)` filters on the read side.
+    const backfill: Record<string, unknown> = {
+      entry_type: props['entry_type'],
+      referrer: props['referrer'],
+      referrer_domain: props['referrer_domain'],
+      utm_source: props['utm_source'],
+      utm_medium: props['utm_medium'],
+      utm_campaign: props['utm_campaign'],
+    };
+    for (const [column, value] of Object.entries(backfill)) {
+      const current = (existing as Record<string, unknown>)[column];
+      if ((current === null || current === undefined) && value != null) {
+        updatePayload[column] = value;
+      }
+    }
+
     // Remove undefined fields so Supabase does not overwrite with null
     const cleanPayload = Object.fromEntries(
       Object.entries(updatePayload).filter(([, v]) => v !== undefined),
@@ -115,12 +196,32 @@ export class SessionManagerService {
     }
   }
 
+  /**
+   * Record a keepalive ping.
+   *
+   * Also increments `heartbeat_count`, which previously was never written by
+   * anything — it sat at 0 on every session, so engagement readouts derived
+   * from it were uniformly empty.
+   *
+   * Read-modify-write rather than an atomic increment, matching upsertSession.
+   * A lost update under concurrent pings from multiple tabs only undercounts a
+   * coarse engagement signal, so the added round trip is not worth an RPC.
+   */
   async updateHeartbeat(sessionId: string): Promise<void> {
     const client = this.supabase.getClient();
 
+    const { data: existing } = await client
+      .from('user_sessions')
+      .select('heartbeat_count')
+      .eq('session_id', sessionId)
+      .maybeSingle();
+
     const { error } = await client
       .from('user_sessions')
-      .update({ last_activity_at: new Date().toISOString() })
+      .update({
+        last_activity_at: new Date().toISOString(),
+        heartbeat_count: (existing?.heartbeat_count ?? 0) + 1,
+      })
       .eq('session_id', sessionId);
 
     if (error) {

@@ -1,0 +1,62 @@
+{
+  "_comment": "Hand-authored product-demo fixture. ONE spine rendered at both ratios: pass --format product_demo_horizontal or product_demo_vertical. Slots point at committed test fixtures so this renders with no network.",
+  "format": "product_demo_horizontal",
+  "hook": {
+    "kind": "text_card",
+    "headline": "Agents who guess lose listings.",
+    "subhead": "PropertyIQ scores every market in the country."
+  },
+  "features": [
+    {
+      "key": "mcp",
+      "title": "Ask it anything",
+      "callouts": [
+        "Query live market data in plain English",
+        "Works inside Claude and ChatGPT",
+        "No dashboard to learn"
+      ],
+      "slot": {
+        "slotId": "feature1",
+        "kind": "image",
+        "url": "test-fixtures/feature-mcp.png",
+        "sourceAspect": 1.7777777777777777,
+        "focusRegion": { "x": 0.5375, "y": 0.2111, "w": 0.375, "h": 0.2111 },
+        "spotlight": true
+      }
+    },
+    {
+      "key": "deal_analyzer",
+      "title": "Run the numbers",
+      "callouts": [
+        "Cash flow, cap rate, and risk in one pass",
+        "Grades the deal against your strategy"
+      ],
+      "slot": {
+        "slotId": "feature2",
+        "kind": "image",
+        "url": "test-fixtures/feature-analyzer.png",
+        "sourceAspect": 1.7777777777777777,
+        "focusRegion": { "x": 0.0687, "y": 0.5778, "w": 0.325, "h": 0.2667 },
+        "spotlight": true
+      }
+    },
+    {
+      "key": "market_reports",
+      "title": "Know a market in ten seconds",
+      "callouts": [
+        "Every metro, county, and ZIP",
+        "Momentum, not last year's numbers"
+      ],
+      "slot": {
+        "slotId": "feature3",
+        "kind": "image",
+        "url": "test-fixtures/feature-reports.png",
+        "sourceAspect": 1.7777777777777777,
+        "focusRegion": { "x": 0.5375, "y": 0.5778, "w": 0.3875, "h": 0.2667 },
+        "spotlight": true
+      }
+    }
+  ],
+  "ctaHeadline": "Stop guessing. Start scoring.",
+  "ctaUrl": "https://propertyiq.app"
+}

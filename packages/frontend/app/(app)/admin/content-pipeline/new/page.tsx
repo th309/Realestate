@@ -2,6 +2,12 @@
 import { Suspense, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { resolvePrefill } from "./helpers/prefill";
+import {
+  FORMAT_PICKER_STEP,
+  firstStep,
+  previousStep,
+  type WizardStepId,
+} from "./wizard-steps";
 import { FormatStep } from "./format-step";
 import { MarketStep } from "./market-step";
 import { ConfirmStep } from "./confirm-step";
@@ -42,6 +48,17 @@ type RankingArgs = {
 const RANKING_FORMATS = new Set(["top_10_ranking", "bottom_10_ranking"]);
 
 /**
+ * The prefill helper still speaks the wizard's old step names. Map them onto
+ * the manifest's vocabulary here rather than renaming a deep-link contract
+ * that other pages ("Make this video") already build URLs against.
+ */
+const LEGACY_STEP_ALIASES: Record<string, WizardStepId> = {
+  market: "market",
+  "ranking-params": "params",
+  "infographic-params": "params",
+};
+
+/**
  * Reads the "Make this video" prefill (`?format=&market=`) and seeds the flow.
  * useSearchParams requires a Suspense boundary in the App Router.
  */
@@ -67,14 +84,13 @@ function NewRunFlow({
 }: {
   prefill: ReturnType<typeof resolvePrefill>;
 }) {
-  const [step, setStep] = useState<
-    | "format"
-    | "market"
-    | "confirm"
-    | "ranking-params"
-    | "ranking-preview"
-    | "infographic-params"
-  >(prefill.step);
+  // Step ids come from the format manifest (see wizard-steps), so adding a
+  // template no longer means editing this component's branching.
+  const [step, setStep] = useState<WizardStepId>(
+    prefill.step === "format"
+      ? FORMAT_PICKER_STEP
+      : (LEGACY_STEP_ALIASES[prefill.step] ?? FORMAT_PICKER_STEP),
+  );
   const [format, setFormat] = useState<string>(prefill.format);
   const [mode, setMode] = useState<WizardMode>("single");
   // The confirmed market is only ever set by picking a resolveMarket match; the
@@ -118,13 +134,8 @@ function NewRunFlow({
       setInfographicSelection(undefined);
       setInfographicPlan(undefined);
     }
-    if (RANKING_FORMATS.has(f)) {
-      setStep("ranking-params");
-    } else if (f === INFOGRAPHIC_FORMAT) {
-      setStep("infographic-params");
-    } else {
-      setStep("market");
-    }
+    // Where to go next is the manifest's call, not a branch here.
+    setStep(firstStep(f));
   }
 
   async function handleRankingSubmit(resolved: ResolveRankingResponse) {
@@ -181,7 +192,7 @@ function NewRunFlow({
 
   return (
     <div>
-      {step === "format" && <FormatStep onPick={handleFormatPick} />}
+      {step === FORMAT_PICKER_STEP && <FormatStep onPick={handleFormatPick} />}
 
       {step === "market" && (
         <MarketStep
@@ -193,7 +204,7 @@ function NewRunFlow({
           topMoversGeo={topMoversGeo}
           onTopMoversGeoChange={setTopMoversGeo}
           initialQuery={prefill.marketSeed}
-          onBack={() => setStep("format")}
+          onBack={() => setStep(previousStep(format, step))}
           onPickSingle={(m, opts) => {
             setMarket(m);
             if (format === "long_form_deep_dive") {
@@ -224,10 +235,10 @@ function NewRunFlow({
         />
       )}
 
-      {step === "infographic-params" && isInfographic && (
+      {step === "params" && isInfographic && (
         <InfographicParamsStep
           initial={infographicSelection}
-          onBack={() => setStep("format")}
+          onBack={() => setStep(previousStep(format, step))}
           onNext={(selection, plan) => {
             setInfographicSelection(selection);
             setInfographicPlan(plan);
@@ -245,9 +256,7 @@ function NewRunFlow({
           formatOptions={formatOptions}
           onFormatOptionsChange={setFormatOptions}
           infographicPlan={isInfographic ? infographicPlan : undefined}
-          onBack={() =>
-            setStep(isInfographic ? "infographic-params" : "market")
-          }
+          onBack={() => setStep(previousStep(format, step))}
           onCreatedSingle={(id) =>
             router.push(`/admin/content-pipeline/runs/${id}`)
           }
@@ -257,20 +266,20 @@ function NewRunFlow({
         />
       )}
 
-      {step === "ranking-params" && RANKING_FORMATS.has(format) && (
+      {step === "params" && RANKING_FORMATS.has(format) && (
         <RankingParamsStep
           format={format as "top_10_ranking" | "bottom_10_ranking"}
           initial={rankingArgs}
-          onBack={() => setStep("format")}
+          onBack={() => setStep(previousStep(format, step))}
           onNext={(args) => {
             setRankingArgs(args);
             setDriftError(null);
-            setStep("ranking-preview");
+            setStep("preview");
           }}
         />
       )}
 
-      {step === "ranking-preview" &&
+      {step === "preview" &&
         rankingArgs &&
         RANKING_FORMATS.has(format) && (
           <div>
@@ -281,8 +290,8 @@ function NewRunFlow({
                   type="button"
                   onClick={() => {
                     setDriftError(null);
-                    setStep("ranking-params");
-                    setTimeout(() => setStep("ranking-preview"), 0);
+                    setStep("params");
+                    setTimeout(() => setStep("preview"), 0);
                   }}
                   className="shrink-0 rounded-full border border-current px-3 py-1 text-xs font-semibold"
                 >
@@ -300,7 +309,7 @@ function NewRunFlow({
               }}
               onBack={() => {
                 setDriftError(null);
-                setStep("ranking-params");
+                setStep(previousStep(format, step));
               }}
               onSubmit={(resolved) => {
                 if (!rankingSubmitting) void handleRankingSubmit(resolved);

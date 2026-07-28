@@ -19,7 +19,12 @@ import { ContentRunsService } from './content-runs.service';
 import { ContentPipelineQueriesService } from './content-pipeline-queries.service';
 import { RunActionsService } from './run-actions.service';
 import { RunThumbnailService } from './run-thumbnail.service';
+import {
+  RunMediaSlotService,
+  SLOT_VIDEO_MAX_BYTES,
+} from './media/run-media-slot.service';
 import { CreateRunDto } from './dto/create-run.dto';
+import { UploadMediaSlotParamsDto } from './dto/upload-media-slot.dto';
 import { ResolveMarketQueryDto } from './dto/resolve-market-query.dto';
 import { EditScriptDto } from './dto/edit-script.dto';
 import { RejectRunDto, CancelRunDto } from './dto/run-reason.dto';
@@ -43,6 +48,7 @@ export class ContentPipelineRunsController {
     private readonly queries: ContentPipelineQueriesService,
     private readonly actions: RunActionsService,
     private readonly thumbnails: RunThumbnailService,
+    private readonly mediaSlots: RunMediaSlotService,
   ) {}
 
   @Post('runs')
@@ -157,6 +163,40 @@ export class ContentPipelineRunsController {
       originalname: file.originalname,
       size: file.size,
     });
+    return { success: true, data: result };
+  }
+
+  /**
+   * Fill one named media slot on one run with an operator-supplied asset.
+   *
+   * The multer cap is the video ceiling because one interceptor covers both
+   * kinds; the service enforces the tighter per-kind cap once it knows the
+   * MIME type. Params are validated by DTO rather than ParseUUIDPipe alone —
+   * slotId reaches a storage path, so it needs its own allowlist.
+   */
+  @Post('runs/:id/slots/:slotId')
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: SLOT_VIDEO_MAX_BYTES } }),
+  )
+  async uploadMediaSlot(
+    @Param() params: UploadMediaSlotParamsDto,
+    @UploadedFile() file: Express.Multer.File | undefined,
+  ) {
+    if (!file) {
+      throw new BadRequestException(
+        'file is required (multipart/form-data field "file")',
+      );
+    }
+    const result = await this.mediaSlots.uploadSlotAsset(
+      params.id,
+      params.slotId,
+      {
+        buffer: file.buffer,
+        mimetype: file.mimetype,
+        originalname: file.originalname,
+        size: file.size,
+      },
+    );
     return { success: true, data: result };
   }
 

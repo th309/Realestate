@@ -23,6 +23,7 @@ import {
   MARKET_LINKS_DISPLAY_CAP,
 } from "@/lib/data/market-hierarchy";
 import { getAllPosts } from "@/lib/blog";
+import { buildBlogFacetUrls } from "./blog-facet-urls";
 import { COMPARISONS, COMPARISONS_LAST_UPDATED } from "@/lib/data/comparisons";
 import { fetchScoredLocationData } from "@/lib/data";
 import type { SitemapUrl } from "./sitemap-xml";
@@ -119,7 +120,12 @@ export function buildMainUrls(): SitemapUrl[] {
     })),
   ];
 
-  return [...staticRoutes, ...blogRoutes, ...comparisonRoutes];
+  return [
+    ...staticRoutes,
+    ...blogRoutes,
+    ...buildBlogFacetUrls(),
+    ...comparisonRoutes,
+  ];
 }
 
 export async function buildStatesUrls(): Promise<SitemapUrl[]> {

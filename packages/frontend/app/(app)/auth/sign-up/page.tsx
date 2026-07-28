@@ -1,21 +1,19 @@
 "use client";
 
 import { Suspense, useState, useEffect, useRef, FormEvent } from "react";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Building2, Lock, Loader2, AlertCircle, Mail } from "lucide-react";
+import { Building2 } from "lucide-react";
 import type { Session } from "@supabase/supabase-js";
 import { useAuth } from "@/lib/auth";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { trackEvent, flush } from "@/lib/analytics/tracker";
 import {
   allRequirementsMet,
+  classifyAuthError,
   friendlyAuthError,
-  getPasswordRequirements,
 } from "./helpers";
-import { PasswordStrength } from "./PasswordStrength";
-import { GoogleIcon } from "./GoogleIcon";
 import { OtpConfirmation } from "./OtpConfirmation";
+import { SignUpCredentialsForm } from "./SignUpCredentialsForm";
 import { completeSignup } from "./complete-signup";
 
 export default function SignUpPage() {
@@ -81,11 +79,20 @@ function SignUpContent() {
     }
   }, []);
 
-  const requirements = getPasswordRequirements(password);
+  // Every rejection below used to return silently, so a visitor who fought the
+  // form and gave up was indistinguishable in the data from one who never
+  // typed anything -- both simply stopped after signup_start. That blind spot
+  // is why the drop between signup_start and signup_pending_confirmation could
+  // not be attributed to a cause. Emit the reason instead of guessing later.
+  const trackSubmitBlocked = (reason: string) => {
+    trackEvent("conversion.signup_submit_blocked", { reason });
+    flush();
+  };
 
   const handleSignUp = async (e: FormEvent) => {
     e.preventDefault();
     if (!tosAccepted) {
+      trackSubmitBlocked("tos_not_accepted");
       setError("You must accept the Terms of Service to create an account");
       tosRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
@@ -93,11 +100,13 @@ function SignUpContent() {
     if (!email || !password || !confirmPassword) return;
 
     if (password !== confirmPassword) {
+      trackSubmitBlocked("password_mismatch");
       setError("Passwords do not match");
       return;
     }
 
     if (!allRequirementsMet(password)) {
+      trackSubmitBlocked("password_requirements_unmet");
       setError("Password does not meet all requirements");
       return;
     }
@@ -112,6 +121,11 @@ function SignUpContent() {
     } = await signUp(email, password, redirectTo);
 
     if (authError) {
+      // Category only — never the raw provider string (see classifyAuthError).
+      trackEvent("conversion.signup_submit_error", {
+        reason: classifyAuthError(authError.message),
+      });
+      flush();
       setError(authError.message);
       setLoading(false);
       return;
@@ -132,6 +146,7 @@ function SignUpContent() {
     // Already-registered (confirmed) users get an obfuscated user with no
     // identities and no session — route them to sign in, don't show OTP.
     if (user && (user.identities?.length ?? 0) === 0) {
+      trackSubmitBlocked("already_registered");
       setError("This email is already registered. Please sign in instead.");
       setLoading(false);
       return;
@@ -169,8 +184,18 @@ function SignUpContent() {
     router.push(destination);
   };
 
+  // The OAuth branch had NO instrumentation of any kind, which made a real
+  // question unanswerable from data: when zero Google signups land in a month,
+  // is the button not being clicked, or is the flow broken? These three events
+  // separate those cases. Each flushes immediately, because signInWithOAuth
+  // does a full-page redirect that would discard the batched queue.
   const handleOAuth = async (provider: "google") => {
     if (!tosAccepted) {
+      trackEvent("conversion.signup_oauth_blocked", {
+        provider,
+        reason: "tos_not_accepted",
+      });
+      flush();
       setError("You must accept the Terms of Service to create an account");
       tosRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
@@ -178,6 +203,9 @@ function SignUpContent() {
 
     setLoading(true);
     setError(null);
+
+    trackEvent("conversion.signup_oauth_click", { provider });
+    flush();
 
     const supabase = createSupabaseBrowserClient();
     const callbackUrl = `${window.location.origin}/auth/callback?tos=1&next=${encodeURIComponent(redirectTo)}`;
@@ -187,6 +215,11 @@ function SignUpContent() {
     });
 
     if (authError) {
+      trackEvent("conversion.signup_oauth_error", {
+        provider,
+        reason: classifyAuthError(authError.message),
+      });
+      flush();
       setError(friendlyAuthError(authError.message));
       setLoading(false);
     }
@@ -209,177 +242,23 @@ function SignUpContent() {
         {awaitingOtp ? (
           <OtpConfirmation email={email} onVerified={handleOtpVerified} />
         ) : (
-          <>
-            {/* Error Banner */}
-            {error && (
-              <div className="mb-6 flex items-start gap-2 rounded-lg bg-error/10 border border-error/20 px-4 py-3 text-sm text-error">
-                <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-                <span>{error}</span>
-              </div>
-            )}
-
-            {/* Sign-Up Form */}
-            <form onSubmit={handleSignUp} className="space-y-4">
-              {/* Email */}
-              <div>
-                <label
-                  htmlFor="email"
-                  className="block text-sm font-medium text-on-surface mb-1.5"
-                >
-                  Email
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant/50" />
-                  <input
-                    id="email"
-                    type="email"
-                    required
-                    autoComplete="email"
-                    placeholder="you@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    disabled={loading}
-                    className="w-full pl-10 pr-3 py-2.5 bg-surface-container-low border border-outline-variant rounded-lg text-sm text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary disabled:opacity-50"
-                  />
-                </div>
-              </div>
-
-              {/* Password */}
-              <div>
-                <label
-                  htmlFor="password"
-                  className="block text-sm font-medium text-on-surface mb-1.5"
-                >
-                  Password
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant/50" />
-                  <input
-                    id="password"
-                    type="password"
-                    required
-                    autoComplete="new-password"
-                    placeholder="Create a password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    disabled={loading}
-                    className="w-full pl-10 pr-3 py-2.5 bg-surface-container-low border border-outline-variant rounded-lg text-sm text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary disabled:opacity-50"
-                  />
-                </div>
-
-                {/* Password Strength Indicator */}
-                {password.length > 0 && (
-                  <PasswordStrength requirements={requirements} />
-                )}
-              </div>
-
-              {/* Confirm Password */}
-              <div>
-                <label
-                  htmlFor="confirm-password"
-                  className="block text-sm font-medium text-on-surface mb-1.5"
-                >
-                  Confirm Password
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant/50" />
-                  <input
-                    id="confirm-password"
-                    type="password"
-                    required
-                    autoComplete="new-password"
-                    placeholder="Confirm your password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    disabled={loading}
-                    className="w-full pl-10 pr-3 py-2.5 bg-surface-container-low border border-outline-variant rounded-lg text-sm text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary disabled:opacity-50"
-                  />
-                </div>
-                {confirmPassword.length > 0 && password !== confirmPassword && (
-                  <p className="mt-1 text-xs text-error">
-                    Passwords do not match
-                  </p>
-                )}
-              </div>
-
-              {/* Terms of Service Checkbox */}
-              <label
-                ref={tosRef}
-                className={`flex items-start gap-3 cursor-pointer select-none py-1 rounded-lg transition-shadow ${
-                  tosError
-                    ? "ring-2 ring-error/60 ring-offset-2 ring-offset-surface-container px-2"
-                    : ""
-                }`}
-              >
-                <input
-                  type="checkbox"
-                  checked={tosAccepted}
-                  onChange={(e) => setTosAccepted(e.target.checked)}
-                  disabled={loading}
-                  className="mt-0.5 h-4 w-4 rounded border-outline-variant text-primary focus:ring-primary/30 accent-primary"
-                />
-                <span className="text-sm text-on-surface-variant leading-snug">
-                  I agree to the{" "}
-                  <a
-                    href="/about/terms"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary hover:text-primary/80 font-medium underline underline-offset-2"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    Terms of Service
-                  </a>
-                </span>
-              </label>
-
-              {/* Submit Button */}
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full px-4 py-2.5 bg-primary text-on-primary rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-                Create Account
-              </button>
-            </form>
-
-            {/* Divider */}
-            <div className="my-6 flex items-center gap-3">
-              <div className="flex-1 h-px bg-outline-variant" />
-              <span className="text-xs text-on-surface-variant">
-                or sign up with
-              </span>
-              <div className="flex-1 h-px bg-outline-variant" />
-            </div>
-
-            {/* OAuth Buttons */}
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => handleOAuth("google")}
-                disabled={loading}
-                className="flex-1 px-4 py-2.5 bg-surface-container-high border border-outline-variant rounded-lg text-sm font-medium text-on-surface hover:bg-surface-container-highest transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                <GoogleIcon />
-                Google
-              </button>
-            </div>
-
-            {/* Sign In Link */}
-            <p className="mt-8 text-center text-sm text-on-surface-variant">
-              Already have an account?{" "}
-              <Link
-                href={
-                  explicitRedirect
-                    ? `/auth/sign-in?redirect=${encodeURIComponent(explicitRedirect)}`
-                    : "/auth/sign-in"
-                }
-                className="text-primary hover:text-primary/80 font-medium"
-              >
-                Sign in
-              </Link>
-            </p>
-          </>
+          <SignUpCredentialsForm
+            email={email}
+            onEmailChange={setEmail}
+            password={password}
+            onPasswordChange={setPassword}
+            confirmPassword={confirmPassword}
+            onConfirmPasswordChange={setConfirmPassword}
+            loading={loading}
+            error={error}
+            tosAccepted={tosAccepted}
+            onTosAcceptedChange={setTosAccepted}
+            tosRef={tosRef}
+            tosError={tosError}
+            explicitRedirect={explicitRedirect}
+            onSubmit={handleSignUp}
+            onOAuth={handleOAuth}
+          />
         )}
       </div>
     </div>

@@ -30,6 +30,7 @@ export class OverviewDataFetcherService {
     let query = client
       .from('user_sessions')
       .select(fields)
+      .eq('is_bot', false)
       .gte('started_at', startDate.toISOString());
 
     if (endDate) {
@@ -59,11 +60,14 @@ export class OverviewDataFetcherService {
       .from('user_events')
       .select('page_path')
       .eq('event_category', 'pageview')
+      .eq('is_bot', false)
       .gte('created_at', startDate.toISOString())
       .not('page_path', 'is', null);
 
     if (filters.tier) query = query.eq('user_tier', filters.tier);
-    if (filters.device) query = query.eq('device_type', filters.device);
+    // No device filter here: user_events has no device_type column (it lives on
+    // user_sessions). Filtering on it errored with 42703 and blanked Top Pages
+    // entirely whenever a device was selected.
 
     const { data, error } = await query;
     if (error) {
@@ -116,11 +120,13 @@ export class OverviewDataFetcherService {
         let query = client
           .from('user_events')
           .select('visitor_id')
+          .eq('is_bot', false)
           .gte('created_at', iso)
           .eq('event_action', stage.eventAction);
 
         if (filters.tier) query = query.eq('user_tier', filters.tier);
-        if (filters.device) query = query.eq('device_type', filters.device);
+        // See fetchTopPages: user_events has no device_type column, so this
+        // filter errored and zeroed every funnel stage when a device was set.
 
         const { data, error } = await query;
         if (error) {

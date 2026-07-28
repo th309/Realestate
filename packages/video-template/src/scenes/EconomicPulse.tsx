@@ -1,11 +1,15 @@
 import React from "react";
-import {
-  useCurrentFrame,
-  useVideoConfig,
-  interpolate,
-  spring,
-} from "remotion";
+import { useVideoConfig } from "remotion";
 import { COLORS } from "../constants";
+import { AnimatedEntrance } from "../motion";
+import {
+  BORDER_WIDTH,
+  FONTS,
+  NUMERIC,
+  PALETTE,
+  brandBorder,
+  brandFill,
+} from "../styles/tokens";
 import { useLayoutConfig } from "../layout/useLayoutConfig";
 
 export interface EconomicPulseProps {
@@ -14,83 +18,158 @@ export interface EconomicPulseProps {
   jobGrowthYoyPct: number;
 }
 
+/** Frames before the stat bands enter, so the header reads first. */
+const BAND_DELAY = 10;
+
+interface StatBandProps {
+  label: string;
+  value: string;
+  footnote: string;
+  accent: string;
+  /** Position in the band group — 4-frame sibling stagger. */
+  index: number;
+  isVertical: boolean;
+}
+
+const StatBand: React.FC<StatBandProps> = ({
+  label,
+  value,
+  footnote,
+  accent,
+  index,
+  isVertical,
+}) => {
+  const subtitleSize = isVertical ? 26 : 20;
+  const heroSize = isVertical ? 72 : 56;
+
+  return (
+    <AnimatedEntrance
+      index={index}
+      delay={BAND_DELAY}
+      from="rise"
+      preset="gentle"
+      distance={26}
+      style={{ flex: 1, display: "flex", flexDirection: "column" }}
+    >
+      <div
+        style={{
+          flex: 1,
+          borderRadius: 24,
+          padding: isVertical ? 36 : 32,
+          background: brandFill(accent),
+          border: brandBorder(accent, 0.5),
+        }}
+      >
+        <div
+          style={{
+            fontSize: subtitleSize,
+            color: COLORS.textMuted,
+            fontWeight: 600,
+            marginBottom: 12,
+          }}
+        >
+          {label}
+        </div>
+        <div
+          style={{
+            fontFamily: FONTS.mono,
+            fontSize: heroSize,
+            fontWeight: 800,
+            color: accent,
+            letterSpacing: "-2px",
+            ...NUMERIC,
+          }}
+        >
+          {value}
+        </div>
+        <div style={{ fontSize: subtitleSize - 2, color: COLORS.textDim }}>
+          {footnote}
+        </div>
+      </div>
+    </AnimatedEntrance>
+  );
+};
+
 /**
  * Secondary long-form beat when score history is unavailable: labor market
- * framing so the segment is not a repeat of StatCards.
+ * framing so the segment is not a repeat of StatCards. Paints no background
+ * of its own — the hosting layout keeps a persistent MeshBackground behind it.
  */
 export const EconomicPulse: React.FC<EconomicPulseProps> = ({
   market,
   unemploymentPct,
   jobGrowthYoyPct,
 }) => {
-  const frame = useCurrentFrame();
-  const { fps, width, height } = useVideoConfig();
+  const { width, height } = useVideoConfig();
   const { isVertical } = useLayoutConfig();
 
-  const sceneOpacity = interpolate(frame, [0, 18], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-
-  const pulse = spring({
-    fps,
-    frame,
-    config: { damping: 16, stiffness: 90 },
-    durationInFrames: 35,
-  });
-
-  const bandOpacity = interpolate(pulse, [0, 1], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-
   const titleSize = isVertical ? 44 : 32;
-  const heroSize = isVertical ? 72 : 56;
-  const subtitleSize = isVertical ? 26 : 20;
+  const eyebrowSize = isVertical ? 22 : 16;
 
   const unempLabel = `${unemploymentPct.toFixed(1)}%`;
-  const jobLabel =
-    jobGrowthYoyPct >= 0
-      ? `+${jobGrowthYoyPct.toFixed(1)}%`
-      : `${jobGrowthYoyPct.toFixed(1)}%`;
+  const growing = jobGrowthYoyPct >= 0;
+  const jobLabel = `${growing ? "+" : ""}${jobGrowthYoyPct.toFixed(1)}%`;
+  const jobColor = growing ? PALETTE.positive : PALETTE.negative;
 
   return (
     <div
       style={{
         width,
         height,
-        background: `linear-gradient(165deg, ${COLORS.bg} 0%, #252540 55%, ${COLORS.bg} 100%)`,
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        fontFamily: "'Inter', 'Segoe UI', sans-serif",
-        opacity: sceneOpacity,
+        fontFamily: FONTS.body,
         padding: isVertical ? "48px 56px" : "40px 100px",
         boxSizing: "border-box",
         gap: isVertical ? 36 : 28,
       }}
     >
+      {/* Header: eyebrow + rule, then the market */}
       <div
         style={{
-          fontSize: titleSize,
-          fontWeight: 700,
-          color: COLORS.text,
+          display: "flex",
+          flexDirection: "column",
+          gap: 12,
           alignSelf: "flex-start",
           width: "100%",
         }}
       >
-        Economy & jobs
-        <span
-          style={{
-            color: COLORS.textMuted,
-            fontWeight: 400,
-            fontSize: titleSize * 0.62,
-          }}
-        >
-          {" "}
-          — {market}
-        </span>
+        <AnimatedEntrance index={0} from="left" distance={32}>
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <div
+              style={{
+                width: 48,
+                height: BORDER_WIDTH,
+                background: COLORS.accent,
+              }}
+            />
+            <span
+              style={{
+                fontSize: eyebrowSize,
+                fontWeight: 600,
+                color: COLORS.accent,
+                letterSpacing: "0.28em",
+                textTransform: "uppercase",
+              }}
+            >
+              Economy &amp; Jobs
+            </span>
+          </div>
+        </AnimatedEntrance>
+        <AnimatedEntrance index={1} from="rise" distance={24}>
+          <div
+            style={{
+              fontSize: titleSize,
+              fontWeight: 700,
+              color: COLORS.text,
+              letterSpacing: "-1px",
+            }}
+          >
+            {market}
+          </div>
+        </AnimatedEntrance>
       </div>
 
       <div
@@ -102,75 +181,22 @@ export const EconomicPulse: React.FC<EconomicPulseProps> = ({
           alignItems: "stretch",
         }}
       >
-        <div
-          style={{
-            flex: 1,
-            borderRadius: 24,
-            padding: isVertical ? 36 : 32,
-            background: `linear-gradient(135deg, rgba(57,73,171,0.35) 0%, rgba(26,35,126,0.5) 100%)`,
-            border: `1px solid rgba(91, 107, 192, 0.65)`,
-            opacity: bandOpacity,
-          }}
-        >
-          <div
-            style={{
-              fontSize: subtitleSize,
-              color: COLORS.textMuted,
-              fontWeight: 600,
-              marginBottom: 12,
-            }}
-          >
-            Unemployment rate
-          </div>
-          <div
-            style={{
-              fontSize: heroSize,
-              fontWeight: 800,
-              color: COLORS.text,
-              letterSpacing: "-2px",
-            }}
-          >
-            {unempLabel}
-          </div>
-          <div style={{ fontSize: subtitleSize - 2, color: COLORS.textDim }}>
-            BLS / economic feed
-          </div>
-        </div>
-
-        <div
-          style={{
-            flex: 1,
-            borderRadius: 24,
-            padding: isVertical ? 36 : 32,
-            background: `linear-gradient(135deg, rgba(0,200,83,0.2) 0%, rgba(57,73,171,0.35) 100%)`,
-            border: `1px solid ${COLORS.accent}`,
-            opacity: bandOpacity,
-          }}
-        >
-          <div
-            style={{
-              fontSize: subtitleSize,
-              color: COLORS.textMuted,
-              fontWeight: 600,
-              marginBottom: 12,
-            }}
-          >
-            Job growth (YoY)
-          </div>
-          <div
-            style={{
-              fontSize: heroSize,
-              fontWeight: 800,
-              color: jobGrowthYoyPct >= 0 ? COLORS.accent : COLORS.tierRed,
-              letterSpacing: "-2px",
-            }}
-          >
-            {jobLabel}
-          </div>
-          <div style={{ fontSize: subtitleSize - 2, color: COLORS.textDim }}>
-            Year-over-year change
-          </div>
-        </div>
+        <StatBand
+          index={0}
+          label="Unemployment rate"
+          value={unempLabel}
+          footnote="BLS / economic feed"
+          accent={PALETTE.indigoMedium}
+          isVertical={!!isVertical}
+        />
+        <StatBand
+          index={1}
+          label="Job growth (YoY)"
+          value={jobLabel}
+          footnote="Year-over-year change"
+          accent={jobColor}
+          isVertical={!!isVertical}
+        />
       </div>
     </div>
   );

@@ -124,47 +124,10 @@ export interface OverviewData {
 }
 
 // ============================================================
-// Journeys tab
+// Journeys tab — see ./journey.types.ts
 // ============================================================
 
-export interface NavigationFlow {
-  fromPage: string;
-  toPage: string;
-  transitions: number;
-}
-
-export interface PathSequence {
-  path: string[];
-  sessions: number;
-  conversionRate?: number;
-}
-
-export interface LandingPageMetric {
-  page: string;
-  sessions: number;
-  bounceRate: number;
-  avgDuration: number;
-}
-
-export interface ExitPageMetric {
-  page: string;
-  exits: number;
-}
-
-export interface DurationBucket {
-  bucket: string;
-  count: number;
-}
-
-export interface JourneyData {
-  landingPages: LandingPageMetric[];
-  exitPages: ExitPageMetric[];
-  navigationFlows: NavigationFlow[];
-  commonPaths: PathSequence[];
-  avgPagesPerSession: number;
-  sessionDurationDistribution: DurationBucket[];
-  annotations: Annotation[];
-}
+export * from './journey.types';
 
 // ============================================================
 // Retention tab

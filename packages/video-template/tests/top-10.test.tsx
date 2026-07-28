@@ -52,7 +52,9 @@ describe("Top 10 Ranking snapshots", () => {
     });
   }, 180_000);
 
-  it.each([0, 90, 180, 600, 1200, 1300])(
+  // Last frame is 1244 now that the 60-frame bumper is gone (see E1) —
+  // 1240 keeps the "deep in the brand outro card" coverage the old 1300 had.
+  it.each([0, 90, 180, 600, 1200, 1240])(
     "renders frame %s within tolerance",
     async (frame) => {
       const outPath = path.resolve(__dirname, `top-10-ranking-${frame}.png`);
@@ -210,7 +212,9 @@ describe("Top 10 — N=5 edge case (variable duration)", () => {
     });
   }, 180_000);
 
-  it.each([0, 90, 600, 760])(
+  // N=5 is 720 frames now the bumper is gone (was 780) — 700 keeps the
+  // near-the-end coverage the old 760 had.
+  it.each([0, 90, 600, 700])(
     "renders frame %s (N=5)",
     async (frame) => {
       const outPath = path.resolve(__dirname, `top-10-n5-${frame}.png`);

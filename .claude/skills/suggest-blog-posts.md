@@ -35,6 +35,7 @@ When the user approves a post idea:
 4. Save to `packages/frontend/content/blog/drafts/[slug].mdx`
 5. Include:
    - Proper frontmatter (title, description, date, author: "PropertyIQ Research + AI", category, tags, targetKeyword)
+   - `states` (REQUIRED): USPS codes for every state whose markets the post substantively covers — the subject state(s) plus each featured market in roundup headings/rankings tables (a 10-metro roundup across 10 states lists all 10), e.g. `states: ["OH", "PA"]`. City deep-dives list only the subject city's state (not passing comparisons); posts with no market-specific content (methodology, tooling) use `states: []`. Valid codes per `packages/frontend/lib/data/state-slug-data.ts`; the corpus test `lib/blog/__tests__/post-states-corpus.test.ts` fails on missing keys or bad codes. Powers the `/blog/states/[state]` browse pages. `scripts/backfill-post-states.ts` (dry-run default) suggests values from tags + heading/table structure.
    - 800-1500 words of substantive content
    - H2/H3 headings with keywords worked in naturally
    - Internal links to `/markets/[slug]` pages (verified in step 2)

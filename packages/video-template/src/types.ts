@@ -6,8 +6,16 @@
  */
 
 import { z } from "zod";
+import { MUSIC_BED_NAMES } from "./audio/levels";
+import { MediaSlotSchema } from "./media/media-slot";
+import { ProductDemoShape } from "./media/product-demo-props";
 
-import { LONG_FORM_MAX_DURATION_FRAMES } from "./constants";
+export type {
+  ProductDemoHook,
+  ProductDemoFeature,
+} from "./media/product-demo-props";
+
+export type { MediaSlotValue, FocusRegion } from "./media/media-slot";
 
 export type ScoreTier =
   | "excellent"
@@ -69,91 +77,25 @@ export interface ComparisonMarket {
 
 // Format configuration for the expanded content pipeline
 // ---------------------------------------------------------------------------
+// The catalogue lives in ./formats/manifest.ts — one declaration per
+// template, read by the composition registry, the create-run contract and
+// the admin wizard. Re-exported here so existing `from "./types"` imports
+// keep working; FORMAT_CONFIGS is derived from the manifest, so render
+// dimensions can never disagree with what the wizard advertises.
 
-export type FormatKey =
-  | "grade_reveal"
-  | "top_10_ranking"
-  | "bottom_10_ranking"
-  | "score_mover"
-  | "head_to_head"
-  | "long_form_deep_dive"
-  | "farm_area_spotlight"
-  | "brokerage_market_share"
-  | "recruitment_angle";
-
-export interface FormatConfig {
-  key: FormatKey;
-  width: number;
-  height: number;
-  fps: number;
-  durationInFrames: number;
-}
-
-export const FORMAT_CONFIGS: Record<FormatKey, FormatConfig> = {
-  grade_reveal: {
-    key: "grade_reveal",
-    width: 1080,
-    height: 1920,
-    fps: 30,
-    durationInFrames: 900,
-  },
-  top_10_ranking: {
-    key: "top_10_ranking",
-    width: 1080,
-    height: 1920,
-    fps: 30,
-    durationInFrames: 1800,
-  },
-  bottom_10_ranking: {
-    key: "bottom_10_ranking",
-    width: 1080,
-    height: 1920,
-    fps: 30,
-    durationInFrames: 1800,
-  },
-  score_mover: {
-    key: "score_mover",
-    width: 1080,
-    height: 1920,
-    fps: 30,
-    durationInFrames: 900,
-  },
-  head_to_head: {
-    key: "head_to_head",
-    width: 1080,
-    height: 1920,
-    fps: 30,
-    durationInFrames: 1800,
-  },
-  long_form_deep_dive: {
-    key: "long_form_deep_dive",
-    width: 1920,
-    height: 1080,
-    fps: 30,
-    durationInFrames: LONG_FORM_MAX_DURATION_FRAMES,
-  },
-  farm_area_spotlight: {
-    key: "farm_area_spotlight",
-    width: 1080,
-    height: 1920,
-    fps: 30,
-    durationInFrames: 1800,
-  },
-  brokerage_market_share: {
-    key: "brokerage_market_share",
-    width: 1080,
-    height: 1920,
-    fps: 30,
-    durationInFrames: 2250,
-  },
-  recruitment_angle: {
-    key: "recruitment_angle",
-    width: 1080,
-    height: 1920,
-    fps: 30,
-    durationInFrames: 2700,
-  },
-};
+export type {
+  FormatKey,
+  FormatConfig,
+  FormatManifestEntry,
+  MediaSlotDeclaration,
+  CopyFieldDeclaration,
+  WizardStep,
+} from "./formats/manifest";
+export {
+  FORMAT_CONFIGS,
+  FORMAT_MANIFEST,
+  FORMAT_KEYS,
+} from "./formats/manifest";
 
 export interface ResolvedMarket {
   rank: number;
@@ -238,6 +180,16 @@ const ResolvedMarketShape = z.object({
 const sharedShape = {
   ctaUrl: z.string(),
   styleVariant: z.string().optional(),
+  /**
+   * Per-run music bed override. Falls back to the format's default, then
+   * the house default. Keys come from audio/levels MUSIC_BEDS.
+   */
+  musicBed: z.enum(MUSIC_BED_NAMES).optional(),
+  /**
+   * Operator-supplied images/video, addressed by slotId. Formats that
+   * declare no slots simply never read this.
+   */
+  mediaSlots: z.array(MediaSlotSchema).optional(),
   audioUrl: z.string().url().optional(),
   captionWords: z
     .array(
@@ -298,13 +250,32 @@ export const RankingVideoPropsSchema = z
   })
   .strict();
 
+/**
+ * The product demo is the first format with no market behind it at all —
+ * its content is authored copy plus operator-supplied screens, so it gets
+ * its own branch rather than pretending to carry a `resolvedMarket`.
+ */
+export const ProductDemoVideoPropsSchema = z
+  .object({
+    format: z.enum(["product_demo_horizontal", "product_demo_vertical"]),
+    ...ProductDemoShape,
+    ...sharedShape,
+  })
+  .strict();
+
 export const VideoPropsSchema = z.union([
   SingleMarketVideoPropsSchema,
   RankingVideoPropsSchema,
+  ProductDemoVideoPropsSchema,
 ]);
+
+export type ProductDemoVideoProps = z.infer<typeof ProductDemoVideoPropsSchema>;
 
 export type SingleMarketVideoProps = z.infer<
   typeof SingleMarketVideoPropsSchema
 >;
 export type RankingVideoProps = z.infer<typeof RankingVideoPropsSchema>;
-export type VideoProps = SingleMarketVideoProps | RankingVideoProps;
+export type VideoProps =
+  | SingleMarketVideoProps
+  | RankingVideoProps
+  | ProductDemoVideoProps;

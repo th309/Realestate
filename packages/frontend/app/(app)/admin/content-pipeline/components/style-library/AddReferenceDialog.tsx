@@ -78,7 +78,7 @@ export function AddReferenceDialog({
               type="text"
               value={label}
               onChange={(e) => setLabel(e.target.value)}
-              placeholder="e.g. MrBeast hot palette"
+              placeholder="e.g. Doom-Data Alarm (Graham Stephan thumbnail)"
               required
               className="w-full rounded-lg border border-outline bg-surface px-3 py-2 text-sm focus:outline-none focus:border-primary"
             />

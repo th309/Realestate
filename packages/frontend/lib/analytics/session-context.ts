@@ -4,6 +4,11 @@
  * DATA LAYER EXEMPTION: Analytics context collection, not data fetching.
  */
 
+import {
+  classifyReferrer,
+  type ReferrerChannel,
+} from "./referrer-classification";
+
 const SESSION_CTX_KEY = "piq-session-ctx";
 
 export interface SessionContext {
@@ -12,30 +17,17 @@ export interface SessionContext {
   utm_campaign?: string;
   referrer?: string;
   referrer_domain?: string;
-  entry_type: "utm" | "email" | "organic" | "direct";
+  /**
+   * Acquisition channel. Previously only ever "utm" | "email" | "organic" |
+   * "direct", where "organic" meant "had any referrer at all" — search, social,
+   * AI assistants and backlinks were indistinguishable. Now classified properly
+   * by `classifyReferrer`. Historical rows keep the old "organic" value.
+   */
+  entry_type: ReferrerChannel;
   device_type: "mobile" | "tablet" | "desktop";
   screen_width: number;
   browser: string;
   os: string;
-}
-
-const EMAIL_DOMAINS = ["mail.google.com", "outlook.live.com", "mail.yahoo.com"];
-
-function detectEntryType(
-  utmSource?: string,
-  referrer?: string,
-): SessionContext["entry_type"] {
-  if (utmSource) return "utm";
-  if (referrer) {
-    try {
-      const domain = new URL(referrer).hostname;
-      if (EMAIL_DOMAINS.some((d) => domain.includes(d))) return "email";
-    } catch {
-      // Invalid referrer URL
-    }
-    return "organic";
-  }
-  return "direct";
 }
 
 function detectDeviceType(width: number): SessionContext["device_type"] {
@@ -84,26 +76,20 @@ export function getSessionContext(): SessionContext {
   const params = new URLSearchParams(window.location.search);
   const ua = navigator.userAgent;
   const referrer = document.referrer || undefined;
-  let referrerDomain: string | undefined;
-  if (referrer) {
-    try {
-      referrerDomain = new URL(referrer).hostname;
-    } catch {
-      // Invalid referrer
-    }
-  }
 
   const utmSource = params.get("utm_source") || undefined;
   const utmMedium = params.get("utm_medium") || undefined;
   const utmCampaign = params.get("utm_campaign") || undefined;
+
+  const { channel, sourceDomain } = classifyReferrer(referrer, utmSource);
 
   const ctx: SessionContext = {
     utm_source: utmSource,
     utm_medium: utmMedium,
     utm_campaign: utmCampaign,
     referrer,
-    referrer_domain: referrerDomain,
-    entry_type: detectEntryType(utmSource, referrer),
+    referrer_domain: sourceDomain ?? undefined,
+    entry_type: channel,
     device_type: detectDeviceType(screen.width),
     screen_width: screen.width,
     browser: detectBrowser(ua),

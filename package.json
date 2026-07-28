@@ -32,6 +32,7 @@
     "build:libs": "npm run build -w @propertyiq/analyzer-core && npm run build -w @propertyiq/emails",
     "release:main": "bash scripts/git/release-to-main.sh",
     "sync:develop": "bash scripts/git/release-to-main.sh --sync-only",
+    "blog:publish": "bash scripts/git/publish-blog.sh",
     "postinstall": "node scripts/postinstall-fix-types.js && patch-package",
     "seo:rebuild-slugs": "npm run seo:slugs:metro && npm run seo:slugs:county && npm run seo:slugs:zip && npm run seo:redirects && npm run seo:generate-llms",
     "seo:slugs:metro": "npx tsx scripts/generate-metro-slugs.ts",

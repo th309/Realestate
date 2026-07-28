@@ -1,68 +1,92 @@
 import React from "react";
-import {
-  AbsoluteFill,
-  Easing,
-  Sequence,
-  interpolate,
-  spring,
-  useCurrentFrame,
-  useVideoConfig,
-} from "remotion";
+import { AbsoluteFill, Sequence } from "remotion";
 import { BrandBumper } from "../primitives/BrandBumper";
 import { BrandOutroCard } from "../primitives/BrandOutroCard";
+import { MeshBackground } from "../primitives/MeshBackground";
 import { Intro } from "../scenes/Intro";
 import { Outro } from "../scenes/Outro";
 import { StatCards } from "../scenes/StatCards";
+import {
+  AnimatedEntrance,
+  useCounterValue,
+  useSpringProgress,
+} from "../motion";
+import {
+  FONTS,
+  NUMERIC,
+  PALETTE,
+  brandBorder,
+  brandFill,
+} from "../styles/tokens";
 import { useLayoutConfig } from "../layout/useLayoutConfig";
 import type { SingleMarketVideoProps } from "../types";
 import { num, coerceStats } from "./helpers";
 
 /**
+ * Beat table for the score-move story. Exported so `audio/sfx-cues.ts` can
+ * frame-lock its cues to the SAME numbers the layout renders from — audio
+ * and motion can never drift apart.
+ */
+/**
+ * Beats for score_mover's 900-frame composition. Without a bumper the open
+ * shifts to frame 0 and the delta beat — the payload of this format —
+ * absorbs the freed frames; stats/outro/brand stay anchored to the tail.
+ */
+export function buildScoreMoverBeats(openWithBumper = false) {
+  const bumperDuration = openWithBumper ? 60 : 0;
+  const introFrom = bumperDuration;
+  const deltaFrom = introFrom + 90;
+  return {
+    bumper: { from: 0, duration: bumperDuration },
+    intro: { from: introFrom, duration: 90 },
+    delta: { from: deltaFrom, duration: 450 - deltaFrom },
+    stats: { from: 450, duration: 270 },
+    outro: { from: 720, duration: 90 },
+    brand: { from: 810, duration: 90 },
+  };
+}
+
+/** Frames into the delta scene before the number starts ticking. */
+export const DELTA_TICK_DELAY = 15;
+/** Frames after tick start before the `counter` spring has settled. */
+export const DELTA_SETTLE_FRAMES = 76;
+/** Frames into the delta scene before the delta pill pops in. */
+const DELTA_PILL_DELAY = 30;
+
+/**
  * The score-move scene: tells the story "PropertyIQ Score went from N to M".
- * The number ticks from prior → current over ~1.5s, then the delta pill
- * springs in alongside. Both hold for the rest of the 10s window so the
- * VO has time to land its supporting beats.
+ * The number rides a heavy `counter` spring from prior → current (fast ramp,
+ * long deceleration, no overshoot past the real value), and the delta pill
+ * pops in mid-tick so it lands as the number arrives. Both hold for the rest
+ * of the 10s window so the VO has time to land its supporting beats.
+ *
+ * No solid fill of its own — the layout's persistent MeshBackground shows
+ * through every scene.
  */
 const DeltaScene: React.FC<{
   currentScore: number;
   delta: number;
   windowCaption: string;
 }> = ({ currentScore, delta, windowCaption }) => {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
   const { scale } = useLayoutConfig();
-
   const priorScore = currentScore - delta;
 
-  // Number tick: frames 15-60 (after a brief beat to read the title).
-  const TICK_START = 15;
-  const TICK_DURATION = 45;
-  const animatedScore = interpolate(
-    frame,
-    [TICK_START, TICK_START + TICK_DURATION],
-    [priorScore, currentScore],
-    {
-      extrapolateLeft: "clamp",
-      extrapolateRight: "clamp",
-      easing: Easing.out(Easing.cubic),
-    },
-  );
-
-  // Delta pill enters mid-tick so it lands as the number arrives.
-  const pillSpring = spring({
-    frame: frame - 30,
-    fps,
-    config: { damping: 12, stiffness: 90 },
+  const animatedScore = useCounterValue(currentScore, {
+    delay: DELTA_TICK_DELAY,
+    from: priorScore,
+  });
+  const pillProgress = useSpringProgress({
+    delay: DELTA_PILL_DELAY,
+    preset: "pop",
   });
 
   const isPositive = delta >= 0;
-  const pillColor = isPositive ? "#00C853" : "#B3261E";
+  const signColor = isPositive ? PALETTE.positive : PALETTE.negative;
   const sign = isPositive ? "+" : "";
 
   return (
     <AbsoluteFill
       style={{
-        backgroundColor: "#1A1A2E",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
@@ -70,33 +94,38 @@ const DeltaScene: React.FC<{
         gap: 40 * scale,
       }}
     >
-      <div
-        style={{
-          color: "#C5CAE9",
-          fontFamily: "Roboto",
-          fontSize: 56 * scale,
-          fontWeight: 500,
-          letterSpacing: "0.1em",
-          textTransform: "uppercase",
-          textAlign: "center",
-        }}
-      >
-        PropertyIQ Score moved
-      </div>
-
-      {windowCaption ? (
+      <AnimatedEntrance index={0} from="rise">
         <div
           style={{
-            color: "#C5CAE9",
-            fontFamily: "Roboto Mono",
-            fontSize: 32 * scale,
-            letterSpacing: "0.08em",
+            color: PALETTE.indigoLight,
+            fontFamily: FONTS.body,
+            fontSize: 56 * scale,
+            fontWeight: 500,
+            letterSpacing: "0.1em",
             textTransform: "uppercase",
-            opacity: 0.85,
+            textAlign: "center",
           }}
         >
-          {windowCaption}
+          PropertyIQ Score moved
         </div>
+      </AnimatedEntrance>
+
+      {windowCaption ? (
+        <AnimatedEntrance index={1} from="rise" distance={16}>
+          <div
+            style={{
+              color: PALETTE.indigoLight,
+              fontFamily: FONTS.mono,
+              fontSize: 32 * scale,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              opacity: 0.85,
+              ...NUMERIC,
+            }}
+          >
+            {windowCaption}
+          </div>
+        </AnimatedEntrance>
       ) : null}
 
       <div
@@ -108,31 +137,33 @@ const DeltaScene: React.FC<{
       >
         <div
           style={{
-            color: "white",
-            fontFamily: "Roboto Mono",
+            color: PALETTE.surface,
+            fontFamily: FONTS.mono,
             fontWeight: 700,
             fontSize: 240 * scale,
             lineHeight: 1,
             // tabular-nums prevents the number from jittering horizontally
             // as the digits change width during the tick.
-            fontVariantNumeric: "tabular-nums",
             minWidth: `${3.5 * 240 * scale * 0.6}px`,
             textAlign: "center",
+            ...NUMERIC,
           }}
         >
           {Math.round(animatedScore)}
         </div>
         <div
           style={{
-            transform: `scale(${pillSpring}) translateX(${(1 - pillSpring) * -40}px)`,
-            opacity: pillSpring,
-            background: pillColor,
-            color: "white",
+            transform: `scale(${pillProgress}) translateX(${(1 - pillProgress) * -40}px)`,
+            opacity: Math.min(1, Math.max(0, pillProgress * 1.5)),
+            background: brandFill(signColor),
+            border: brandBorder(signColor),
+            color: signColor,
             padding: `${10 * scale}px ${28 * scale}px`,
             borderRadius: 999,
-            fontFamily: "Roboto Mono",
+            fontFamily: FONTS.mono,
             fontWeight: 700,
             fontSize: 80 * scale,
+            ...NUMERIC,
           }}
         >
           {sign}
@@ -154,28 +185,36 @@ export const ScoreMoverLayout: React.FC<SingleMarketVideoProps> = (props) => {
   const delta = num(scoreObj.score_delta, 0);
   const windowCaption = scoreObj.window_caption ?? "";
   const stats = coerceStats(bundle);
+  const { format } = useLayoutConfig();
+  const beats = buildScoreMoverBeats(format.openWithBumper);
   return (
     <>
-      <Sequence from={0} durationInFrames={60}>
-        <BrandBumper />
-      </Sequence>
-      <Sequence from={60} durationInFrames={90}>
+      <MeshBackground />
+      {format.openWithBumper && (
+        <Sequence
+          from={beats.bumper.from}
+          durationInFrames={beats.bumper.duration}
+        >
+          <BrandBumper />
+        </Sequence>
+      )}
+      <Sequence from={beats.intro.from} durationInFrames={beats.intro.duration}>
         <Intro marketName={props.resolvedMarket.canonical_name} />
       </Sequence>
-      <Sequence from={150} durationInFrames={300}>
+      <Sequence from={beats.delta.from} durationInFrames={beats.delta.duration}>
         <DeltaScene
           currentScore={score}
           delta={delta}
           windowCaption={windowCaption}
         />
       </Sequence>
-      <Sequence from={450} durationInFrames={270}>
+      <Sequence from={beats.stats.from} durationInFrames={beats.stats.duration}>
         <StatCards market={props.resolvedMarket.canonical_name} stats={stats} />
       </Sequence>
-      <Sequence from={720} durationInFrames={90}>
+      <Sequence from={beats.outro.from} durationInFrames={beats.outro.duration}>
         <Outro ctaUrl={props.ctaUrl} />
       </Sequence>
-      <Sequence from={810} durationInFrames={90}>
+      <Sequence from={beats.brand.from} durationInFrames={beats.brand.duration}>
         <BrandOutroCard ctaUrl={props.ctaUrl} score={score} />
       </Sequence>
     </>

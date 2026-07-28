@@ -30,6 +30,34 @@ export function readAttributionCookie(): string | null {
   }
 }
 
+/**
+ * Reduce a raw auth error to one of a fixed set of categories, for analytics.
+ *
+ * Raw provider messages are freeform text controlled upstream (Supabase, the
+ * custom Send-Email hook, Google) and may interpolate account details, so they
+ * must never be shipped to the analytics pipeline and persisted in the shared
+ * user_events store. This is a strict allow-list: anything unrecognised
+ * collapses to "other" rather than falling through to the original string.
+ */
+export function classifyAuthError(message: string): string {
+  const lower = message.toLowerCase();
+  if (lower.includes("already registered") || lower.includes("already exists"))
+    return "already_registered";
+  if (lower.includes("provider") && lower.includes("not enabled"))
+    return "provider_not_enabled";
+  if (lower.includes("provider") && lower.includes("disabled"))
+    return "provider_disabled";
+  if (lower.includes("popup") || lower.includes("cancelled"))
+    return "user_cancelled";
+  if (lower.includes("rate") || lower.includes("too many"))
+    return "rate_limited";
+  if (lower.includes("password")) return "password_rejected";
+  if (lower.includes("email")) return "email_rejected";
+  if (lower.includes("network") || lower.includes("fetch"))
+    return "network_error";
+  return "other";
+}
+
 /** Map raw Supabase/OAuth error messages to user-friendly text. */
 export function friendlyAuthError(message: string): string {
   const lower = message.toLowerCase();

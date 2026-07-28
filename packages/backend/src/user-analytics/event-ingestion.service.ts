@@ -3,6 +3,7 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { SessionManagerService } from './session-manager.service';
 import { IdentityStitchingService } from './identity-stitching.service';
 import type { IngestableEvent, IngestionResult } from './user-analytics.types';
+import { hasBotUserAgent } from './bot-detection';
 
 @Injectable()
 export class EventIngestionService {
@@ -14,7 +15,10 @@ export class EventIngestionService {
     private readonly identityStitching: IdentityStitchingService,
   ) {}
 
-  async ingestBatch(rawEvents: unknown[]): Promise<IngestionResult> {
+  async ingestBatch(
+    rawEvents: unknown[],
+    clientUserAgent = '',
+  ): Promise<IngestionResult> {
     const { valid, rejected } = this.validateEvents(rawEvents);
     if (valid.length === 0) return { accepted: 0, rejected: rejected };
 
@@ -35,7 +39,12 @@ export class EventIngestionService {
     // Insert regular events into user_events
     if (regular.length > 0) {
       const client = this.supabase.getClient();
+      // Classified once per batch and stamped on every row. Denormalised onto
+      // user_events (like user_tier) because the event-sourced panels query
+      // this table directly and cannot join to user_sessions through PostgREST.
+      const isBot = hasBotUserAgent(clientUserAgent);
       const rows = regular.map((e) => ({
+        is_bot: isBot,
         client_event_id: e.client_event_id || null,
         visitor_id: e.visitor_id,
         session_id: e.session_id,
@@ -64,7 +73,7 @@ export class EventIngestionService {
       const sessionGroups = this.groupBySession(regular);
       await Promise.all(
         Object.entries(sessionGroups).map(([sid, events]) =>
-          this.sessionManager.upsertSession(sid, events),
+          this.sessionManager.upsertSession(sid, events, clientUserAgent),
         ),
       );
 

@@ -6,12 +6,7 @@ import {
 } from '@nestjs/common';
 import { SupabaseService } from '../../supabase/supabase.service';
 import { VisionExtractorService } from './vision-extractor.service';
-import { YtDlpWrapperService } from './yt-dlp-wrapper.service';
-import { FFmpegWrapperService } from './ffmpeg-wrapper.service';
-import { join } from 'path';
-import { tmpdir } from 'os';
-import { spawn } from 'child_process';
-import { readFileSync, writeFileSync } from 'fs';
+import { StyleReferencePreviewService } from './style-reference-preview.service';
 import type {
   CreateStyleReferenceDto,
   UpdateStyleReferenceDto,
@@ -39,12 +34,15 @@ export interface StyleReference {
  *   1. operator uploads image OR pastes URL
  *   2. service stores row with empty extracted_attributes
  *   3. service calls VisionExtractorService.extract() to populate palette
- *      + typography + layout + summary
+ *      + typography + layout + summary, and mirrors the image into the
+ *      `content-pipeline` bucket so the card preview outlives the source URL
  *   4. row updated with attrs + cost; consumer (Task 2.28 thumbnail
  *      variants) reads palette to drive styleVariant rendering
  *
- * Re-extract is exposed separately for cases where the operator changed
- * the source image or wants to re-run after a model upgrade.
+ * `list()` resolves stored `supabase://` previews to short-lived signed URLs
+ * for the browser. Re-extract is exposed separately for cases where the
+ * operator changed the source image or wants to re-run after a model upgrade;
+ * it also backfills missing preview mirrors.
  */
 @Injectable()
 export class StyleReferenceService {
@@ -53,8 +51,7 @@ export class StyleReferenceService {
   constructor(
     private readonly supabase: SupabaseService,
     private readonly vision: VisionExtractorService,
-    private readonly ytdlp: YtDlpWrapperService,
-    private readonly ffmpeg: FFmpegWrapperService,
+    private readonly preview: StyleReferencePreviewService,
   ) {}
 
   async list(userId: string | null): Promise<StyleReference[]> {
@@ -65,7 +62,15 @@ export class StyleReferenceService {
       .order('created_at', { ascending: false });
     const { data, error } = userId ? await q.eq('user_id', userId) : await q;
     if (error) throw error;
-    return (data ?? []) as StyleReference[];
+    const refs = (data ?? []) as StyleReference[];
+    return Promise.all(
+      refs.map(async (ref) => ({
+        ...ref,
+        preview_strip_url: await this.preview.toSignedPreviewUrl(
+          ref.preview_strip_url,
+        ),
+      })),
+    );
   }
 
   async create(
@@ -89,35 +94,55 @@ export class StyleReferenceService {
     if (error || !data)
       throw new BadRequestException(error?.message ?? 'failed to create');
 
-    // Fire-and-forget extraction; the row exists either way and the
-    // operator can re-extract if this fails. Awaited here so the response
-    // includes the attrs when it works.
-    try {
-      const attrs = await this.vision.extract(dto.source_url);
-      const { data: updated } = await client
+    // Extraction + preview mirror are independent best-effort steps; the row
+    // exists either way and the operator can re-extract. Awaited here so the
+    // response includes the attrs when they work. A completed mirror is
+    // persisted even when vision fails — discarding it would orphan the
+    // uploaded storage object.
+    const [attrsResult, mirroredPreview] = await Promise.all([
+      this.vision.extract(dto.source_url).then(
+        (attrs) => ({ ok: true as const, attrs }),
+        (err: Error) => ({ ok: false as const, err }),
+      ),
+      dto.preview_strip_url
+        ? Promise.resolve<string | null>(dto.preview_strip_url)
+        : this.preview.mirrorImageToStorage(userId, dto.source_url),
+    ]);
+
+    if (!attrsResult.ok) {
+      this.logger.warn(
+        `[STYLE] extraction failed for id=${data.id} — operator can re-extract: ${attrsResult.err.message.slice(0, 120)}`,
+      );
+      if (!mirroredPreview) return data as StyleReference;
+      const { data: previewOnly } = await client
         .from('style_references')
-        .update({
-          extracted_attributes: {
-            palette: attrs.palette,
-            typography: attrs.typography,
-            layout: attrs.layout,
-            summary: attrs.summary,
-          },
-          vision_cost_usd: attrs.cost_usd,
-        })
+        .update({ preview_strip_url: mirroredPreview })
         .eq('id', data.id)
         .select('*')
         .single();
-      this.logger.log(
-        `[STYLE] extracted id=${data.id} palette=${attrs.palette.length}`,
-      );
-      return (updated ?? data) as StyleReference;
-    } catch (err) {
-      this.logger.warn(
-        `[STYLE] extraction failed for id=${data.id} — operator can re-extract: ${(err as Error).message.slice(0, 120)}`,
-      );
-      return data as StyleReference;
+      return (previewOnly ?? data) as StyleReference;
     }
+
+    const { attrs } = attrsResult;
+    const { data: updated } = await client
+      .from('style_references')
+      .update({
+        extracted_attributes: {
+          palette: attrs.palette,
+          typography: attrs.typography,
+          layout: attrs.layout,
+          summary: attrs.summary,
+        },
+        vision_cost_usd: attrs.cost_usd,
+        preview_strip_url: mirroredPreview,
+      })
+      .eq('id', data.id)
+      .select('*')
+      .single();
+    this.logger.log(
+      `[STYLE] extracted id=${data.id} palette=${attrs.palette.length} preview=${mirroredPreview ? 'mirrored' : 'none'}`,
+    );
+    return (updated ?? data) as StyleReference;
   }
 
   async update(
@@ -147,17 +172,51 @@ export class StyleReferenceService {
     if (error) throw error;
   }
 
-  /** Re-run Vision extraction on an existing reference's source_url. */
+  /**
+   * Re-run Vision extraction on an existing reference's source_url, and
+   * backfill the storage preview mirror when the row predates mirroring.
+   */
   async reExtract(id: string): Promise<StyleReference> {
     const client = this.supabase.getClient();
     const { data: row } = await client
       .from('style_references')
-      .select('source_url')
+      .select('user_id, source_url, preview_strip_url')
       .eq('id', id)
       .maybeSingle();
     if (!row?.source_url)
       throw new NotFoundException(`style ref ${id} has no source_url`);
-    const attrs = await this.vision.extract(row.source_url as string);
+
+    const hasMirror = String(row.preview_strip_url ?? '').startsWith(
+      'supabase://',
+    );
+    const [attrsResult, mirroredPreview] = await Promise.all([
+      this.vision.extract(row.source_url as string).then(
+        (attrs) => ({ ok: true as const, attrs }),
+        (err: Error) => ({ ok: false as const, err }),
+      ),
+      hasMirror
+        ? Promise.resolve<string | null>(row.preview_strip_url as string)
+        : this.preview.mirrorImageToStorage(
+            row.user_id as string,
+            row.source_url as string,
+          ),
+    ]);
+
+    // Persist a fresh mirror even when vision fails, then surface the vision
+    // failure as a client error instead of an opaque 500.
+    if (!attrsResult.ok) {
+      if (mirroredPreview && !hasMirror) {
+        await client
+          .from('style_references')
+          .update({ preview_strip_url: mirroredPreview })
+          .eq('id', id);
+      }
+      throw new BadRequestException(
+        `Vision extraction failed: ${attrsResult.err.message.slice(0, 200)}`,
+      );
+    }
+
+    const { attrs } = attrsResult;
     const { data: updated, error } = await client
       .from('style_references')
       .update({
@@ -168,6 +227,7 @@ export class StyleReferenceService {
           summary: attrs.summary,
         },
         vision_cost_usd: attrs.cost_usd,
+        preview_strip_url: mirroredPreview,
       })
       .eq('id', id)
       .select('*')
@@ -175,110 +235,5 @@ export class StyleReferenceService {
     if (error || !updated)
       throw new BadRequestException(error?.message ?? 'failed to update');
     return updated as StyleReference;
-  }
-
-  // ── Phase 3: Video ingest ────────────────────────────────────────────────
-
-  async ingestVideoFromUpload(
-    userId: string,
-    buffer: Buffer,
-    label: string,
-  ): Promise<StyleReference> {
-    const videoPath = join(tmpdir(), `upload-${Date.now()}.mp4`);
-    writeFileSync(videoPath, buffer);
-    return this.processVideo(userId, videoPath, label, null);
-  }
-
-  async ingestVideoFromUrl(
-    userId: string,
-    url: string,
-    label: string,
-  ): Promise<StyleReference> {
-    const download = await this.ytdlp.download(url);
-    return this.processVideo(userId, download.videoPath, label, url);
-  }
-
-  private async processVideo(
-    userId: string,
-    videoPath: string,
-    label: string,
-    sourceUrl: string | null,
-  ): Promise<StyleReference> {
-    const client = this.supabase.getClient();
-    const frames = await this.ffmpeg.extractFrames(videoPath, 1);
-    if (frames.length === 0) {
-      throw new Error('ffmpeg produced no frames');
-    }
-
-    const extraction = await this.vision.extractFromFrames(frames);
-
-    const previewStripBuffer = await this.buildPreviewStrip(frames.slice(0, 9));
-    const previewPath = `style-references/${userId}/${Date.now()}-preview.jpg`;
-    const uploadRes = await client.storage
-      .from('content-pipeline')
-      .upload(previewPath, previewStripBuffer, {
-        contentType: 'image/jpeg',
-        upsert: true,
-      });
-    if (uploadRes.error) throw uploadRes.error;
-
-    const { data, error } = await client
-      .from('style_references')
-      .insert({
-        user_id: userId,
-        kind: 'video',
-        label,
-        source_url: sourceUrl,
-        preview_strip_url: `supabase://content-pipeline/${previewPath}`,
-        extracted_attributes: extraction.attributes,
-        vision_cost_usd: extraction.cost_usd,
-      })
-      .select('*')
-      .single();
-    if (error || !data)
-      throw new BadRequestException(error?.message ?? 'failed to create');
-
-    // Best-effort cleanup: remove extracted frames directory.
-    try {
-      const dir = join(frames[0], '..');
-      this.ffmpeg.cleanupDir(dir);
-    } catch {
-      // ignore
-    }
-
-    return data as StyleReference;
-  }
-
-  private async buildPreviewStrip(framePaths: string[]): Promise<Buffer> {
-    const paths = framePaths.filter(Boolean).slice(0, 9);
-    if (paths.length === 0) throw new Error('no frames for preview strip');
-
-    const outPath = join(tmpdir(), `strip-${Date.now()}.jpg`);
-    const bin = process.env.FFMPEG_BIN ?? 'ffmpeg';
-
-    await new Promise<void>((resolve, reject) => {
-      const args = [
-        ...paths.flatMap((p) => ['-i', p]),
-        '-filter_complex',
-        'tile=3x3',
-        '-frames:v',
-        '1',
-        '-y',
-        outPath,
-      ];
-      const proc = spawn(bin, args);
-      let stderr = '';
-      proc.stderr.on('data', (d) => {
-        stderr += d.toString();
-      });
-      proc.on('close', (code) =>
-        code === 0
-          ? resolve()
-          : reject(new Error(`ffmpeg tile ${code}: ${stderr.slice(0, 300)}`)),
-      );
-      proc.on('error', (err) => reject(err));
-    });
-
-    return readFileSync(outPath);
   }
 }

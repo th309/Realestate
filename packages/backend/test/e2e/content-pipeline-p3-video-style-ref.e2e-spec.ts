@@ -20,7 +20,7 @@ describeFn('E2E: content-pipeline P3 video style reference ingest', () => {
       throw new Error('P3_VIDEO_STYLE_REF_URL env var required');
     }
     const userId = `e2e-style-${Date.now()}`;
-    const ref = await ctx.styleReferences.ingestVideoFromUrl(
+    const ref = await ctx.styleReferenceVideoIngest.ingestVideoFromUrl(
       userId,
       url,
       'E2E video ref',
@@ -30,4 +30,3 @@ describeFn('E2E: content-pipeline P3 video style reference ingest', () => {
     expect(ref.extracted_attributes).toBeTruthy();
   }, 180_000);
 });
-

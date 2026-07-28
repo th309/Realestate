@@ -9,6 +9,8 @@ export interface StyleReference {
   preview_strip_url: string | null;
   extracted_attributes: {
     palette?: string[];
+    /** Video ingests store their palette under this key. */
+    dominant_palette?: string[];
     typography?: string[];
     layout?: string[];
     summary?: string;
@@ -61,7 +63,16 @@ export async function ingestVideoUrl(body: {
     const t = await res.text();
     throw new Error(`ingestVideoUrl failed: ${res.status} ${t}`);
   }
-  const json = (await res.json()) as { data: StyleReference };
+  // The backend maps ingest failures to 200 { success: false, error } for
+  // operator-friendly messages — surface them instead of faking success.
+  const json = (await res.json()) as {
+    success?: boolean;
+    error?: string;
+    data: StyleReference;
+  };
+  if (json.success === false || !json.data) {
+    throw new Error(json.error ?? "video ingest failed");
+  }
   return json.data;
 }
 
@@ -83,7 +94,14 @@ export async function uploadVideoReference(body: {
     const t = await res.text();
     throw new Error(`uploadVideo failed: ${res.status} ${t}`);
   }
-  const json = (await res.json()) as { data: StyleReference };
+  const json = (await res.json()) as {
+    success?: boolean;
+    error?: string;
+    data: StyleReference;
+  };
+  if (json.success === false || !json.data) {
+    throw new Error(json.error ?? "video upload failed");
+  }
   return json.data;
 }
 

@@ -1,14 +1,23 @@
 import React from "react";
-import { AbsoluteFill, Audio, Sequence } from "remotion";
+import { AbsoluteFill, useVideoConfig } from "remotion";
 import {
   VideoProps,
   RankingVideoProps,
   SingleMarketVideoProps,
+  ProductDemoVideoProps,
   FORMAT_CONFIGS,
+  FORMAT_MANIFEST,
 } from "./types";
-import { LONG_FORM_MAX_DURATION_FRAMES } from "./constants";
+import { AudioMix } from "./audio/AudioMix";
+import { buildSfxCues } from "./audio/sfx-cues";
+import { PALETTE } from "./styles/tokens";
+import {
+  LONG_FORM_MAX_DURATION_FRAMES,
+  narrationStartFrame,
+} from "./constants";
 import {
   BRAND_OUTRO_FRAMES,
+  MAX_RANKING_ROWS,
   computeRankingTiming,
 } from "./layouts/top10-timing";
 
@@ -24,8 +33,21 @@ export const calculateRankingMetadata = ({
 }: {
   props: RankingVideoProps;
 }) => {
-  const n = props.params?.resolved_markets?.length || 10;
-  const timing = computeRankingTiming(n, props.captionWords);
+  // Cap to the rows the layout actually renders (Top10Layout slices to the
+  // same limit). An over-fetched candidate list would otherwise make this
+  // compute a duration for rows nobody sees — and worse, the caption-aligned
+  // branch requires one "Number N" cue per row, so an inflated rowCount
+  // silently drops it to generic even-spacing and the composition's length
+  // stops matching its own audio.
+  const n = Math.min(
+    MAX_RANKING_ROWS,
+    props.params?.resolved_markets?.length || MAX_RANKING_ROWS,
+  );
+  const timing = computeRankingTiming(
+    n,
+    props.captionWords,
+    FORMAT_CONFIGS[props.format].openWithBumper,
+  );
   return {
     durationInFrames: timing.totalFrames + BRAND_OUTRO_FRAMES,
     fps: 30,
@@ -85,12 +107,44 @@ import { LongFormDeepDiveLayout } from "./layouts/LongFormDeepDiveLayout";
 import { BrokerageMarketShareLayout } from "./layouts/BrokerageMarketShareLayout";
 import { RecruitmentAngleLayout } from "./layouts/RecruitmentAngleLayout";
 import { CaptionOverlay } from "./primitives/CaptionOverlay";
+import { ProductDemoLayout } from "./layouts/ProductDemoLayout";
+import { isProductDemoFormat } from "./formats/product-demo-format";
+import { buildProductDemoBeats } from "./lib/product-demo-timing";
+
+/**
+ * A product demo's length comes from how many features were authored, not
+ * from a catalogue constant — three features and six are different videos.
+ */
+export const calculateProductDemoMetadata = ({
+  props,
+}: {
+  props: ProductDemoVideoProps;
+}) => {
+  const manifest = FORMAT_MANIFEST[props.format];
+  const hookFrames =
+    props.hook?.kind === "avatar_video"
+      ? props.hook.slot?.durationInFrames
+      : undefined;
+  const beats = buildProductDemoBeats(
+    props.features?.length ?? 1,
+    manifest.beats,
+    manifest.fps,
+    hookFrames,
+  );
+  return {
+    durationInFrames: beats.totalFrames,
+    fps: manifest.fps,
+    width: manifest.width,
+    height: manifest.height,
+  };
+};
 
 export const PropertyIQVideo: React.FC<VideoProps> = (props) => {
   const cfg = FORMAT_CONFIGS[props.format];
+  const { durationInFrames } = useVideoConfig();
   return (
     <VideoLayout config={cfg}>
-      <AbsoluteFill style={{ backgroundColor: "#1A1A2E" }}>
+      <AbsoluteFill style={{ backgroundColor: PALETTE.stage }}>
         {props.format === "grade_reveal" && <GradeRevealLayout {...props} />}
         {props.format === "top_10_ranking" && <Top10Layout {...props} />}
         {props.format === "bottom_10_ranking" && (
@@ -110,6 +164,9 @@ export const PropertyIQVideo: React.FC<VideoProps> = (props) => {
         {props.format === "recruitment_angle" && (
           <RecruitmentAngleLayout {...props} />
         )}
+        {isProductDemoFormat(props.format) && (
+          <ProductDemoLayout {...(props as ProductDemoVideoProps)} />
+        )}
         {/* Other formats rendered in later phases.
             CaptionOverlay is suppressed for ranking layouts — they have
             their own editorial typography (HeroRow's city/value) that
@@ -123,18 +180,19 @@ export const PropertyIQVideo: React.FC<VideoProps> = (props) => {
           )}
       </AbsoluteFill>
       {/*
-        Delay voice-over until after the 2-second BrandBumper (60 frames
-        @ 30fps) so the brand sting plays clean, without the narrator
-        talking over the intro logo. Audio plays from its start through
-        to its natural end (ffprobe cap in synthesize-audio.handler
-        ensures audio_length <= duration - audio_buffer_seconds, so even
-        the longest legal audio still ends before the video does).
+        Full program mix: narration, sidechain-ducked music bed, room tone,
+        and entrance SFX frame-locked to the layout beats. Narration starts
+        at frame 0 on vertical short-form and after the sting on bumper'd
+        long-form (see narrationStartFrame). It still ends before the video
+        does (ffprobe cap in synthesize-audio.handler enforces the budget).
       */}
-      {props.audioUrl && (
-        <Sequence from={60}>
-          <Audio src={props.audioUrl} />
-        </Sequence>
-      )}
+      <AudioMix
+        audioUrl={props.audioUrl}
+        captionWords={props.captionWords}
+        narrationStartFrame={narrationStartFrame(cfg)}
+        cues={buildSfxCues(props, durationInFrames)}
+        musicBed={props.musicBed ?? cfg.musicBed}
+      />
     </VideoLayout>
   );
 };

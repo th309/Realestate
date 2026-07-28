@@ -1,7 +1,13 @@
 // packages/video-template/src/primitives/FarmAreaGrid.tsx
-// Brand colors hardcoded; Task 2.28 will move them to a shared variant module.
 import React from "react";
-import { spring, useCurrentFrame, useVideoConfig } from "remotion";
+import { AnimatedEntrance } from "../motion";
+import {
+  FONTS,
+  NUMERIC,
+  PALETTE,
+  brandBorder,
+  brandFill,
+} from "../styles/tokens";
 import { useLayoutConfig } from "../layout/useLayoutConfig";
 
 export interface FarmAreaGridProps {
@@ -13,9 +19,12 @@ export interface FarmAreaGridProps {
   }>;
 }
 
+/**
+ * Three-up ZIP farm-area cards. Each card enters on the house 4-frame
+ * stagger so the grid assembles top-down, and carries the brand card
+ * treatment — 8% container tint, 1.75px softened indigo border, rounded-xl.
+ */
 export const FarmAreaGrid: React.FC<FarmAreaGridProps> = ({ areas }) => {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
   const { scale } = useLayoutConfig();
   return (
     <div
@@ -26,29 +35,30 @@ export const FarmAreaGrid: React.FC<FarmAreaGridProps> = ({ areas }) => {
         padding: 40 * scale,
       }}
     >
-      {areas.slice(0, 3).map((a, i) => {
-        const appear = spring({
-          frame: frame - i * 15,
-          fps,
-          config: { damping: 12 },
-        });
-        return (
+      {areas.slice(0, 3).map((a, i) => (
+        // Index is part of the key because the empty-bundle fallback renders
+        // three placeholder cards that all carry the same "—" zip.
+        <AnimatedEntrance
+          key={`${a.zip}-${i}`}
+          index={i}
+          from="rise"
+          distance={40}
+        >
           <div
-            key={a.zip}
             style={{
-              opacity: appear,
-              transform: `translateY(${(1 - appear) * 40}px)`,
-              background: "#E8EAF6",
-              borderRadius: 16 * scale,
+              background: brandFill(PALETTE.container),
+              border: brandBorder(PALETTE.indigoLight, 0.28),
+              borderRadius: 24 * scale,
               padding: 20 * scale,
             }}
           >
             <div
               style={{
-                fontFamily: "Roboto Mono",
+                fontFamily: FONTS.mono,
                 fontSize: 24 * scale,
                 fontWeight: 700,
-                color: "#1A237E",
+                color: PALETTE.indigoLight,
+                ...NUMERIC,
               }}
             >
               ZIP {a.zip}
@@ -58,23 +68,51 @@ export const FarmAreaGrid: React.FC<FarmAreaGridProps> = ({ areas }) => {
                 display: "flex",
                 gap: 16 * scale,
                 marginTop: 8 * scale,
-                color: "#1A237E",
+                fontFamily: FONTS.body,
+                color: PALETTE.indigoMuted,
                 fontSize: 16 * scale,
               }}
             >
               <div>
-                <strong>${(a.medianPrice / 1000).toFixed(0)}K</strong> median
+                <strong
+                  style={{
+                    fontFamily: FONTS.mono,
+                    color: PALETTE.surface,
+                    ...NUMERIC,
+                  }}
+                >
+                  ${(a.medianPrice / 1000).toFixed(0)}K
+                </strong>{" "}
+                median
               </div>
               <div>
-                <strong>{a.turnoverPct.toFixed(0)}%</strong> turnover
+                <strong
+                  style={{
+                    fontFamily: FONTS.mono,
+                    color: PALETTE.surface,
+                    ...NUMERIC,
+                  }}
+                >
+                  {a.turnoverPct.toFixed(0)}%
+                </strong>{" "}
+                turnover
               </div>
               <div>
-                <strong>{a.absenteePct.toFixed(0)}%</strong> absentee
+                <strong
+                  style={{
+                    fontFamily: FONTS.mono,
+                    color: PALETTE.surface,
+                    ...NUMERIC,
+                  }}
+                >
+                  {a.absenteePct.toFixed(0)}%
+                </strong>{" "}
+                absentee
               </div>
             </div>
           </div>
-        );
-      })}
+        </AnimatedEntrance>
+      ))}
     </div>
   );
 };

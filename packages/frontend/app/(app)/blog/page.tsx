@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { BookOpen } from "lucide-react";
 import { getAllPosts } from "@/lib/blog";
+import { getArchiveTree, getStateIndex } from "@/lib/blog/archive";
 import { PageHeaderWithBreadcrumbs } from "@/components/navigation";
 import { BlogIndexContent } from "./BlogIndexContent";
 
@@ -95,7 +96,11 @@ export default function BlogIndexPage() {
           icon={<BookOpen className="w-5 h-5" />}
         />
 
-        <BlogIndexContent posts={postSummaries} />
+        <BlogIndexContent
+          posts={postSummaries}
+          archiveTree={getArchiveTree()}
+          stateIndex={getStateIndex()}
+        />
       </div>
     </>
   );

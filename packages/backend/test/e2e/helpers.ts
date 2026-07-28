@@ -12,7 +12,7 @@ import { TimeCaptionsHandler } from '../../src/content-pipeline/orchestrator/job
 import { RenderVideoHandler } from '../../src/content-pipeline/orchestrator/job-handlers/render-video.handler';
 import { PublishHandler } from '../../src/content-pipeline/orchestrator/job-handlers/publish.handler';
 import { RunOrchestratorService } from '../../src/content-pipeline/orchestrator/run-orchestrator.service';
-import { StyleReferenceService } from '../../src/content-pipeline/style-refs/style-reference.service';
+import { StyleReferenceVideoIngestService } from '../../src/content-pipeline/style-refs/style-reference-video-ingest.service';
 import { DashboardMagnetsService } from '../../src/content-pipeline/magnets/dashboard-magnets.service';
 
 /**
@@ -48,7 +48,7 @@ export async function bootstrapE2EContext(): Promise<E2EContext> {
     timeCaptionsHandler: app.get(TimeCaptionsHandler),
     renderVideoHandler: app.get(RenderVideoHandler),
     publishHandler: app.get(PublishHandler),
-    styleReferences: app.get(StyleReferenceService),
+    styleReferenceVideoIngest: app.get(StyleReferenceVideoIngestService),
     dashboardMagnets: app.get(DashboardMagnetsService),
   };
 }
@@ -66,7 +66,7 @@ export interface E2EContext {
   timeCaptionsHandler: TimeCaptionsHandler;
   renderVideoHandler: RenderVideoHandler;
   publishHandler: PublishHandler;
-  styleReferences: StyleReferenceService;
+  styleReferenceVideoIngest: StyleReferenceVideoIngestService;
   dashboardMagnets: DashboardMagnetsService;
 }
 

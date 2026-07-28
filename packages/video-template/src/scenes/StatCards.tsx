@@ -1,13 +1,17 @@
 import React from "react";
-import {
-  useCurrentFrame,
-  useVideoConfig,
-  interpolate,
-  spring,
-  Easing,
-} from "remotion";
+import { useCurrentFrame, useVideoConfig } from "remotion";
 import { COLORS } from "../constants";
 import { LONG_FORM_VISUAL_RHYTHM_FRAMES } from "../constants/long-form-rhythm";
+import { AnimatedEntrance } from "../motion";
+import {
+  BORDER_WIDTH,
+  FONTS,
+  NUMERIC,
+  PALETTE,
+  brandBorder,
+  brandFill,
+  withAlpha,
+} from "../styles/tokens";
 import type { MarketStats } from "../types";
 import { useLayoutConfig } from "../layout/useLayoutConfig";
 
@@ -33,147 +37,162 @@ function formatPct(n: number, digits = 1): string {
   return `${sign}${n.toFixed(digits)}%`;
 }
 
-const CARD_DEFS = [
+interface CardDef {
+  key: keyof MarketStats;
+  label: string;
+  format: (v: number) => string;
+  description: string;
+  /** Color the numeral by sign (YoY-style semantics). */
+  signed?: boolean;
+  area: string;
+}
+
+const CARD_DEFS: CardDef[] = [
   {
-    key: "medianPrice" as keyof MarketStats,
+    key: "medianPrice",
     label: "Median Home Value",
-    icon: "🏠",
-    format: (v: number) => formatPrice(v),
+    format: formatPrice,
     description: "Zillow ZHVI",
+    area: "hero",
   },
   {
-    key: "medianRent" as keyof MarketStats,
+    key: "medianRent",
     label: "Median Rent",
-    icon: "🏢",
-    format: (v: number) => formatPrice(v),
+    format: formatPrice,
     description: "Rent index",
+    area: "rent",
   },
   {
-    key: "homeValueYoyPct" as keyof MarketStats,
+    key: "homeValueYoyPct",
     label: "Home Value YoY",
-    icon: "📈",
-    format: (v: number) => formatPct(v, 2),
+    format: (v) => formatPct(v, 2),
     description: "Year-over-year change",
+    signed: true,
+    area: "yoy",
   },
   {
-    key: "medianIncome" as keyof MarketStats,
-    label: "Median Household Income",
-    icon: "💵",
-    format: (v: number) => formatPrice(v),
+    key: "medianIncome",
+    label: "Household Income",
+    format: formatPrice,
     description: "US Census",
+    area: "income",
   },
   {
-    key: "homeownershipPct" as keyof MarketStats,
+    key: "homeownershipPct",
     label: "Homeownership",
-    icon: "🔑",
-    format: (v: number) => `${v.toFixed(1)}%`,
+    format: (v) => `${v.toFixed(1)}%`,
     description: "Of occupied housing",
+    area: "own",
   },
   {
-    key: "population" as keyof MarketStats,
+    key: "population",
     label: "Metro Population",
-    icon: "👥",
-    format: (v: number) => formatPopulation(v),
+    format: formatPopulation,
     description: "US Census",
+    area: "pop",
   },
 ];
 
 interface CardProps {
-  label: string;
-  icon: string;
-  value: string;
-  description: string;
-  delay: number;
+  def: CardDef;
+  value: number;
+  index: number;
+  hero: boolean;
   isVertical: boolean;
   spotlight: boolean;
 }
 
 const StatCard: React.FC<CardProps> = ({
-  label,
-  icon,
+  def,
   value,
-  description,
-  delay,
+  index,
+  hero,
   isVertical,
   spotlight,
 }) => {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
+  const numeralColor = def.signed
+    ? value >= 0
+      ? PALETTE.positive
+      : PALETTE.negative
+    : hero
+      ? PALETTE.indigoLight
+      : COLORS.text;
 
-  const appear = spring({
-    fps,
-    frame: Math.max(0, frame - delay),
-    config: { damping: 18, stiffness: 100, mass: 0.8 },
-    durationInFrames: 40,
-  });
-
-  const opacity = interpolate(appear, [0, 0.3], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-  const translateY = interpolate(appear, [0, 1], [30, 0], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-
-  const cardPad = isVertical ? "40px 44px" : "28px 32px";
-  const iconSize = isVertical ? 52 : 40;
-  const labelSize = isVertical ? 28 : 20;
-  const valueSize = isVertical ? 64 : 48;
+  const labelSize = isVertical ? (hero ? 30 : 26) : hero ? 24 : 19;
+  const valueSize = isVertical ? (hero ? 110 : 60) : hero ? 84 : 46;
   const descSize = isVertical ? 22 : 16;
 
   return (
-    <div
-      style={{
-        background: COLORS.bgCard,
-        borderRadius: 20,
-        padding: cardPad,
-        display: "flex",
-        flexDirection: "column",
-        gap: 10,
-        border: spotlight
-          ? `2px solid rgba(57,73,171,0.85)`
-          : `1px solid ${COLORS.bgCardAlt}`,
-        opacity,
-        transform: `translateY(${translateY}px) scale(${spotlight ? 1.03 : 1})`,
-        flex: 1,
-        minWidth: 0,
-        boxShadow: spotlight
-          ? "0 12px 40px rgba(57,73,171,0.35)"
-          : undefined,
-        transition: "box-shadow 0.3s ease",
-      }}
+    <AnimatedEntrance
+      index={index}
+      delay={6}
+      from="rise"
+      style={{ gridArea: def.area, display: "flex", minWidth: 0 }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <span style={{ fontSize: iconSize }}>{icon}</span>
+      <div
+        style={{
+          background: hero
+            ? brandFill(PALETTE.indigo)
+            : brandFill(PALETTE.container),
+          borderRadius: 24,
+          padding: isVertical
+            ? hero
+              ? "44px 48px"
+              : "34px 38px"
+            : hero
+              ? "34px 40px"
+              : "24px 28px",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          gap: hero ? 14 : 8,
+          border: spotlight
+            ? brandBorder(COLORS.accent)
+            : brandBorder(PALETTE.indigoLight, 0.28),
+          boxShadow: spotlight
+            ? `0 12px 40px ${withAlpha(PALETTE.indigo, 0.35)}`
+            : undefined,
+          transform: spotlight ? "scale(1.02)" : undefined,
+          flex: 1,
+          minWidth: 0,
+        }}
+      >
         <span
           style={{
             fontSize: labelSize,
             color: COLORS.textMuted,
             fontWeight: 500,
+            letterSpacing: "0.04em",
           }}
         >
-          {label}
+          {def.label}
+        </span>
+        <span
+          style={{
+            fontFamily: FONTS.mono,
+            fontSize: valueSize,
+            fontWeight: 700,
+            color: numeralColor,
+            lineHeight: 1,
+            letterSpacing: "-2px",
+            ...NUMERIC,
+          }}
+        >
+          {def.format(value)}
+        </span>
+        <span style={{ fontSize: descSize, color: COLORS.textDim }}>
+          {def.description}
         </span>
       </div>
-      <div
-        style={{
-          fontSize: valueSize,
-          fontWeight: 800,
-          color: COLORS.text,
-          lineHeight: 1,
-          letterSpacing: "-1px",
-        }}
-      >
-        {value}
-      </div>
-      <div style={{ fontSize: descSize, color: COLORS.textDim }}>
-        {description}
-      </div>
-    </div>
+    </AnimatedEntrance>
   );
 };
 
+/**
+ * Asymmetric stat mosaic: the headline value (median home value) gets a
+ * hero cell ~2× the others; the rest fill a varied grid. Cards enter with
+ * the house 4-frame stagger; the rotating spotlight keeps long holds alive.
+ */
 export const StatCards: React.FC<StatCardsProps> = ({ market, stats }) => {
   const frame = useCurrentFrame();
   const { width, height } = useVideoConfig();
@@ -182,71 +201,81 @@ export const StatCards: React.FC<StatCardsProps> = ({ market, stats }) => {
   const focusIdx =
     Math.floor(frame / LONG_FORM_VISUAL_RHYTHM_FRAMES) % CARD_DEFS.length;
 
-  const sceneOpacity = interpolate(frame, [0, 15], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
+  const titleSize = isVertical ? 46 : 34;
+  const eyebrowSize = isVertical ? 22 : 16;
+  const padding = isVertical ? 64 : 110;
 
-  const titleSize = isVertical ? 48 : 34;
-  const padding = isVertical ? 60 : 100;
+  const gridTemplateAreas = isVertical
+    ? `"hero hero" "yoy rent" "income own" "pop pop"`
+    : `"hero hero rent" "hero hero yoy" "income own pop"`;
 
   return (
     <div
       style={{
         width,
         height,
-        background: COLORS.bg,
         display: "flex",
         flexDirection: "column",
-        alignItems: "center",
         justifyContent: "center",
-        fontFamily: "'Inter', 'Segoe UI', sans-serif",
-        opacity: sceneOpacity,
+        fontFamily: FONTS.body,
         padding: `0 ${padding}px`,
-        gap: isVertical ? 40 : 32,
+        gap: isVertical ? 40 : 28,
         boxSizing: "border-box",
       }}
     >
-      {/* Title */}
-      <div
-        style={{
-          fontSize: titleSize,
-          fontWeight: 700,
-          color: COLORS.text,
-          alignSelf: "flex-start",
-          width: "100%",
-        }}
-      >
-        Market Stats
-        <span
+      <AnimatedEntrance index={0} from="left" distance={32}>
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          <div
+            style={{
+              width: 48,
+              height: BORDER_WIDTH,
+              background: COLORS.accent,
+            }}
+          />
+          <span
+            style={{
+              fontSize: eyebrowSize,
+              fontWeight: 600,
+              color: COLORS.accent,
+              letterSpacing: "0.28em",
+              textTransform: "uppercase",
+            }}
+          >
+            Market Stats
+          </span>
+        </div>
+      </AnimatedEntrance>
+      <AnimatedEntrance index={1} from="rise" distance={28}>
+        <div
           style={{
-            color: COLORS.textMuted,
-            fontWeight: 400,
-            fontSize: titleSize * 0.65,
+            fontSize: titleSize,
+            fontWeight: 700,
+            color: COLORS.text,
+            letterSpacing: "-1px",
           }}
         >
-          {" "}
-          — {market}
-        </span>
-      </div>
+          {market}
+        </div>
+      </AnimatedEntrance>
 
-      {/* Cards grid: 3×2 on 16:9, column on 9:16 */}
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: isVertical ? "1fr" : "repeat(3, minmax(0, 1fr))",
-          gap: isVertical ? 20 : 20,
+          gridTemplateAreas,
+          gridTemplateColumns: isVertical
+            ? "repeat(2, minmax(0, 1fr))"
+            : "repeat(3, minmax(0, 1fr))",
+          gap: isVertical ? 22 : 20,
           width: "100%",
         }}
       >
         {CARD_DEFS.map((def, i) => (
           <StatCard
             key={def.key}
-            label={def.label}
-            icon={def.icon}
-            value={def.format(stats[def.key])}
-            description={def.description}
-            delay={i * 18}
+            def={def}
+            value={stats[def.key]}
+            index={i + 2}
+            hero={def.area === "hero"}
             isVertical={!!isVertical}
             spotlight={i === focusIdx}
           />

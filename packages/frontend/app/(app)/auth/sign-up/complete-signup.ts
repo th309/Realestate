@@ -1,11 +1,9 @@
 import type { Session } from "@supabase/supabase-js";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
-  trackEvent,
-  flush,
-  setUserId,
-  gtagEvent,
-} from "@/lib/analytics/tracker";
+  emitSignupCompleteOnce,
+  type SignupMethod,
+} from "@/lib/analytics/signup-conversion";
 import { readAttributionCookie } from "./helpers";
 import { startOnboardingTrial, API_URL } from "@/lib/data";
 
@@ -19,25 +17,22 @@ export async function completeSignup(
     email: string;
     explicitRedirect: string | null;
     redirectTo: string;
-    method: string;
+    method: SignupMethod;
   },
 ): Promise<string> {
-  // Attribute the conversion to the new user BEFORE firing the event — the
-  // tracker's user id is otherwise set reactively (after auth state updates),
-  // which races the synchronous trackEvent below and would log signup_complete
-  // with no user_id (unqueryable by user, breaks funnel attribution).
-  setUserId(session.user.id);
-  trackEvent("conversion.signup_complete", { method: opts.method });
-  // Also surface the conversion in GA4 (internal trackEvent never reaches gtag).
-  // Mark `sign_up` as a Key Event in the GA4 admin to see it as a conversion.
-  gtagEvent("sign_up", { method: opts.method });
-  // The reverse Pro trial is granted 1:1 at signup, so this is the correct,
-  // once-per-user location for trial_start (not startOnboardingTrial() call
-  // sites — tour/page.tsx re-runs on every market change).
-  gtagEvent("trial_start", { tier: "pro" });
-  flush(); // send queued events before navigation unmounts the page
-
   const supabase = createSupabaseBrowserClient();
+
+  // Emission (including setUserId, the GA4 mirror and the flush before
+  // navigation) lives in emitSignupCompleteOnce so this path and the
+  // /auth/callback path cannot drift apart. It claims a once-per-user flag, so
+  // a subsequent trip through the callback re-counts nothing.
+  await emitSignupCompleteOnce(
+    supabase,
+    session.user.id,
+    opts.method,
+    session.user.created_at,
+  );
+
   await supabase.from("user_profiles").upsert(
     {
       id: session.user.id,

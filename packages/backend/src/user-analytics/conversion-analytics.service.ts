@@ -75,30 +75,52 @@ export class ConversionAnalyticsService {
     let sessionQuery = client
       .from('user_sessions')
       .select('visitor_id')
+      .eq('is_bot', false)
       .gte('created_at', startDate);
     if (filters.device)
       sessionQuery = sessionQuery.eq('device_type', filters.device);
+    // Acquisition channel is `entry_type`; there is no `traffic_source` column.
+    // Filtering on it errored with 42703, and because the results below were
+    // destructured without checking `error`, the whole funnel silently
+    // rendered as zeros whenever a Source filter was applied.
     if (filters.source)
-      sessionQuery = sessionQuery.eq('traffic_source', filters.source);
+      sessionQuery = sessionQuery.eq('entry_type', filters.source);
 
     const conversionEventQuery = (action: string) =>
       client
         .from('user_events')
         .select('visitor_id')
         .eq('event_action', action)
+        .eq('is_bot', false)
         .gte('created_at', startDate);
 
     const [
-      { data: sessionRows },
-      { data: signupRows },
-      { data: trialRows },
-      { data: paidRows },
+      { data: sessionRows, error: sessionError },
+      { data: signupRows, error: signupError },
+      { data: trialRows, error: trialError },
+      { data: paidRows, error: paidError },
     ] = await Promise.all([
       sessionQuery,
       conversionEventQuery('signup_complete'),
       conversionEventQuery('trial_start'),
       conversionEventQuery('upgrade_complete'),
     ]);
+
+    // Surface query failures. Previously these were swallowed, so a bad column
+    // or filter produced a confident-looking all-zero funnel with nothing in
+    // the logs to explain it.
+    for (const [label, queryError] of [
+      ['sessions', sessionError],
+      ['signup_complete', signupError],
+      ['trial_start', trialError],
+      ['upgrade_complete', paidError],
+    ] as const) {
+      if (queryError) {
+        this.logger.error(
+          `[ConversionAnalytics] Full funnel ${label} query failed: ${queryError.message}`,
+        );
+      }
+    }
 
     const allVisitors = new Set((sessionRows || []).map((r) => r.visitor_id));
     const signupVisitors = new Set((signupRows || []).map((r) => r.visitor_id));
@@ -192,6 +214,7 @@ export class ConversionAnalyticsService {
         client
           .from('user_sessions')
           .select('visitor_id, id')
+          .eq('is_bot', false)
           .gte('created_at', startDate)
           .order('created_at', { ascending: true }),
         client

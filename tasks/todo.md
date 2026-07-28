@@ -1,3 +1,120 @@
+# Remotion Composition Upgrade — Motion, Tokens, Audio Mix (2026-07-28)
+
+Directive: upgrade all active Remotion compositions (Reels/Shorts pipeline) to the brand
+motion language + a real audio mix, as shared reusable utilities (not per-composition
+fixes), then document the standards in the video pipeline SKILL.md. Branch `develop`
+(commit locally; never push without ask).
+
+## Plan
+
+### Phase 0 — Discovery
+
+- [x] Locate Remotion project root, all active compositions, current animation patterns (`packages/video-template`, 9 compositions, 13 bespoke springs + ~30 raw linear interpolates)
+- [x] Locate Edge TTS narration path, audio insertion, existing assets, SKILL.md (backend driver chain, one-blob synthesis, zero mix assets, `Skills/youtube-production/SKILL.md`)
+
+### Phase 1 — Shared motion system
+
+- [x] Motion utility module `src/motion/` (SPRINGS presets, M3 EASINGS, STAGGER_FRAMES=4, hooks)
+- [x] `<AnimatedEntrance>` wrapper: spring-in + 1.05→1.0 settle + index-based stagger
+- [x] Signature motif: `ScoreRing` dial spin-up (counter spring + endpoint glow pulse) adopted by ScoreReveal, Comparison, BrandOutroCard
+- [x] Audit complete: no raw linear interpolate remains on visible motion; surviving interpolates all carry EASINGS curves
+- [x] Stagger applied wherever siblings animate (stat cards, ranking rows, comparison columns, farm grid)
+
+### Phase 2 — Brand token enforcement
+
+- [x] `src/styles/tokens.ts` (PALETTE, 1.75px borders, 8% fills, tabular-nums, chart rules); COLORS + style-variants rewired onto it; zero hex literals in components
+- [x] Fonts self-hosted (`public/fonts/` variable woff2 + `loadBrandFonts()` with delayRender) — Railway render container has no Roboto
+- [x] Asymmetric layout pass (ScoreReveal off-center dial + overlapping momentum pill, StatCards hero mosaic, Intro lower-third) + MeshBackground depth (blooms + grain) mounted per-layout
+- [x] TrendChart rebuilt to Robinhood spec: line draw-in with exact tip tracking, endpoint glow pulse, range pills, scripted scrub, no gridlines (dashed 50 baseline only)
+
+### Phase 3 — Audio production
+
+- [x] `src/audio/` — AudioMix (music bed + room tone + narration + SFX), sidechain duck from captionWords (attack 8f / release 20f / hold 600ms)
+- [x] SFX cues frame-locked to layout beat tables (`sfx-cues.ts` imports the same beats layouts render from); deterministic WAV asset generator (replace with licensed files, same names)
+- [x] Loudness: narration loudnorm'd backend-side to -16 LUFS; all in-comp gains from AUDIO_LEVELS
+- [x] TTS segmentation (backend): sentence-split clips + 200-500ms pauses + ffmpeg concat + loudnorm; per-segment word-timing offsets (drift resets each boundary); ffmpeg-absent → exact legacy fallback. 690 content-pipeline tests green, tsc clean.
+
+### Phase 4 — Documentation + verification
+
+- [x] SKILL.md updated: Step 6 (segmented pipeline TTS), Step 7b (template exists + REQUIRED composition standards), coverage-copy fix
+- [x] Verification: build:cli clean; backend plain tsc clean; content-pipeline jest 690 passed / 1 pre-existing skip; snapshot baselines regenerated (55 PNGs, 8 suites / 60 tests) and determinism proven on a second full run
+- [x] Review section below
+
+### Pre-existing bugs found & fixed along the way
+
+- Brokerage/recruitment narration desync: beats scaled the 2s bumper to 5-6s while narration always starts at frame 60 — bumper now fixed at 60f (`NARRATION_START_FRAME`), content beats stretch to fill
+- Intro/Outro exit fades anchored to unscaled frames → scenes went invisible mid-slot in scaled formats + HeadToHead (`durationInFrames` props added)
+- Outro "Explore 400+ scored markets" retired raw coverage count → countless copy; SKILL.md "40,000 markets" → sanctioned 900+/3,000+/29,000+ phrasing
+- ScoreReveal/Comparison badges rendered legacy quality-word `grade` from the bundle → momentum ladder (CLAUDE.md §9)
+- Edge TTS Windows cmdline-length latent bug sidestepped by short per-segment texts
+- Dead code deleted: RankingRow, MetricValue, DeltaDisplay, compositions/factory.ts; package.json render script ids fixed (grade_reveal → grade-reveal)
+
+## Review
+
+Shipped on `develop` (local only, NOT pushed): `89b18147` (video-template) +
+`4d93313b` (backend TTS) + docs commit. Four §1.6 review passes ran; every
+CRITICAL/WARNING was fixed and re-verified (narration-over-bumper desync in
+scaled formats; audio-vs-wall-clock bitrate domain mix; DOM.Iterable tsconfig
+lib for FontFaceSet).
+
+Architecture notes for future sessions:
+
+- One timing source per family: layouts AND sfx cues read the same beat
+  tables (`grade-reveal-beats.ts`, `SCORE_MOVER_BEATS`, `FARM_AREA_BEATS`,
+  `computeRankingTiming`) — never hardcode a cue frame.
+- `NARRATION_START_FRAME` (60) is a backend contract (audio budget =
+  duration − 2s buffer). Opening bumpers must stay 60 frames in every format.
+- Audio assets are generated (deterministic script); drop licensed
+  replacements onto the same filenames in `public/audio/`.
+- Snapshot baselines re-mint automatically when deleted; always run the
+  suite twice (mint + determinism) after motion changes.
+- Standards documented as REQUIRED in `Skills/youtube-production/SKILL.md`
+  Step 7b — point future composition work there first.
+
+Known limits (deliberate): head_to_head/long-form/rankings get bespoke cue
+plans only where their beat tables allowed; other formats fall back to
+scene-change bookends. Inserted TTS pauses (~0.3s/sentence) count against
+the audio budget — `silence_ms` in `synthesize_audio_done` makes overflow
+attributable; `SENTENCE_BREAK_MS` is the single tuning knob if repair-loop
+rates rise. A real rendered-video listen/watch on a live run is the one
+check no test covers — do it on the next pipeline run.
+
+---
+
+# Content Pipeline (SocialAuto) — Purpose Taxonomy + Mix Rotation + Lane A/B Bridge (2026-07-27)
+
+Full design: `docs/superpowers/specs/2026-07-27-content-purpose-taxonomy-design.md` (approved by Troy 2026-07-27, session with Claude). Branch `develop` (commit locally; never push without ask).
+
+## Immediate (unblocked, ready now)
+
+- [ ] Commit the already-implemented, already-tested feed rotation bug fix (`FeedService` split into `FeedService`/`FeedTopUpService`, `PostsService.countAll()`, offsets both post-type and candidate-market selection by a monotonic cursor instead of resetting to 0 every cron tick — fixes the observed 7 linkedin_post/2 facebook_post/1 carousel_copy/0 video_script skew). 76 backend tests pass, tsc clean, two independent code reviews (APPROVE). NOT yet committed as of 2026-07-27.
+- [ ] Write an implementation plan for the taxonomy/mix/bridge design (next step after Troy reviews the spec doc) via the writing-plans skill.
+
+## Deferred, sequenced (Troy's explicit ordering, 2026-07-27)
+
+- [ ] **Spec 2 — Stories as a new content format.** No format/template/Late-publish path exists today; the `trust` pillar is reserved with zero formats mapped to it in Spec 1's data model so this slots in later without scheduler changes. Open unknown to resolve when this spec starts: does Late's real API even support publishing to IG/FB Stories (not modeled anywhere in `late-client.types.ts` today, feed-post-only).
+- [ ] **Spec 3 — Trend-awareness in generation** (after Spec 2). Model what's currently trending per platform (TikTok trending sounds/hashtags, Instagram trending audio, X trending topics) and feed that into generation prompts. Needs its own trend-data ingestion pipeline — genuinely separate subsystem, not a prompt tweak.
+
+## Identified but not yet actioned (from the 2026-07-27 content-pipeline audit — do not lose these)
+
+- [ ] **Infographics lane is structurally blocked, not just under-automated.** NotebookLM has no service-account/programmatic auth path (`create-infographic-run.ts:20-24`) — can never run server-side as-is; would need a different generation engine entirely (e.g. repurpose the post-image Puppeteer stack). Separately, only 1 of 6 topics in `infographic-topics.ts` is `vetted:true` — the other 5 can't generate even via the manual local worker today.
+- [ ] **Archetype router needs Troy's actual editorial policy.** `archetype-router.service.ts:17-33` is an intentional stub with a sane fallback (picks by `median_view_count` per format, else null) — not broken, just missing a real rotation/curation policy decision.
+- [ ] **TikTok publish path bug** (found 2026-07-27, deprioritized in favor of content-creation work): `late-client.service.ts:205-210` — TikTok photo/carousel posts need `tiktokSettings` consent flags that aren't sent; will fail visibly on any TikTok image post once TikTok is connected via Late.
+- [ ] **Only Facebook connected via Late** as of 2026-07-25 — Instagram/TikTok/LinkedIn/X all need Connect clicked in `/admin/content-pipeline/platforms`, each requiring Troy's own login to that network.
+- [ ] Analytics/Insights is stale (`content_metrics`: 5 rows, all `views:0`, latest `pulled_at` 2026-04-27) because nothing's published since April — not a bug, resolves itself once Lane A/B publishing resumes. No action needed unless it's still flat after this project ships.
+
+---
+
+# Deferred: /markets/ SEO pages — remove mislabeled "Data confidence" badge (2026-07-26)
+
+Fold into the next monthly /markets/ pages update (user decision 2026-07-26 — do NOT ship standalone).
+
+- [ ] Remove the letter badge from `packages/frontend/app/(public)/markets/components/MarketStatsBlock.tsx` (badge block ~lines 107-115 + now-unused `gradeClasses`). It renders `data.grade` labeled "Data confidence" — but `grade` is the score itself on an academic scale (`scoreToGrade(score)`, `formula-weights.ts:187`), NOT confidence. Live proof: Sierra Vista metro 43420 = score 23 / grade F / confidence 100 / confidence_level A.
+- [ ] Also drop `grade` from the snapshot passthrough for this surface (`processScores` in `packages/backend/src/market-snapshot/market-snapshot-assembler.helper.ts:189`, `market-snapshot.types.ts`, `MarketStatsData.grade` in `lib/data/fetchers/market-stats.ts`) so the academic score-letter can't be mislabeled again (CLAUDE.md §9: no quality-letter framing of the score; confidence is the only letter).
+- [ ] Note: SEO pages ISR-cache 24h + Redis snapshot cache — badge disappears on next revalidation after deploy.
+
+---
+
 # PWA / Phone-App Build — 2026-07-12
 
 Branch `worktree-PWA` (user-requested worktree). Full analysis + plan: `docs/plans/2026-07-12-propertyiq-phone-app-analysis-and-plan.md`.

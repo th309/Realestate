@@ -7,6 +7,7 @@ import { ContentRunsService } from './content-runs.service';
 import { ContentPipelineQueriesService } from './content-pipeline-queries.service';
 import { RunActionsService } from './run-actions.service';
 import { RunThumbnailService } from './run-thumbnail.service';
+import { RunMediaSlotService } from './media/run-media-slot.service';
 import { MagnetLibraryService } from './magnets/magnet-library.service';
 import { MagnetLibraryController } from './magnets/magnet-library.controller';
 import { FormatsController } from './formats/formats.controller';
@@ -15,6 +16,8 @@ import { ScopeService } from './scope/scope.service';
 import { BatchRunsController } from './batch-runs.controller';
 import { VisionExtractorService } from './style-refs/vision-extractor.service';
 import { StyleReferenceService } from './style-refs/style-reference.service';
+import { StyleReferencePreviewService } from './style-refs/style-reference-preview.service';
+import { StyleReferenceVideoIngestService } from './style-refs/style-reference-video-ingest.service';
 import { StyleReferenceController } from './style-refs/style-reference.controller';
 import { YouTubeDiscoveryService } from './archetypes/youtube-discovery.service';
 import { TranscriptFetcherService } from './archetypes/transcript-fetcher.service';
@@ -72,6 +75,7 @@ import { StyleABService } from './style-references/style-ab.service';
 
 import { PostsBrandKitModule } from './posts-brand-kit.module';
 import { FeedService } from './feed/feed.service';
+import { FeedTopUpService } from './feed/feed-topup.service';
 import { FeedPostGeneratorService } from './feed/feed-post-generator.service';
 import { PostGenerateController } from './feed/post-generate.controller';
 import { PostImageRenderService } from './post-images/post-image-render.service';
@@ -124,12 +128,15 @@ import { CONTENT_PIPELINE_ANALYTICS_PROVIDERS } from './content-pipeline-analyti
     ContentPipelineQueriesService,
     RunActionsService,
     RunThumbnailService,
+    RunMediaSlotService,
     MagnetLibraryService,
     DashboardMagnetsService,
     LeadMagnetBindingService,
     MagnetABPromoterService,
     VisionExtractorService,
     StyleReferenceService,
+    StyleReferencePreviewService,
+    StyleReferenceVideoIngestService,
     StyleABService,
     FFmpegWrapperService,
     YtDlpWrapperService,
@@ -160,6 +167,7 @@ import { CONTENT_PIPELINE_ANALYTICS_PROVIDERS } from './content-pipeline-analyti
     MetroBrollService,
 
     FeedService,
+    FeedTopUpService,
     FeedPostGeneratorService,
     PostImageRenderService,
     PostVideoCardService,

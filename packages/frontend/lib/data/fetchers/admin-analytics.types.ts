@@ -120,11 +120,27 @@ export interface DurationBucket {
   count: number;
 }
 
+/**
+ * An off-site destination reached by clicking a link on our site.
+ *
+ * Captured at click time. A browser gives the departing page no access to
+ * where a navigation lands, so exits by typed URL, bookmark or tab close are
+ * unobservable and never appear here.
+ */
+export interface OutboundDestination {
+  domain: string;
+  clicks: number;
+  sessions: number;
+  topUrl: string;
+  fromPage: string;
+}
+
 export interface JourneyData {
   landingPages: LandingPageMetric[];
   exitPages: ExitPageMetric[];
   navigationFlows: NavigationFlow[];
   commonPaths: PathSequence[];
+  outboundDestinations: OutboundDestination[];
   avgPagesPerSession: number;
   sessionDurationDistribution: DurationBucket[];
   annotations: Annotation[];

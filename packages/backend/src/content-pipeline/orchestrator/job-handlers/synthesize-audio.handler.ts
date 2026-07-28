@@ -7,10 +7,12 @@ import { join } from 'path';
 import { tmpdir } from 'os';
 import { randomBytes } from 'crypto';
 import { probeAudioDurationMs } from './audio-duration-probe';
+import { captureNativeCaptions } from './synthesize-audio-chain';
 import {
-  synthesizeWithFallback,
-  captureNativeCaptions,
-} from './synthesize-audio-chain';
+  synthesizeNarration,
+  totalSilenceMs,
+} from './synthesize-narration-segmented';
+import { enforceAudioBudget } from './enforce-audio-budget';
 import { AlertDispatcherService } from '../../observability/alert-dispatcher.service';
 import { CostCapService } from '../../auto-ideation/cost-cap.service';
 import { recordDriverSpend } from './record-driver-spend';
@@ -97,62 +99,40 @@ export class SynthesizeAudioHandler {
         tmpdir(),
         `audio-${runId}-${randomBytes(4).toString('hex')}.mp3`,
       );
-      const { driver, result } = await synthesizeWithFallback(
-        client,
-        this.logger,
-        runId,
-        chain,
-        voice.provider_voice_id as string,
-        spokenText,
-        outputPath,
-      );
+      const { driver, result, segmentPlan, loudnorm } =
+        await synthesizeNarration(
+          client,
+          this.logger,
+          runId,
+          chain,
+          voice.provider_voice_id as string,
+          spokenText,
+          outputPath,
+        );
+      const segmentCount = segmentPlan?.segments.length ?? 1;
+      const silenceMs = segmentPlan ? totalSilenceMs(segmentPlan.segments) : 0;
       // TTSSynthesisResult.durationMs is wall-clock synth time on edge-tts,
       // not audio length — probe the file directly so we know what'll
       // actually mix into the video.
       const audioDurationMs = await probeAudioDurationMs(outputPath);
       this.logger.log(
-        `[PIPE] synthesize-audio run=${runId} driver=${driver.constructor.name} wallMs=${result.durationMs} audioMs=${audioDurationMs} budgetMs=${audioBudgetMs} cost=$${result.cost.amount_usd.toFixed(4)}`,
+        `[PIPE] synthesize-audio run=${runId} driver=${driver.constructor.name} segments=${segmentCount} silenceMs=${silenceMs} wallMs=${result.durationMs} audioMs=${audioDurationMs} budgetMs=${audioBudgetMs} cost=$${result.cost.amount_usd.toFixed(4)}`,
       );
 
-      if (audioDurationMs > audioBudgetMs) {
-        const overSec = (audioDurationMs - audioBudgetMs) / 1000;
-        const overSecStr = overSec.toFixed(1);
-        const audioSecStr = (audioDurationMs / 1000).toFixed(1);
-        const capSecStr = (audioBudgetMs / 1000).toFixed(1);
-        // Approximate words to cut at ~140 wpm narration pace.
-        const cutWords = Math.max(1, Math.ceil(overSec * (140 / 60)));
-
-        const overflowMessage = `voice-over is ${audioSecStr}s but ${run.format} video is ${fmt.duration_seconds}s with a ${fmt.audio_buffer_seconds}s buffer (cap ${capSecStr}s). Over by ${overSecStr}s.`;
-
-        // Try the script-repair loop first — same mechanism as gate_b_voice.
-        // The script generator gets the overflow as feedback and produces a
-        // shorter script that fits the budget on retry.
-        const repairing = await this.scriptRepair.attemptRepair(
+      const repairing = await enforceAudioBudget(
+        this.scriptRepair,
+        this.logger,
+        {
           runId,
-          'audio_duration',
-          [
-            {
-              quote:
-                spokenText.length > 240
-                  ? `${spokenText.slice(0, 240)}…`
-                  : spokenText,
-              issue: `${overflowMessage} Cut at least ${cutWords} words from the script — favor tightening the hook and outro before touching the row VOs. Row count and rank order MUST be preserved.`,
-            },
-          ],
-        );
-        if (repairing) {
-          this.logger.warn(
-            `[PIPE] synthesize-audio run=${runId} over budget by ${overSecStr}s — repair-loop triggered`,
-          );
-          return;
-        }
-
-        // Repair budget exhausted — fall through to failed with the original
-        // descriptive message so the operator can see what happened.
-        throw new Error(
-          `${overflowMessage} Edit the script to be shorter and retry.`,
-        );
-      }
+          format: run.format,
+          spokenText,
+          audioDurationMs,
+          audioBudgetMs,
+          durationSeconds: fmt.duration_seconds,
+          audioBufferSeconds: fmt.audio_buffer_seconds,
+        },
+      );
+      if (repairing) return;
 
       const storageUrl = await this.uploadToStorage(runId, outputPath);
       this.logger.log(
@@ -197,6 +177,8 @@ export class SynthesizeAudioHandler {
           durationMs: audioDurationMs,
           synthWallMs: result.durationMs,
           bitrate: result.bitrate,
+          segments: segmentCount,
+          loudnorm,
         },
       });
 
@@ -212,6 +194,7 @@ export class SynthesizeAudioHandler {
         voice.provider_voice_id as string,
         spokenText,
         result.wordTimings,
+        segmentPlan,
       );
 
       // Diagnostic event so I can audit audio-vs-budget on success runs
@@ -237,6 +220,11 @@ export class SynthesizeAudioHandler {
           spoken_words: spokenText.split(/\s+/).filter(Boolean).length,
           captions_source: captions.source,
           captions_word_count: captions.count,
+          segments: segmentCount,
+          loudnorm,
+          // Inserted pause time — it counts against the audio budget, so this
+          // is the first thing to look at if runs start overflowing.
+          silence_ms: silenceMs,
         },
       });
 

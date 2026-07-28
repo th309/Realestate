@@ -1,66 +1,44 @@
 import React from "react";
 import {
   Img,
+  interpolate,
   staticFile,
   useCurrentFrame,
   useVideoConfig,
-  interpolate,
-  spring,
-  Easing,
 } from "remotion";
 import { COLORS } from "../constants";
+import { AnimatedEntrance, EASINGS } from "../motion";
+import { FONTS, brandBorder, brandFill } from "../styles/tokens";
 import { useLayoutConfig } from "../layout/useLayoutConfig";
 
 interface OutroProps {
   ctaUrl: string;
   ctaLabel?: string;
   marketName?: string;
+  /** The hosting Sequence's length — the exit fade anchors to its end. */
+  durationInFrames?: number;
 }
 
-export const Outro: React.FC<OutroProps> = ({ ctaUrl: _ctaUrl, ctaLabel }) => {
+export const Outro: React.FC<OutroProps> = ({
+  ctaUrl: _ctaUrl,
+  ctaLabel,
+  durationInFrames = 210,
+}) => {
   const frame = useCurrentFrame();
-  const { width, height, fps } = useVideoConfig();
+  const { width, height } = useVideoConfig();
   const { isVertical } = useLayoutConfig();
 
-  const sceneOpacity = interpolate(frame, [0, 20], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-
-  // Logo pop
-  const logoSpring = spring({
-    fps,
+  // Scripted exit — accelerate out over the final 20 frames.
+  const finalFade = interpolate(
     frame,
-    config: { damping: 14, stiffness: 120 },
-    durationInFrames: 30,
-  });
-  const logoScale = interpolate(logoSpring, [0, 1], [0.5, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-
-  // Text stagger
-  const line1Opacity = interpolate(frame, [20, 45], [0, 1], {
-    easing: Easing.ease,
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-  const ctaOpacity = interpolate(frame, [60, 90], [0, 1], {
-    easing: Easing.ease,
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-  const subscribeOpacity = interpolate(frame, [80, 110], [0, 1], {
-    easing: Easing.ease,
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-
-  // Final fade hold — fade out last 20 frames
-  const finalFade = interpolate(frame, [190, 210], [1, 0], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
+    [durationInFrames - 20, durationInFrames],
+    [1, 0],
+    {
+      easing: EASINGS.exit,
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+    },
+  );
 
   const shortmarkSize = isVertical ? 180 : 140;
   const wordmarkWidth = isVertical ? 480 : 360;
@@ -73,13 +51,12 @@ export const Outro: React.FC<OutroProps> = ({ ctaUrl: _ctaUrl, ctaLabel }) => {
       style={{
         width,
         height,
-        background: COLORS.bg,
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        fontFamily: "'Inter', 'Segoe UI', sans-serif",
-        opacity: sceneOpacity * finalFade,
+        fontFamily: FONTS.body,
+        opacity: finalFade,
         gap: isVertical ? 32 : 24,
         padding: isVertical ? "0 80px" : "0 160px",
         boxSizing: "border-box",
@@ -87,84 +64,90 @@ export const Outro: React.FC<OutroProps> = ({ ctaUrl: _ctaUrl, ctaLabel }) => {
       }}
     >
       {/* PIQ shortmark — same asset as BrandBumper for brand continuity */}
-      <Img
-        src={staticFile("brand/piq-shortmark-192px-normal.png")}
-        style={{
-          width: shortmarkSize,
-          height: shortmarkSize,
-          objectFit: "contain",
-          transform: `scale(${logoScale})`,
-        }}
-      />
+      <AnimatedEntrance index={0} from="scale" preset="pop">
+        <Img
+          src={staticFile("brand/piq-shortmark-192px-normal.png")}
+          style={{
+            width: shortmarkSize,
+            height: shortmarkSize,
+            objectFit: "contain",
+          }}
+        />
+      </AnimatedEntrance>
 
       {/* PropertyIQ wordmark lockup (includes the real tagline
           "The IQ Behind Every Market"; no separate text tagline needed) */}
-      <Img
-        src={staticFile("brand/piq-logo-primary-dark-reversed.png")}
-        style={{
-          width: wordmarkWidth,
-          height: "auto",
-          objectFit: "contain",
-          opacity: line1Opacity,
-        }}
-      />
+      <AnimatedEntrance index={1} from="rise" distance={20}>
+        <Img
+          src={staticFile("brand/piq-logo-primary-dark-reversed.png")}
+          style={{
+            width: wordmarkWidth,
+            height: "auto",
+            objectFit: "contain",
+          }}
+        />
+      </AnimatedEntrance>
 
       {/* Divider */}
-      <div
-        style={{
-          width: "100%",
-          maxWidth: 600,
-          height: 1,
-          background: `linear-gradient(to right, transparent, ${COLORS.bgCardAlt}, transparent)`,
-          opacity: ctaOpacity,
-        }}
-      />
+      <AnimatedEntrance index={2} from="none">
+        <div
+          style={{
+            width: isVertical ? 500 : 600,
+            height: 1,
+            background: `linear-gradient(to right, transparent, ${COLORS.bgCardAlt}, transparent)`,
+          }}
+        />
+      </AnimatedEntrance>
 
       {/* CTA */}
-      <div
-        style={{
-          opacity: ctaOpacity,
-          display: "flex",
-          flexDirection: "column",
-          gap: 12,
-        }}
-      >
+      <AnimatedEntrance index={3} delay={30} from="rise">
         <div
           style={{
-            fontSize: ctaSize,
-            color: COLORS.textMuted,
-            fontWeight: 400,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 12,
           }}
         >
-          {ctaLabel ?? "Explore 400+ scored markets at"}
+          <div
+            style={{
+              fontSize: ctaSize,
+              color: COLORS.textMuted,
+              fontWeight: 400,
+            }}
+          >
+            {ctaLabel ?? "Every scored market, one place"}
+          </div>
+          <div
+            style={{
+              fontSize: urlSize,
+              fontWeight: 700,
+              fontFamily: FONTS.mono,
+              color: COLORS.accent,
+              letterSpacing: "0.02em",
+              background: brandFill(COLORS.accent),
+              border: brandBorder(COLORS.accent, 0.5),
+              borderRadius: 999,
+              padding: isVertical ? "16px 44px" : "12px 36px",
+            }}
+          >
+            propertyiq.app
+          </div>
         </div>
-        <div
-          style={{
-            fontSize: urlSize,
-            fontWeight: 700,
-            color: COLORS.accent,
-            letterSpacing: "0.02em",
-            background: `${COLORS.accent}15`,
-            border: `1px solid ${COLORS.accent}40`,
-            borderRadius: 12,
-            padding: isVertical ? "16px 40px" : "12px 32px",
-          }}
-        >
-          propertyiq.app
-        </div>
-      </div>
+      </AnimatedEntrance>
 
       {/* Subscribe prompt */}
-      <div
-        style={{
-          opacity: subscribeOpacity,
-          fontSize: subscribeSize,
-          color: COLORS.textDim,
-          fontStyle: "italic",
-        }}
-      >
-        Subscribe for weekly market scores.
-      </div>
+      <AnimatedEntrance index={4} delay={45} from="rise">
+        <div
+          style={{
+            fontSize: subscribeSize,
+            color: COLORS.textDim,
+            fontStyle: "italic",
+          }}
+        >
+          Subscribe for weekly market scores.
+        </div>
+      </AnimatedEntrance>
     </div>
   );
 };

@@ -1,4 +1,5 @@
 import React from "react";
+import { PALETTE, withAlpha } from "../styles/tokens";
 
 type NarrativeSideArtProps = {
   variant: 0 | 1;
@@ -7,7 +8,8 @@ type NarrativeSideArtProps = {
 
 /**
  * Decorative editorial panel for NarrativeBeat — animates continuously so even
- * long chapter reads feel “alive” without replacing copy.
+ * long chapter reads feel “alive” without replacing copy. The drift is ambient
+ * (idle motion, not an entrance), so plain sine/cosine is the right tool here.
  */
 export const NarrativeSideArt: React.FC<NarrativeSideArtProps> = ({
   variant,
@@ -28,8 +30,8 @@ export const NarrativeSideArt: React.FC<NarrativeSideArtProps> = ({
       >
         <defs>
           <linearGradient id="ns-bars" x1="0" y1="1" x2="0" y2="0">
-            <stop offset="0%" stopColor="#1A237E" />
-            <stop offset="100%" stopColor="#3949AB" />
+            <stop offset="0%" stopColor={PALETTE.indigoDark} />
+            <stop offset="100%" stopColor={PALETTE.indigo} />
           </linearGradient>
         </defs>
         {[0, 1, 2, 3, 4].map((i) => {
@@ -55,7 +57,7 @@ export const NarrativeSideArt: React.FC<NarrativeSideArtProps> = ({
         <path
           d="M 20 120 Q 160 80 300 140"
           fill="none"
-          stroke="rgba(0,200,83,0.45)"
+          stroke={withAlpha(PALETTE.positive, 0.45)}
           strokeWidth={3}
           strokeDasharray="8 12"
           transform={`translate(${Math.sin(frame / 55) * 8}, ${Math.cos(frame / 47) * 6})`}
@@ -81,7 +83,7 @@ export const NarrativeSideArt: React.FC<NarrativeSideArtProps> = ({
           rx={55 + ring * 48 + Math.sin(frame / 33 + ring) * 10}
           ry={40 + ring * 38 + Math.cos(frame / 29 + ring) * 8}
           fill="none"
-          stroke={`rgba(197,202,233,${0.28 - ring * 0.06})`}
+          stroke={withAlpha(PALETTE.indigoLight, 0.28 - ring * 0.06)}
           strokeWidth={2}
           transform={`rotate(${frame / 6 + ring * 22} 160 210)`}
         />
@@ -90,9 +92,9 @@ export const NarrativeSideArt: React.FC<NarrativeSideArtProps> = ({
         cx={160}
         cy={210}
         r={22 + pulse * 6}
-        fill="rgba(57,73,171,0.45)"
+        fill={withAlpha(PALETTE.indigo, 0.45)}
       />
-      <circle cx={160} cy={210} r={10} fill="#00C853" opacity={0.85} />
+      <circle cx={160} cy={210} r={10} fill={PALETTE.positive} opacity={0.85} />
     </svg>
   );
 };
