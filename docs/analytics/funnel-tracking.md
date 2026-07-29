@@ -8,6 +8,33 @@ Do not hand-edit old entries — just let the daily job append. If a day's run f
 
 ---
 
+## 2026-07-29 — automated run
+
+**Verdict: Growth re-accelerated instead of cooling further — the "deceleration" flagged last entry turns out to have been a one-window pause, and the sign-up funnel shows more raw activity underneath a headline that reads flat.** The 8-day clean window shows Visited site up another 1,091 users (3,474 → 4,565, +31%), a fourth straight increase and the largest single-window jump since the +1,705 surge two entries ago — reversing the "sharp deceleration" read from the 07-28 entry, where the +346 window looked like traffic leveling off rather than one slower week among four growing ones. Form-start fell for the first time in three windows (10 → 8), so the visit-to-form-start rate kept shrinking for a fifth straight window: ~0.18% (8/4,565) here vs ~0.29% at 07-28, ~0.32% at 07-27, and ~0.63% at 07-25 — traffic keeps outrunning funnel engagement by a widening margin. The ordered funnel itself shows completed sign-up and started trial both flat at 1 for a third straight window, but a plain per-event count for the same 8-day window complicates that: `session_start` (4,675 events / 4,570 users — funnel reported 4,565 active users, a variance of 5, similar to prior entries), `form_start` (13 events / 8 users, matching the funnel exactly), `sign_up` (4 events / 2 users), `trial_start` (3 events / 2 users) — for the first time, the plain counts show a second distinct user triggering both sign_up and trial_start that the ordered funnel doesn't credit, most likely someone who entered the funnel (form-start) before this 8-day window began and converted inside it. Worth watching whether that second user shows up as a confirmed new conversion in the next run or whether it's a step-ordering quirk of the funnel query. The 30-day figures moved in the same growth direction, and notably both conversion steps ticked up for the first time in several entries: `session_start` rose to 12,483 users (+1,172, tracking the 8-day surge), `form_start` ticked up to 42 (+1), `sign_up` rose to 13 events / 10 users (+3 events / +1 user), and `trial_start` rose to 10 events / 9 users (+2 events / +1 user) — consistent with that second sign_up/trial_start user now entering the 30-day window as a real, additional conversion.
+
+Last 30 days (raw, includes tail of Jun 10–23 bot storm):
+
+| Step                                | Users                | Δ vs baseline       |
+| ----------------------------------- | -------------------- | ------------------- |
+| Visited site (`session_start`)      | 12,483               | +1,172              |
+| Started sign-up form (`form_start`) | 42                   | +1                  |
+| Completed sign-up (`sign_up`)       | 13 events / 10 users | +3 events / +1 user |
+| Started trial (`trial_start`)       | 10 events / 9 users  | +2 events / +1 user |
+| `purchase`                          | 0                    | +0                  |
+
+Last 8 days (clean, post-bot-storm traffic — this is the window the daily job tracks):
+
+| Step                 | Users | Δ vs baseline |
+| -------------------- | ----- | ------------- |
+| Visited site         | 4,565 | +1,091        |
+| Started sign-up form | 8     | -2            |
+| Completed sign-up    | 1     | +0            |
+| Started trial        | 1     | +0            |
+
+Next comparison should be against this entry.
+
+---
+
 ## 2026-07-28 — automated run
 
 **Verdict: Cooling off, not reverting — traffic growth decelerated sharply after two straight doublings, while conversions held flat instead of resetting to zero.** The 8-day clean window shows Visited site up another 346 users (3,128 → 3,474, +11%), a third straight increase but a fraction of the +1,705 (+120%) and +735 (+107%) jumps in the prior two entries — the surge is leveling off rather than continuing to compound. Form-start held exactly flat at 10, so the visit-to-form-start rate kept diluting: ~0.29% (10/3,474) here versus ~0.32% at the 07-27 baseline, ~0.63% at 07-25, and ~0.87% at 07-24 — a fourth straight window of a shrinking rate as traffic outpaces funnel engagement. Completed sign-up and started trial both held flat at 1 — no new conversions this window, but also no reversion to the four-window zero streak that broke last entry. This was cross-checked against a plain per-event count for the same 8-day window: `session_start` (3,547 events / 3,478 users — funnel reported 3,474 active users, a small variance of the kind seen in prior entries), `form_start` (11 events / 10 users), `form_submit` (2 events / 1 user), `sign_up` (1 event / 1 user), `trial_start` (1 event / 1 user) — matching the funnel report step-for-step. The 30-day figures moved in the same decelerating direction: `session_start` rose to 11,311 users (+381, versus +1,770 last entry), `form_start` dipped slightly to 41 (-1, noise at this volume), and `sign_up` (10/9) and `trial_start` (8/8) stayed unchanged — the single conversion from the last entry hasn't yet produced a second 30-day data point.
