@@ -172,9 +172,24 @@ const backendSwrAllowlist: RuntimeCaching = {
 // curl 200), and the app flips to its offline banner. Serve these straight from
 // the network with no plugins and no copying. Signed URLs are unique per mint,
 // so caching them would be pure waste anyway. MUST stay before `...defaultCache`.
+// Storage is served from whatever host NEXT_PUBLIC_SUPABASE_URL points at. That is
+// `<ref>.supabase.co` by default, but a Supabase custom domain (auth.propertyiq.app)
+// moves it off `.supabase.co` entirely — matching only the wildcard would silently
+// drop these back into defaultCache and resurrect the opaque-response bug above.
+// Derived rather than hardcoded so the next host change needs no edit here; the
+// try/catch matters because a throw at SW module scope aborts installation outright.
+const supabaseStorageHost = (() => {
+  try {
+    return new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").hostname;
+  } catch {
+    return "";
+  }
+})();
+
 const supabaseStorageNetworkOnly: RuntimeCaching = {
   matcher: ({ url }) =>
-    url.hostname.endsWith(".supabase.co") &&
+    (url.hostname.endsWith(".supabase.co") ||
+      (supabaseStorageHost !== "" && url.hostname === supabaseStorageHost)) &&
     url.pathname.startsWith("/storage/"),
   handler: new NetworkOnly(),
 };

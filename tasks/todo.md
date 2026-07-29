@@ -1,3 +1,186 @@
+# Google OAuth consent screen: show PropertyIQ, not the Supabase host (2026-07-28)
+
+**Problem:** Users signing in with Google see `Sign in to pysflbhpnqwoczyuaaif.supabase.co`.
+
+**Cause:** Google renders the consent identity from the OAuth client's _verified brand_. With no
+brand verification it falls back to printing the raw `redirect_uri` host — today
+`https://pysflbhpnqwoczyuaaif.supabase.co/auth/v1/callback`. Brand verification requires proving
+ownership of the authorized domain, and nobody but Supabase can prove ownership of `supabase.co`.
+So the callback host must move onto `propertyiq.app` **before** branding can ever take effect.
+Setting the App name alone is a dead end.
+
+**Chosen fix (Troy, 2026-07-28):** Supabase Custom Domain (`auth.propertyiq.app`) + Google brand
+verification. Rejected alternative: Google Identity Services + `signInWithIdToken` — free, but
+re-plumbs the signup path just repaired in `6885741e`, and still needs brand verification anyway.
+
+**Why this is low-risk:** no local JWT verification anywhere — every auth check goes through
+`supabase.auth.getUser(token)` (`packages/backend/src/common/guards/jwt-auth.guard.ts:53`,
+`optional-jwt-auth.guard.ts:34`, `packages/backend/src/analyzer/grade.controller.ts:71`). No pinned
+issuer, so the issuer change from `*.supabase.co` to `auth.propertyiq.app` is inert.
+
+## Sequence (order is load-bearing)
+
+- [x] **1. Enable the Custom Domain add-on** — _Troy_ — DONE 2026-07-28
+      https://supabase.com/dashboard/project/pysflbhpnqwoczyuaaif/settings/addons
+      Variant `cd_default`, $10/mo fixed, prorated. Reversible via
+      `DELETE /v1/projects/{ref}/billing/addons/cd_default`.
+      (Claude is blocked from billing mutations by the permission classifier.)
+
+- [x] **2. Register the hostname** — _Claude_ — DONE 2026-07-28
+      `supabase domains create --project-ref pysflbhpnqwoczyuaaif --custom-hostname auth.propertyiq.app`
+      then `domains reverify` to mint the DCV record. Cert is `dv`/`txt` from the Google CA; origin
+      bound to `pysflbhpnqwoczyuaaif.supabase.co`. State: `2_initiated` / ssl `pending_validation`.
+
+- [x] **3. Add DNS records in Cloudflare** — _Troy_ — DONE 2026-07-28, both resolve publicly.
+      Grey-cloud confirmed: the DoH answer exposes the CNAME target rather than masking it behind
+      proxy IPs. (Local nslookup returned nothing — the VPN resolver at 103.86.96.100 lies; always
+      verify DNS here via `cloudflare-dns.com/dns-query`, not the system resolver.)
+
+      | Type  | Name                   | Value                               | Proxy |
+      | ----- | ---------------------- | ----------------------------------- | ----- |
+      | CNAME | `auth`                 | `pysflbhpnqwoczyuaaif.supabase.co.` | **DNS only (grey cloud)** |
+      | TXT   | `_acme-challenge.auth` | `TAeaA1ZAwRSNUlWArO1pjUsdJrK-2sBMUMsmdXLuxEA` | n/a |
+
+      ⚠️ **Grey cloud, not orange.** Proxying makes Cloudflare terminate TLS with its own cert, so
+      Supabase's managed cert is never presented and the hostname health check can fail. Not stated
+      in Supabase's docs — this is the standard Cloudflare + managed-cert interaction, so confirm
+      empirically at step 4 rather than trusting it blind.
+      ⚠️ Cloudflare appends the zone automatically — enter `auth`, not `auth.propertyiq.app`.
+      `auth.propertyiq.app` currently returns no address records, so no conflict expected.
+
+- [~] **4. Verify DNS + cert issuance** — _Claude_ — DNS verified; cert issuing.
+  `supabase domains reverify --project-ref pysflbhpnqwoczyuaaif`
+  Cloudflare hostname `active` (DNS satisfied); ssl `pending_validation` with the DCV record at
+  `processing` — Google CA has picked up the challenge. No `verification_errors`, no
+  `validation_errors`, and **no CAA record** on the apex to block Google Trust Services, so
+  there is nothing to fix — it just needs time. Do not re-`create` the hostname to "retry"; that
+  re-mints the TXT value and invalidates the record already in DNS.
+
+- [x] **5. Pre-authorize the new callback in Google** — _Troy_ — DONE 2026-07-28, **via a client migration**
+
+      **Unplanned but mandatory detour.** The OAuth client Supabase was using
+      (`777921019984-fv6iocd…`) lives in a Google Cloud project Troy has **no access to**
+      (`resourcemanager.projects.get` missing; owning account unknown/unrecoverable). That blocks
+      far more than this step: brand verification is configured on the consent screen of the project
+      that **owns the client**, so branding could never have been submitted for it. The client had
+      to move, or the whole plan dead-ends at the bare domain.
+
+      **Migration performed:** new Web client `PropertyIQ Auth (Supabase)` =
+      `1036757309323-tt88facqimuin1rqf0c98unihcd613tp.apps.googleusercontent.com` created in
+      `propertyiq-488415` (a project Troy owns), with **both** callbacks registered up front:
+      `https://pysflbhpnqwoczyuaaif.supabase.co/auth/v1/callback` and
+      `https://auth.propertyiq.app/auth/v1/callback`. Credentials set via the Supabase dashboard by
+      Troy (secret never entered the transcript).
+
+      **Why this was safe for existing users:** Google's `sub` claim is unique per *Google Account*
+      and never reused — it is NOT scoped per OAuth client or per Cloud project
+      (developers.google.com/identity/openid-connect/openid-connect). So all 12 existing
+      `auth.identities` google rows re-match on the new client; no orphans, no duplicates.
+      (Counts at migration: 12 google identities, 24 email, first google link 2026-04-06.)
+
+      **Verified live, not assumed:** `GET /auth/v1/authorize?provider=google` now emits the new
+      `client_id` with the old `redirect_uri`, and Google returns its normal sign-in page rather than
+      `redirect_uri_mismatch` / `invalid_client` — i.e. production sign-in never broke during the swap.
+
+      ⚠️ **Consent-screen hygiene for step 8:** `propertyiq-488415` also holds an abandoned
+      `Youtube test` client. A project has exactly ONE consent screen shared by all its clients, and
+      YouTube Data API scopes are *restricted* — the heaviest verification tier, potentially
+      requiring a third-party security assessment. If any YouTube scopes remain under Data Access,
+      strip them before submitting for brand verification or the review balloons.
+
+- [x] **6. Activate** — _Claude_ — DONE 2026-07-28, status `5_services_reconfigured`.
+
+      **The stall and how it cleared.** `ssl` sat at `pending_validation` / record `processing` for
+      ~45 min. Ruled out, with evidence, before touching anything: no CAA on the apex OR on the
+      CNAME target (RFC 8659 makes the CA follow the alias, so `supabase.co` mattered too); TXT
+      byte-identical and visible from BOTH `dns.google` and `cloudflare-dns.com`; zone on Cloudflare
+      NS. Nothing was misconfigured — it was pure Cloudflare/Google queue latency, and a repeat
+      `domains reverify` cleared it. **Do not "fix" this by re-running `domains create`** — that
+      re-mints the TXT value and invalidates the record already in DNS, resetting the clock.
+
+      ⚠️ **Norton MITM makes local TLS checks lie here.** `openssl s_client` against the custom
+      domain returns a cert issued by "Norton Web/Mail Shield Root", not the real one, so a local
+      handshake proves nothing about public validity. Use `WebFetch` (fetches server-side, outside
+      this machine) as the independent check — it returned HTTP 400 with no TLS error, proving the
+      cert was publicly valid while Supabase's API still reported `pending_validation`.
+
+      **Pre-flight before activating** (worth repeating on any future cutover): built the Google
+      authorize URL by hand for BOTH redirect URIs and confirmed each returned the normal sign-in
+      page rather than `redirect_uri_mismatch`. Proves the new callback is registered instead of
+      trusting that it was saved.
+
+- [~] **7. Point the frontend at the custom domain** — _Claude_ — code ready, deploying 2026-07-28.
+
+      🚨 **HARD ORDERING: the CSP change must be DEPLOYED before the Railway var flips.**
+      `packages/frontend/next.config.mjs:327` allowlists `https://*.supabase.co` +
+      `wss://*.supabase.co` in `connect-src` / `img-src` / `media-src`. `auth.propertyiq.app` is NOT
+      covered by that wildcard, so flipping `NEXT_PUBLIC_SUPABASE_URL` first would have had the
+      browser block EVERY Supabase REST/auth/Realtime call — a total production outage, not just
+      sign-in, and visible only in prod since the header is set at the edge. The wildcard is what
+      hid the dependency: it silently covered every project ref, so it never read as hardcoded.
+      Custom domain ADDED alongside `*.supabase.co` (not replacing it) because backend + mcp-server
+      deliberately stay on the original host and may still mint storage URLs there.
+
+      Also fixed: `packages/frontend/app/sw.ts` storage matcher keyed on
+      `hostname.endsWith(".supabase.co")`. A custom domain moves storage off that suffix entirely,
+      dropping those requests into `defaultCache` and resurrecting the documented opaque-response →
+      `copyResponse` throw → synthesized 503 → offline-banner bug. Now derived from
+      `NEXT_PUBLIC_SUPABASE_URL`, wrapped in try/catch because a throw at SW module scope aborts
+      service-worker installation outright.
+
+      Railway `frontend` → `NEXT_PUBLIC_SUPABASE_URL` = `https://auth.propertyiq.app`, redeploy.
+      Leave `backend` (`SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_URL`) and `mcp-server` (`SUPABASE_URL`)
+      on the original host: server-to-server, never user-visible, and pinning them limits blast
+      radius if the custom domain has a cert hiccup. Both hosts are interchangeable per docs —
+      confirm cross-host token validation at step 9.
+      `SUPABASE_DB_URL` is the direct Postgres host (`db.*.supabase.co`); custom domains do not
+      cover it. Do not touch.
+
+- [x] **8. Branding + brand verification** — _Troy_ — DONE 2026-07-28, **already verified**.
+      App name `PropertyIQ`, PIQ logo, support email set on `propertyiq-488415`; Google reports
+      "Your branding has been verified and is being shown to users." The expected multi-day
+      verification wait never materialised — an accidental payoff of the step-5 client migration,
+      since the destination project was already brand-verified. This is why the fix landed the same
+      night rather than days later, and it also moots the YouTube-scope warning above (verification
+      already cleared, nothing to strip).
+
+      **PRIMARY GOAL ACHIEVED — verified on Google's live response, not inferred:**
+      consent HTML went from `pysflbhpnqwoczyuaaif.supabase.co` ×10 / `auth.propertyiq.app` ×0
+      to `auth.propertyiq.app` ×10 / `pysflbhpnqwoczyuaaif.supabase.co` ×0, with `PropertyIQ` ×4
+      throughout. Both entry hosts emit `redirect_uri: https://auth.propertyiq.app/auth/v1/callback`.
+      Note this needed NO frontend deploy: GoTrue derives the callback from the project's external
+      URL, so activation alone flipped it. Step 7 is polish, not the fix.
+
+- [ ] **8b. Remove the stale redirect URI** — _Troy_ — only AFTER step 9 passes.
+      Drop `https://pysflbhpnqwoczyuaaif.supabase.co/auth/v1/callback` from the Google client. Kept
+      deliberately until now: it is the rollback path, and it must be gone before any FUTURE
+      verification submission because Google requires every redirect URI to sit under an authorized
+      domain you can prove ownership of — which `supabase.co` never can be.
+
+- [ ] **9. Verify end-to-end** — _Claude_
+      Real Google sign-in through the live signup path. Confirm: consent screen identity, session
+      established, backend API calls still authorize (cross-host token validation), `/auth/callback`
+      onboarding routing intact, and `signup_complete` with `method=oauth` still fires (the fix from
+      `6885741e` — regression risk lives here).
+
+## Verification checkpoints
+
+| After step | Must be true                                                  |
+| ---------- | ------------------------------------------------------------- |
+| 4          | `supabase domains get` reports the hostname verified          |
+| 6          | Consent screen shows `auth.propertyiq.app`; sign-in completes |
+| 7          | Frontend sign-in works; backend API calls still authorize     |
+| 8          | Consent screen shows `PropertyIQ` + logo                      |
+| 9          | `signup_complete` / `method=oauth` present in analytics       |
+
+## Rollback
+
+Steps 2–4 are inert until activation. After step 6, `supabase domains delete` reverts to the
+`*.supabase.co` host; the Google client still carries the old redirect URI (step 5 keeps it), so
+sign-in survives the revert. Step 7 reverts by restoring the Railway var and redeploying.
+
+---
+
 # Remotion Composition Upgrade — Motion, Tokens, Audio Mix (2026-07-28)
 
 Directive: upgrade all active Remotion compositions (Reels/Shorts pipeline) to the brand
