@@ -30,13 +30,185 @@ pre-deploy ambiguous rows go to `NULL` (3) instead of being falsely labeled bot.
 drops to real size immediately, because the default `human` segment excludes `NULL` — the excluded
 mass is just labeled honestly.
 
-**Evidence rule** (any one ⇒ human): `heartbeat_count > 0`, `duration_seconds > 0`, `page_count > 1`,
-`user_id IS NOT NULL`, `converted`, `feature_events_count > 0`, `max_scroll_depth > 0`,
-`had_frustration_event`.
+**Evidence rule — v4 (any one ⇒ human):** `heartbeat_count > 1`, `duration_seconds > 5`,
+`page_count > 1`, `user_id IS NOT NULL`, `converted`, or the session emitted an event matching the
+**deliberate-interaction allow-list**
+(`click|submit|attempt|search|toggle|select|download|export|share|signup_start|otp_`).
+
+> **Three earlier versions were wrong — each caught by measurement, not review.** The spread between
+> them is 35,000 sessions, so the rule _is_ the deliverable; everything else is plumbing.
+>
+> - **v2 — "emitted any non-pageview event"** re-admitted **32,305 crawler sessions**. Bots emit
+>   plenty of events; they just don't emit _intentional_ ones.
+> - **v1 — `feature_events_count > 0` / `had_frustration_event`** — silently contaminated. Of sessions
+>   we _know_ are bots, **582 emit `feature.score_view`** and **550 emit `seo.conversion_bar_shown`**;
+>   both auto-fire on render, as does `frustration.error_shown`. Any crawler hitting `/markets/*`
+>   incremented `feature_events_count`, so v1 laundered it into "human."
+> - **v3 — `duration_seconds > 0` / `heartbeat_count > 0`** — the subtlest and worst. The duration
+>   histogram spikes to **2,019 sessions at exactly 5 seconds**, against neighbours of 30–107. That is
+>   `EARLY_HEARTBEAT_MS = 5000` firing once and the client vanishing. Of those 2,019, **1** is
+>   multi-page and **1** is logged in. The early heartbeat was added specifically so duration would
+>   separate humans from crawlers — but crawlers block on network-idle, which takes longer than 5s, so
+>   they fire it too. v3 would have declared ~2,019 crawlers human, i.e. **70% of its own "human"
+>   cohort**.
+>
+> Two load-bearing distinctions: **auto-fired telemetry vs. deliberate interaction** (not event
+> category), and **surviving past the first ping vs. merely reaching it**.
+>
+> **`max_scroll_depth` is unusable** — 0 on every row in 30 days. Scroll tracking is another
+> never-written field, the same defect class the last commit fixed. Do not put it in the rule.
 
 **Load-bearing constant:** `EARLY_HEARTBEAT_DEPLOYED_AT = 2026-07-28 21:59:18Z`. Before it, a real
 visitor leaving inside the 30s heartbeat window recorded 0 duration and is genuinely indistinguishable
 from a crawler. After it, absence of a ping is real evidence.
+
+## Purpose (Troy, 2026-07-29)
+
+> "Clearly identify where our real human traffic is coming from, what they are doing here, and why
+> they are leaving. We need to convert users."
+
+That is the goal. Bot filtering is not the deliverable — it is the precondition for the three
+questions being answerable at all. **The answers below were computable the moment rule v4 existed, so
+the plan below is deliberately re-sequenced: act on what we already know first, build dashboard
+plumbing second.**
+
+### What the clean data already says (30 days to 2026-07-29, rule v4, n=772)
+
+**1. Where real humans come from — 772 sessions, ≈26/day.**
+
+| Source                | Human sessions | Avg pages | Logged in | Converted |
+| --------------------- | -------------: | --------: | --------: | --------: |
+| Direct / no referrer  |        **579** |      3.92 |        80 |         1 |
+| Google                |         **94** |      2.43 |         8 |         0 |
+| Facebook (4 variants) |         **44** | 2.6 – 6.2 |         0 |         0 |
+| Bing                  |             18 |      5.61 |         2 |         0 |
+| DuckDuckGo            |             14 |      4.36 |         0 |         0 |
+| localhost (us)        |              5 |     14.60 |         5 |         0 |
+
+**2. What they do.** Engaged sessions concentrate on `/`, `/analyzer`, `/map`, `/screener`,
+`/reports`. Logged-in users go deep — `/analyzer` exits average **9.5 pages**, `/screener` **10.3**,
+`/market` **13.6**. The product retains the people who reach it.
+
+**3. Why they leave — `/auth/sign-up` is the single largest exit page.**
+
+| Exit page       | Sessions ending here | Avg pages before exit | Logged in |
+| --------------- | -------------------: | --------------------: | --------: |
+| `/auth/sign-up` |               **62** |               **1.5** |     **1** |
+| `/`             |                   57 |                   4.3 |         6 |
+| `/analyzer`     |                   44 |                   9.5 |        30 |
+| `/map`          |                   39 |                   4.9 |         9 |
+
+62 sessions arrive at the signup form, spend 1.5 pages, and leave. Against the funnel — **75
+`signup_start` → 8 `signup_complete`, an 89% abandon rate inside the form** — this confirms the
+leak is the form itself, not traffic quality and not the funnel above it.
+
+### The uncomfortable implication
+
+**Traffic is the binding constraint, not conversion.** At 26 human sessions/day, fixing the form from
+11% to a strong 40% completion moves signups from 8/month to ~29/month. Real, but it does not change
+the business by itself.
+
+And organic is barely functioning: **488 impressions and 28 clicks in 30 days** across 77 blog posts
+and thousands of programmatic `/markets/*` pages. The 26,032 "Google organic sessions" that made SEO
+look healthy were **99.9% crawlers** — the bot problem was actively masking an SEO problem.
+
+Two under-exploited signals worth naming:
+
+- **Facebook is the most engaged external source** (5.1–6.2 pages/session, beating Google's 2.43) and
+  has produced **zero** conversions. Highest intent, no capture.
+- **75% of real traffic is "direct"** with only 80 logged-in sessions. That bucket is doing too much
+  work and is mostly unattributed — 6.6 exists to break it up.
+
+### Re-sequencing
+
+Given the purpose, the original phase order optimised the wrong thing. Revised priority:
+
+1. **P0 — Fix the signup form.** Highest-confidence, highest-value, already-diagnosed, and needs
+   **none** of the plumbing below. Track separately; the instrumentation from `6885741e` already
+   emits a rejection reason on every failure, so the abandon cause is likely already in the data.
+2. **P1 — Phases 1-3** (three-state classification + backfill). Makes every number trustworthy and is
+   the precondition for measuring whether the P0 fix worked.
+3. **P2 — Phase 6** (traffic-source truth + Search Console). Answers "where do they come from" and
+   turns the SEO problem from invisible to measurable.
+4. **P3 — Phases 4, 5, 7** (UA capture, crawler naming, dashboard UI). Valuable, not urgent.
+
+### P0 detail — the signup form: email or Google? _Currently unanswerable._
+
+Asked directly (Troy, 2026-07-29): are the abandonments on the email/password path or the Google one?
+**Neither can be attributed yet**, for three structural reasons — all worth fixing before any form
+redesign, or the redesign will be guesswork:
+
+1. **`signup_start` carries no method.** All 75 events are `(no method)`; it fires on form _view_,
+   before a path is chosen. The top of the funnel is un-splittable by construction.
+2. **OAuth completion was structurally invisible until 2026-07-28.** The apparent 7-email / 1-oauth
+   split is an artifact of the bug `6885741e` fixed, not user behaviour — that commit documents real
+   Google signups that recorded nothing, and the sole oauth row is dated the day of the fix.
+3. **The new instrumentation has ~14h of data.** Since deploy: 2 `signup_start`, 1 `signup_complete`,
+   and **zero** google `click`/`error`/`blocked`, zero email rejection reasons, zero outbound events.
+   At ≈26 human sessions/day it has not had a chance to accumulate.
+
+**What is visible:** the drop is at the first step, not spread through the form —
+**63 of 75 sessions never submitted anything on either path.** That is equally consistent with
+"clicked Google and it failed" and "looked at the form and left," which is exactly the ambiguity
+`6885741e` set out to close. Separately, **12 `pending_confirmation` → 7 `otp_verified`** means 5
+people requested the confirmation email and never returned through it — real friction on the email
+path, independent of the form, and expected given autoconfirm is off in prod.
+
+- [x] **P0.1 Split the email path from the Google path** — DONE 2026-07-29.
+      **Redesigned during implementation:** "add `method` to `signup_start`" is not implementable —
+      that event fires from a mount effect (`page.tsx:57`), before any path exists to name. The real
+      gap is asymmetry: the Google path already announces itself via `signup_oauth_click`, while the
+      email path emitted nothing between "form rendered" and "form submitted."
+      New `conversion.signup_email_engaged` (`lib/analytics/signup-path-engagement.ts`) fires once per
+      form mount on first touch of any credential field, carrying `{ field }`. Latched deliberately —
+      it hooks onChange, so without the latch one abandoned signup emits an event per keystroke and
+      inflates the stage it was added to measure. TDD: 4 tests written first, watched fail on
+      assertions, then implemented. 41/41 analytics tests green, `tsc --noEmit` clean.
+      **The 63 now split three ways:** `signup_email_engaged` (typed, gave up) ·
+      `signup_oauth_click` (chose Google) · neither (pure bounce).
+- [x] **P0.2 Google button events confirmed firing in prod** — DONE 2026-07-29. Clicked the live
+      button with ToS unchecked; `conversion.signup_oauth_blocked`
+      `{reason: "tos_not_accepted", provider: "google", variant: "B"}` landed in `user_events`.
+      Whole chain verified: button → handler → `trackEvent` → `flush` → same-origin proxy → backend →
+      DB. **The zero rows were "no traffic," not "still broken."** Backend has no event allow-list
+      (`event-ingestion.service.ts:87` validates only category/action/session_id), so new event names
+      pass through without backend work. Test rows (3 events + 1 session) deleted afterwards so the
+      75-event funnel is not skewed.
+- [x] **P0.3 Confirmation-email follow-through** — DONE 2026-07-29. Investigating first changed the
+      diagnosis: **the 12→7 "gap" is substantially an artifact.**
+
+      **Finding A — `signup_pending_confirmation` fires when no signup happened.** 5 such events on
+      2026-07-12 against exactly ONE new `auth.users` row that day; identical 5-vs-1 on 2026-06-18.
+      Cause is a fall-through at `page.tsx:148`: the already-registered guard reads
+      `user && (user.identities?.length ?? 0) === 0`, so a response of
+      `{error: null, session: null, user: null}` — which `AuthContext.signUp` returns verbatim via
+      `user: data?.user ?? null` — is falsy there and drops into the branch announcing "we sent you a
+      code." Nothing was created and no code was sent. Also a real UX bug: the visitor is shown a
+      code-entry screen and waits for an email that will never arrive.
+      **Fixed** with `signup-result.ts` — `classifySignupResult()` returns a closed union
+      (`error | autoconfirmed | no_user | already_registered | awaiting_otp`), making `no_user` a
+      state the caller must handle rather than the default. 7 tests, TDD.
+
+      **Finding B — the 8 "never entered a code" sessions are two different populations.**
+      2026-07-12 (4 sessions): duration 0, one page, distinct visitor ids, two of them 1.5s apart,
+      mixed Windows/Linux, all landing straight on `/auth/sign-up` with no referrer — automated form
+      submission. 2026-06-18 (4 sessions): durations 178s / 271s / 298s / 299s — real people who sat
+      on the code screen for 3-5 minutes and entered nothing.
+
+      **Finding C — the failure branches were silent.** `_attempt`, `_verified`, `_resent` existed;
+      rejection, lockout and resend-failure emitted nothing, so "entered a wrong code" and "closed
+      the tab" were identical in the data, and zero `_resent` across 90 days could not be read as
+      either "nobody needed one" or "resend is broken." **Added** `_failed {attempt}`,
+      `_exhausted {attempts}`, `_resend_failed {reason}` with `classifyResendError()` keeping raw
+      provider strings out of the shared store. 4 tests, TDD; 11 pre-existing OtpCodeForm tests green.
+
+      Verified: 69/69 tests across 6 files, `tsc --noEmit` 0 errors, eslint clean.
+
+- [ ] **P0.5 Re-measure the OTP funnel after ~2 weeks of corrected data.** The current 23-session
+      history mixes bot submissions, phantom pending-confirmations and real users; it is not a
+      baseline. Do not tune copy against it.
+- [ ] **P0.4 Only then redesign the form.** Wait for P0.1-P0.2 to produce ~2 weeks of split data;
+      at 26 sessions/day, changing the form now means never learning which path was broken.
 
 ## Phase 1 — Three-state classification, centralized
 
@@ -58,8 +230,8 @@ from a crawler. After it, absence of a ping is real evidence.
       behavioral rule _only_ at/after the deploy constant, then everything else pre-deploy → `NULL`.
 - [ ] **2.2 Propagate to `user_events`** via `session_id` join (events carry no duration/heartbeat of
       their own, so the session verdict is the only sound source).
-- [ ] **2.3 Verify:** post-backfill segment counts match the 88.8%-bot / 11.2%-human split measured
-      above for the post-deploy window, and no converted/logged-in session was labeled bot.
+- [ ] **2.3 Verify** against the acceptance gates below — run G2/G3/G4 immediately after the backfill
+      transaction, in the same session, before anything else touches the tables.
 
 ## Phase 3 — Go-forward behavioral classification
 
@@ -79,15 +251,213 @@ from a crawler. After it, absence of a ping is real evidence.
 - [ ] **4.3 After ~24h of capture,** query the UA distribution of the dead cohort and tighten
       `KNOWN_BOT_UA_SUBSTRINGS` with a precise rule for the Chrome/Linux/desktop crawler.
 
-## Phase 5 — Make it visible (this is the actual reported symptom)
+## Phase 5 — Name the crawlers (_"which bots are crawling?"_)
 
-- [ ] **5.1 Traffic segment selector** in the analytics filter bar, defaulting to Human.
-- [ ] **5.2 Show what was excluded** — human / unclassified / bot counts on the overview, so the
+Crawler volume is real SEO/GEO signal — the original migration said so explicitly and chose
+store-and-flag over drop-at-ingestion for exactly this reason. Knowing GPTBot and ClaudeBot reach the
+programmatic `/markets/*` surface is a business answer, not a data-hygiene one.
+
+- [ ] **5.1 Add `bot_name varchar(64)`** to `user_sessions`, derived from the same UA at ingestion.
+      Families: Googlebot · Bingbot · GPTBot · ClaudeBot · PerplexityBot · CCBot · Bytespider ·
+      AhrefsBot · SemrushBot · DataForSeo · headless-automation · other-declared.
+- [ ] **5.2 Refactor `bot-detection.ts`** from a `string[]` of substrings to
+      `{ pattern, name }[]`, so classification and attribution come from one table and cannot drift.
+      `classifyAsBot()` keeps its boolean signature; add `identifyBot(): string | null`.
+- [ ] **5.3 Crawler panel** in `/admin/analytics` — bot name × sessions × top landing pages × trend.
+      Answers "is GPTBot indexing our market pages?" directly.
+- [ ] **5.4 Bucket honestly.** Two cohorts cannot be named and must not be silently merged with the
+      named ones: - **`unidentified-automation`** — the dominant Chrome/Linux/desktop cohort. It spoofs an
+      ordinary UA, so we can count it but not name it. - **`referrer-spoofed`** — see 6.2. Claims a Google referrer that Search Console disproves. - Naming a bot requires reverse-DNS on the IP (how Google says to verify Googlebot), and we do
+      not store IPs. Out of scope; the honest ceiling is "self-declared bots by name, the rest by
+      count."
+
+## Phase 6 — Traffic-source truth (_"more specific sources; can we get the search term?"_)
+
+**Search terms cannot come from the referrer — proven, not assumed.** 0 of 26,032 Google referrers in
+the last 30 days carry a query string; every one is a bare `https://www.google.com/`. Google has
+stripped the term since the 2011 "not provided" switch. The **only** legitimate source is Search
+Console, and we already have working scripted access to it.
+
+**Two independent defects found while checking this:**
+
+1. **The 8-channel classifier shipped but history was never backfilled** — the same forward-only
+   pattern as `is_bot`. `referrer-classification.ts` correctly resolves `ai` / `search` / `social` /
+   `email` / `referral` / `internal` / `utm` / `direct`, but stored data says otherwise:
+
+   | `entry_type` | pre-deploy | post-deploy |
+   | ------------ | ---------: | ----------: |
+   | `organic`    |     26,323 |           1 |
+   | `direct`     |     20,796 |         728 |
+   | `search`     |      **0** |          48 |
+
+   Every historical row still carries the legacy binary `organic` bucket — the exact conflation the
+   new module was written to fix. Unlike `is_bot`, this **is** cleanly backfillable: `referrer_domain`
+   is stored on every row, so the channel can simply be recomputed. AI referrals (claude.ai) are
+   currently buried inside "organic" and would surface immediately.
+
+2. **The referrer is crawler-controlled and is being trusted verbatim.** Search Console reports
+   **28 clicks / 488 impressions / 25 distinct queries** for the same 30 days in which our own tables
+   claim **26,032 Google organic sessions** — a 930× gap. Even after bot rule v3, 1,840 survive, still
+   ~65× more than Google says it sent. A bare `www.google.com` referrer is therefore one of the
+   strongest bot signals in the dataset, not a trustworthy source attribution.
+
+- [ ] **6.1 Backfill `entry_type`** for all history by recomputing `classifyReferrer()` from the
+      stored `referrer_domain`. Port the host lists to SQL, or run a one-shot Node script against the
+      shared module so the two cannot diverge — preferred, since the module is already pure and
+      dependency-free by design.
+- [ ] **6.2 Treat a bare search-engine referrer with no human evidence as `referrer-spoofed`,** not as
+      organic search. Validate the surviving count against Search Console clicks, which is the only
+      bot-free measure of Google traffic we have.
+- [ ] **6.3 Ingest Search Console into the dashboard.** New `search_console_queries` table
+      (`date, query, page, clicks, impressions, ctr, position`), populated by a daily job wrapping the
+      existing `scripts/analytics/search-console.js` (verified working: 25 queries / 28 clicks /
+      488 impressions for 2026-06-29 → 07-28).
+- [ ] **6.4 "Search queries" panel** on `/admin/analytics`, joined to landing pages via the GSC `page`
+      dimension — "these queries brought people to this page."
+- [ ] **6.5 Label the limits in the UI.** GSC lags ~2-3 days, samples, and withholds rare queries for
+      privacy, so its clicks will never tie out exactly to session counts. State it on the panel
+      rather than letting the mismatch read as a bug.
+- [ ] **6.6 Split `direct`.** 21,523 sessions is the second-largest bucket and is currently a
+      catch-all for "no referrer," which includes genuine direct navigation, stripped referrers, and
+      crawlers. At minimum separate `direct` (human evidence present) from `no-referrer-automation`.
+
+## Phase 7 — Make it visible (this is the actual reported symptom)
+
+- [ ] **7.1 Traffic segment selector** in the analytics filter bar, defaulting to Human.
+- [ ] **7.2 Show what was excluded** — human / unclassified / bot counts on the overview, so the
       filtering is legible instead of silent.
+- [ ] **7.3 Sources panel reads in real channels** — search / ai / social / referral / direct, with
+      AI assistants broken out rather than folded into organic.
+
+## What success looks like
+
+**The one-sentence test:** Troy opens `/admin/analytics`, and the 30-day visitor count reads ≈2,900
+instead of 48,234 — while all 8 signups are still there.
+
+Everything below is measured against the 30-day window as of 2026-07-29. Numbers are projections
+from the live tables under rule v3; the backfill must reproduce them within rounding.
+
+### G1 — The headline numbers move (Phase 2)
+
+| Metric                  | Before              | After (target, rule v4) |
+| ----------------------- | ------------------- | ----------------------- |
+| Sessions, human segment | 48,243              | **772** (−98.4%)        |
+| Sessions, bot segment   | 70                  | **773**                 |
+| Sessions, unclassified  | 0                   | **46,698**              |
+| Signup conversion rate  | 8 / 48,243 ≈ 0.017% | **8 / 772 ≈ 1.04%**     |
+| Sessions per visitor    | 1.001               | **1.180** ✅            |
+| Avg pages, human        | 1.00                | **> 2.0**               |
+
+The last two rows are the honest-signal checks, and they are the reason to trust v4 over v3. Before:
+980 sessions from 979 distinct visitors — nobody ever returns, which is only true of crawlers. Under
+v4 the human cohort returns at 1.18 sessions/visitor and 262 of 772 are multi-page. A rule that
+leaves sessions-per-visitor at ~1.00 has not worked, whatever the volume says.
+
+**1.04% visit→signup is a believable SaaS number.** 0.017% was measuring crawlers.
+
+### G2 — Hard invariants (each MUST return 0 rows)
+
+These are the "did we hide a real person" gates. Any non-zero result reverts the backfill.
+
+- [ ] **G2.1** No session with `converted = true` is classified bot or unclassified.
+- [ ] **G2.2** No session with `user_id IS NOT NULL` is classified bot or unclassified.
+- [ ] **G2.3** No session that emitted a deliberate-interaction event is classified bot.
+- [ ] **G2.4** No session with `heartbeat_count > 0` or `duration_seconds > 0` is classified bot.
+- [ ] **G2.5** Row counts conserved: `human + bot + unclassified = total` on both tables, and total is
+      unchanged from the pre-backfill count. Nothing was deleted.
+- [ ] **G2.6** No `user_events` row disagrees with its parent session's verdict.
+
+### G3 — The funnel survives intact (Phase 2)
+
+Measured above; the backfill must not change a single one of these counts in the human segment:
+
+| Event                         | 30-day count | Must survive |
+| ----------------------------- | -----------: | -----------: |
+| `signup_start`                |           75 |           75 |
+| `signup_otp_attempt`          |           14 |           14 |
+| `signup_pending_confirmation` |           12 |           12 |
+| `signup_complete`             |            8 |            8 |
+| `signup_otp_verified`         |            7 |            7 |
+| `pricing_cta_click`           |            6 |            6 |
+
+The known in-form leak (75 starts → 8 completes) must still be visible afterwards. If the backfill
+flattens the funnel, it destroyed the very signal this work exists to expose.
+
+### G4 — Go-forward classification actually classifies (Phase 3)
+
+- [ ] **G4.1** 24h after deploy, unclassified share of _new_ sessions is < 5% — sessions get a verdict,
+      they don't pile up in limbo.
+- [ ] **G4.2** New human sessions have a non-zero average duration. Today's human segment averages
+      0.28s, which is not a human number.
+- [ ] **G4.3** A real browser session (Troy loading the site, waiting >5s) lands as `is_bot = false`
+      within one heartbeat. Verify by session id, not in aggregate.
+- [ ] **G4.4** The daily-rollup sweep is idempotent — a second run changes 0 rows.
+
+### G5 — Crawlers are named, not just counted (Phase 5)
+
+- [ ] **G5.1** The crawler panel names at least the self-declaring families present in the data, each
+      with session counts and top landing pages.
+- [ ] **G5.2** The AI-crawler question is answerable without writing SQL: "did GPTBot / ClaudeBot /
+      PerplexityBot hit `/markets/*` this month, and how often?"
+- [ ] **G5.3** `unidentified-automation` is shown as its own bucket with an explicit caption, never
+      merged into a named family and never silently dropped. Expect it to be the largest bucket —
+      that is the honest answer, not a failure.
+- [ ] **G5.4** `classifyAsBot()` and `identifyBot()` read from one table; adding a crawler is a
+      one-line change and cannot make the two disagree. Covered by a test.
+
+### G6 — Traffic sources are specific and defensible (Phase 6)
+
+- [ ] **G6.1** `entry_type = 'organic'` is **gone** from the 30-day window — 26,323 rows redistributed
+      into `search` / `ai` / `social` / `referral` / `internal`. A remaining `organic` row means the
+      backfill missed it.
+- [ ] **G6.2** AI referrals are visible as their own channel. claude.ai's 14 sessions currently sit
+      inside "organic"; after backfill they read as `ai`.
+- [ ] **G6.3** Recomputed channels match the live classifier exactly — run `classifyReferrer()` over a
+      sample of backfilled rows and diff. Zero mismatches, or the SQL port drifted from the module.
+- [ ] **G6.4 Google reconciles with Search Console.** Human-segment Google `search` sessions land
+      within the same order of magnitude as GSC clicks (28 for 2026-06-29 → 07-28), not 26,032 and not
+      1,840. This is the single strongest external check available, because GSC cannot be spoofed by a
+      crawler setting a referrer header.
+- [ ] **G6.5** The search-queries panel renders real terms from GSC ("property iq", "propertyiq
+      search", "home prices forecast"), joined to the landing pages they drove.
+- [ ] **G6.6** The panel states GSC's lag/sampling/privacy limits, so the permanent mismatch with
+      session counts reads as expected rather than broken.
+- [ ] **G6.7** No search term is ever sourced from a referrer. If any code path claims to extract `q=`
+      from a referrer URL, it is wrong by construction — the data proves the parameter is not there.
+
+### G7 — It is visible (Phase 7) — _the originally reported symptom_
+
+- [ ] **G7.1** The filter bar has a traffic selector, defaulting to Human.
+- [ ] **G7.2** The overview states what was excluded, e.g. "2,862 human · 730 bot · 44,643 unclassified",
+      so the number on screen is self-explaining.
+- [ ] **G7.3** Switching to All reproduces the old inflated numbers — proof the filter is doing the work
+      and no data was destroyed.
+- [ ] **G7.4** Verified in the browser against live data, not from a 200 response or a passing test.
+
+### G8 — Not-broken checks
+
+- [ ] **G8.1** `npx tsc --noEmit` clean in backend (plain tsc — `nest build` excludes specs).
+- [ ] **G8.2** `bot-detection.spec.ts`, `session-manager.service.spec.ts`,
+      `journey-analytics.service.spec.ts` updated and passing.
+- [ ] **G8.3** Every analytics tab renders without an empty panel that was populated before. An empty
+      panel is the exact failure mode of the last round — indistinguishable from "no data yet."
+- [ ] **G8.4** No dashboard query regressed to a full scan; the partial indexes still apply.
+
+### Explicit non-goals
+
+Not in scope, so absence is not failure: recovering true visitor counts for pre-deploy history (the
+evidence does not exist — that traffic stays unclassified forever), reconciling with GA4, and
+back-correcting the daily rollup tables already written from bot-inflated inputs.
+
+---
 
 **Risk:** analytics-only, no user-facing surface, no new tables (so no GRANT work). Reversible — the
 backfill sets a flag, never deletes rows. Tests to update: `bot-detection.spec.ts`,
 `session-manager.service.spec.ts`, `journey-analytics.service.spec.ts`.
+
+**Before Phase 2 runs:** snapshot the current classification so the backfill is revertible —
+`create table user_sessions_isbot_backup_20260729 as select session_id, is_bot from user_sessions;`
+and the same for `user_events` (id, is_bot). Restoring is then a single join-update.
 
 ---
 
