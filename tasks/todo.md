@@ -1,3 +1,96 @@
+# /admin/analytics: bot exclusion is live but invisible — three-state classification (2026-07-29)
+
+**Symptom (Troy):** "Work was done yesterday to clean up the data and exclude bots. I'm not seeing that."
+
+**Root cause — the filtering shipped and works; it has nothing to filter.** Verified against prod:
+
+| Check                  | Result                                                             |
+| ---------------------- | ------------------------------------------------------------------ |
+| Read paths filter bots | ✅ 19 × `.eq('is_bot', false)` across 8 services                   |
+| Migrations applied     | ✅ both `is_bot` columns present                                   |
+| Ingestion classifying  | ✅ first flagged row `2026-07-28 21:59:18Z`                        |
+| Last 30 days           | 48,228 sessions, **70 flagged (0.15%)**                            |
+| Since deploy (~14h)    | 766 sessions, 73 UA-flagged, **607 more with zero human evidence** |
+
+Two causes, both of which the original commit predicted in its own comments:
+
+1. **Forward-only + `default false`.** `is_bot` overloads `false` to mean both "checked, human" and
+   "never checked." The 30-day window is ~99.85% pre-classification rows, so `.eq('is_bot', false)`
+   passes all of history through as human. Migration comment says it outright: pre-2026-07-28 rows
+   are "unclassified, not verified-human."
+2. **UA-only classifier misses the dominant crawler.** `bot-detection.ts:101-106` calls this exact
+   shot. Today's largest cohort — **534 sessions, Chrome/Linux/desktop, no referrer, 0.28s avg,
+   exactly 1.00 pages, 6 heartbeats across all 534** — is `is_bot = false`.
+3. **No UI signal at all.** The only frontend changes were `JourneysTab.tsx` + `OutboundDestinationsTable.tsx`.
+   Nothing on the page says bots are being excluded, so even correct filtering would be invisible.
+
+**Chosen approach (Troy, 2026-07-29): options 1 + 3 + 4 combined.** These compose rather than
+conflict. The behavioral rule (1) is only trustworthy _after_ the 5s early heartbeat went live, so
+pre-deploy ambiguous rows go to `NULL` (3) instead of being falsely labeled bot. The dashboard still
+drops to real size immediately, because the default `human` segment excludes `NULL` — the excluded
+mass is just labeled honestly.
+
+**Evidence rule** (any one ⇒ human): `heartbeat_count > 0`, `duration_seconds > 0`, `page_count > 1`,
+`user_id IS NOT NULL`, `converted`, `feature_events_count > 0`, `max_scroll_depth > 0`,
+`had_frustration_event`.
+
+**Load-bearing constant:** `EARLY_HEARTBEAT_DEPLOYED_AT = 2026-07-28 21:59:18Z`. Before it, a real
+visitor leaving inside the 30s heartbeat window recorded 0 duration and is genuinely indistinguishable
+from a crawler. After it, absence of a ping is real evidence.
+
+## Phase 1 — Three-state classification, centralized
+
+- [ ] **1.1 Migration: `is_bot` → nullable** on `user_sessions` and `user_events`.
+      `true` = automated · `false` = evidence-backed human · `NULL` = unclassified.
+      Add partial indexes for the `is_bot IS NULL` case alongside the existing `= false` ones.
+- [ ] **1.2 New `traffic-classification.ts`** — `TrafficSegment = 'human' | 'bot' | 'unclassified' | 'all'`,
+      `DEFAULT_TRAFFIC_SEGMENT = 'human'`, and `applyTrafficFilter(query, segment)` using `.is()`
+      (not `.eq()`, which cannot express the NULL case).
+- [ ] **1.3 Replace all 19 `.eq('is_bot', false)` call sites** with `applyTrafficFilter(...)` across
+      `overview-data-fetcher`, `conversion-analytics`, `journey-analytics`, `journey-outbound-queries`,
+      `retention-analytics`, `acquisition-session-queries`, `daily-rollup`.
+- [ ] **1.4 Add `traffic?: TrafficSegment` to `AnalyticsFilters`** (`user-analytics.types.ts:55`) and
+      thread it from the frontend filter bar.
+
+## Phase 2 — Backfill history on evidence
+
+- [ ] **2.1 Migration: classify `user_sessions`.** Order matters — human evidence first, then the
+      behavioral rule _only_ at/after the deploy constant, then everything else pre-deploy → `NULL`.
+- [ ] **2.2 Propagate to `user_events`** via `session_id` join (events carry no duration/heartbeat of
+      their own, so the session verdict is the only sound source).
+- [ ] **2.3 Verify:** post-backfill segment counts match the 88.8%-bot / 11.2%-human split measured
+      above for the post-deploy window, and no converted/logged-in session was labeled bot.
+
+## Phase 3 — Go-forward behavioral classification
+
+- [ ] **3.1 Insert writes `true` or `NULL`, never `false`.** A session cannot be behaviorally
+      classified at insert — duration is 0 by definition — so `session-manager.service.ts:77` should
+      set `true` on a bot UA and `NULL` otherwise.
+- [ ] **3.2 Promote to human on heartbeat.** `updateHeartbeat()` already fires on every ping; a ping
+      _is_ the human evidence, so it flips `NULL → false` in real time.
+- [ ] **3.3 Demote stale no-evidence sessions** in the existing `daily-rollup.service.ts` sweep:
+      `NULL` + older than ~10 min + no human evidence ⇒ `true`.
+
+## Phase 4 — Store the User-Agent, then tighten the rule
+
+- [ ] **4.1 Migration: `user_sessions.user_agent varchar(512)`.** Already capped at 512 in
+      `event-ingestion.controller.ts:47`, currently scanned-then-discarded.
+- [ ] **4.2 Persist it** through `upsertSession` (insert path only; session-invariant).
+- [ ] **4.3 After ~24h of capture,** query the UA distribution of the dead cohort and tighten
+      `KNOWN_BOT_UA_SUBSTRINGS` with a precise rule for the Chrome/Linux/desktop crawler.
+
+## Phase 5 — Make it visible (this is the actual reported symptom)
+
+- [ ] **5.1 Traffic segment selector** in the analytics filter bar, defaulting to Human.
+- [ ] **5.2 Show what was excluded** — human / unclassified / bot counts on the overview, so the
+      filtering is legible instead of silent.
+
+**Risk:** analytics-only, no user-facing surface, no new tables (so no GRANT work). Reversible — the
+backfill sets a flag, never deletes rows. Tests to update: `bot-detection.spec.ts`,
+`session-manager.service.spec.ts`, `journey-analytics.service.spec.ts`.
+
+---
+
 # Google OAuth consent screen: show PropertyIQ, not the Supabase host (2026-07-28)
 
 **Problem:** Users signing in with Google see `Sign in to pysflbhpnqwoczyuaaif.supabase.co`.
@@ -82,11 +175,24 @@ issuer, so the issuer change from `*.supabase.co` to `auth.propertyiq.app` is in
       `client_id` with the old `redirect_uri`, and Google returns its normal sign-in page rather than
       `redirect_uri_mismatch` / `invalid_client` — i.e. production sign-in never broke during the swap.
 
-      ⚠️ **Consent-screen hygiene for step 8:** `propertyiq-488415` also holds an abandoned
-      `Youtube test` client. A project has exactly ONE consent screen shared by all its clients, and
-      YouTube Data API scopes are *restricted* — the heaviest verification tier, potentially
-      requiring a third-party security assessment. If any YouTube scopes remain under Data Access,
-      strip them before submitting for brand verification or the review balloons.
+      ⚠️ **DO NOT strip the YouTube scopes.** (This corrects earlier guidance written here before the
+      client was traced.) `propertyiq-488415` also holds the `Youtube test` client
+      `1036757309323-8iib4bn3…` — which is **live production**, not an abandoned experiment: it is
+      `YOUTUBE_OAUTH_CLIENT_ID` for `content-pipeline/drivers/youtube-longform-publisher.ts`, with
+      `youtube.upload` + `youtube.readonly` and a working `YOUTUBE_OAUTH_REFRESH_TOKEN` deployed on
+      Railway backend. Removing those scopes breaks long-form publishing. Same project number as the
+      auth client, so they share one consent screen — unavoidable, not a mess to clean up.
+
+      The "Your app requires verification" banner on the Audience page is **expected and harmless**:
+      restricted scopes are granted only by Troy authorizing his own channel (OAuth user cap reads
+      1/100 and will not move), while sign-in users request only `email` + `profile` and get the
+      brand-verified screen. Verification would only be required if CUSTOMERS ever connected their
+      own YouTube accounts — multi-tenant restricted-scope use, which triggers a third-party
+      security assessment.
+
+      🚨 **Never click "Back to testing" on the Audience page.** Testing mode expires refresh tokens
+      after 7 days, silently killing `YOUTUBE_OAUTH_REFRESH_TOKEN` and breaking long-form publishing.
+      "In production" is load-bearing for that token, not cosmetic.
 
 - [x] **6. Activate** — _Claude_ — DONE 2026-07-28, status `5_services_reconfigured`.
 
@@ -109,7 +215,14 @@ issuer, so the issuer change from `*.supabase.co` to `auth.propertyiq.app` is in
       page rather than `redirect_uri_mismatch`. Proves the new callback is registered instead of
       trusting that it was saved.
 
-- [~] **7. Point the frontend at the custom domain** — _Claude_ — code ready, deploying 2026-07-28.
+- [x] **7. Point the frontend at the custom domain** — _Claude_ — DONE 2026-07-28. Shipped as
+      `8abffe89`, released `1f0b3571` (§2.6 sync check = 0). Railway `frontend`
+      `NEXT_PUBLIC_SUPABASE_URL` = `https://auth.propertyiq.app`; prod 200 in 0.85s after redeploy.
+      **Gate used before flipping the var:** polled the LIVE `Content-Security-Policy` response
+      header on `www.propertyiq.app` until it actually contained `auth.propertyiq.app` (9 checks,
+      ~4 min) rather than assuming the deploy had finished. Reuse that gate for any env change with
+      a code prerequisite. Adding the host rather than replacing `*.supabase.co` is also what made
+      the rollout safe mid-flight — both origins were permitted the whole time.
 
       🚨 **HARD ORDERING: the CSP change must be DEPLOYED before the Railway var flips.**
       `packages/frontend/next.config.mjs:327` allowlists `https://*.supabase.co` +
@@ -151,17 +264,25 @@ issuer, so the issuer change from `*.supabase.co` to `auth.propertyiq.app` is in
       Note this needed NO frontend deploy: GoTrue derives the callback from the project's external
       URL, so activation alone flipped it. Step 7 is polish, not the fix.
 
-- [ ] **8b. Remove the stale redirect URI** — _Troy_ — only AFTER step 9 passes.
+- [x] **8b. Remove the stale redirect URI** — _Troy_ — DONE 2026-07-29. Verified by probing BOTH URIs
+      directly against Google: `auth.propertyiq.app` → normal sign-in page; the old
+      `pysflbhpnqwoczyuaaif.supabase.co` → `redirect_uri_mismatch` / Error 400. Inverted results
+      would have meant the wrong row was deleted, so probe both, never just the survivor. Live flow
+      unaffected. **The rollback is now gone** — a custom-domain revert would additionally require
+      re-adding the old URI in Google first.
       Drop `https://pysflbhpnqwoczyuaaif.supabase.co/auth/v1/callback` from the Google client. Kept
       deliberately until now: it is the rollback path, and it must be gone before any FUTURE
       verification submission because Google requires every redirect URI to sit under an authorized
       domain you can prove ownership of — which `supabase.co` never can be.
 
-- [ ] **9. Verify end-to-end** — _Claude_
-      Real Google sign-in through the live signup path. Confirm: consent screen identity, session
-      established, backend API calls still authorize (cross-host token validation), `/auth/callback`
-      onboarding routing intact, and `signup_complete` with `method=oauth` still fires (the fix from
-      `6885741e` — regression risk lives here).
+- [x] **9. Verify end-to-end** — _Claude_ — DONE 2026-07-28. **Real user, not synthetic:** the same
+      person whose screenshot opened this task re-ran sign-in and saw "Sign in to PropertyIQ" with
+      the PIQ logo and zero Supabase hash. Server side, `auth.users` shows a NEW google user with
+      `created_at = last_sign_in_at = identity.last_sign_in_at = 2026-07-28 22:57:31Z` — full round
+      trip (consent → callback → user row → identity link → session).
+      **GA4 confirms the analytics path:** `sign_up` ×3 on 2026-07-28, ALL with
+      `customEvent:method = oauth` — the `6885741e` repair survived the client migration, which was
+      the single largest regression risk in this change.
 
 ## Verification checkpoints
 
