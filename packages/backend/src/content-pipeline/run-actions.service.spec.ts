@@ -1,6 +1,7 @@
 import { RunActionsService } from './run-actions.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { RunOrchestratorService } from './orchestrator/run-orchestrator.service';
+import { RunDeleteService } from './run-delete.service';
 
 describe('RunActionsService.nextPipelineStepAfterReview (via resume/edit)', () => {
   function buildService(mocks: {
@@ -59,7 +60,9 @@ describe('RunActionsService.nextPipelineStepAfterReview (via resume/edit)', () =
     };
     const supabase = { getClient: () => client } as unknown as SupabaseService;
     const orchestrator = {} as unknown as RunOrchestratorService;
-    const service = new RunActionsService(supabase, orchestrator);
+    // deleteRun is pure delegation and untouched by these cases.
+    const runDelete = {} as unknown as RunDeleteService;
+    const service = new RunActionsService(supabase, orchestrator, runDelete);
     return { service };
   }
 

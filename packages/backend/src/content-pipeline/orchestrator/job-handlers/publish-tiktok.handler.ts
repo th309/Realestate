@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { settlePublished } from './settle-published';
 import { SupabaseService } from '../../../supabase/supabase.service';
 import { RunOrchestratorService } from '../run-orchestrator.service';
 import { TikTokPublisher } from '../../drivers/tiktok-publisher';
@@ -7,6 +8,10 @@ import { tmpdir } from 'os';
 import { writeFileSync } from 'fs';
 import { randomBytes } from 'crypto';
 import { LeadMagnetBindingService } from '../../magnets/lead-magnet-binding.service';
+import {
+  captureScriptRevision,
+  isStepStaleAfterScriptEdit,
+} from './stale-script-revision-guard';
 
 /**
  * Substitute the stored script's {{SHORT_LINK}} template placeholder
@@ -33,6 +38,7 @@ export class PublishTikTokHandler {
     this.logger.log(`[PIPE] publish-tiktok.handle START run=${runId}`);
     const client = this.supabase.getClient();
     try {
+      const capturedRevision = await captureScriptRevision(client, runId);
       const { data: run } = await client
         .from('content_runs')
         .select('format, resolved_geo, hook_variants, approval_mode')
@@ -67,6 +73,19 @@ export class PublishTikTokHandler {
       this.logger.log(
         `[PIPE] publish-tiktok run=${runId} postMode=${postMode}`,
       );
+
+      // Terminal-write boundary, deliberately placed BEFORE the external post
+      // rather than before the transition below. The caption above is built
+      // from hook_variants, so a stale worker publishes the operator's
+      // superseded copy; and once the post exists on TikTok, bailing out would
+      // orphan it with no platform_posts row to reconcile against. The last
+      // reversible moment is here.
+      const stale = await isStepStaleAfterScriptEdit(client, this.logger, {
+        runId,
+        step: 'publish-tiktok',
+        capturedRevision,
+      });
+      if (stale) return;
 
       const result = await this.publisher.publish({
         runId,
@@ -125,9 +144,7 @@ export class PublishTikTokHandler {
           format: run.format,
         },
       });
-      await this.orchestrator.transitionTo(runId, 'published', {
-        enqueueNext: false,
-      });
+      await settlePublished(this.orchestrator, this.logger, runId, 'tiktok');
     } catch (err) {
       const message = (err as Error).message ?? 'unknown';
       this.logger.error(

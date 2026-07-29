@@ -7,6 +7,11 @@ import {
 } from '../../drivers/script-generator.interface';
 import { CostCapService } from '../../auto-ideation/cost-cap.service';
 import { recordDriverSpend } from './record-driver-spend';
+import { readMcpPayloadWithRetry } from './mcp-payload-reader';
+import {
+  captureScriptRevision,
+  isStepStaleAfterScriptEdit,
+} from './stale-script-revision-guard';
 
 @Injectable()
 export class GenerateScriptHandler {
@@ -23,6 +28,10 @@ export class GenerateScriptHandler {
     try {
       this.logger.log(`[PIPE] generate-script.handle START run=${runId}`);
       const client = this.supabase.getClient();
+      // Epoch captured before the LLM call. An operator editing the script
+      // while we are generating restarts the run at verifying_data against
+      // THEIR text; this worker must not overwrite it with the model's.
+      const capturedRevision = await captureScriptRevision(client, runId);
       const { data: run } = await client
         .from('content_runs')
         .select('format, audience, resolved_geo, format_options')
@@ -127,6 +136,18 @@ export class GenerateScriptHandler {
       this.logger.log(
         `[PIPE] generate-script LLM_OK run=${runId} scripts_count=${result.scripts.length} diagnostics=${JSON.stringify(result.diagnostics ?? {})}`,
       );
+
+      // Terminal-write boundary. Everything below replaces the run's script:
+      // hook_variants, then the script/script_raw assets. If the operator
+      // edited during the LLM round-trip above, writing here would silently
+      // throw their text away, and handleStepSuccess would then walk the
+      // restarted run past the fact-check it was restarted for.
+      const stale = await isStepStaleAfterScriptEdit(client, this.logger, {
+        runId,
+        step: 'scripting',
+        capturedRevision,
+      });
+      if (stale) return;
 
       await client
         .from('content_runs')
@@ -250,31 +271,4 @@ export class GenerateScriptHandler {
       );
     }
   }
-}
-
-const mcpPayloadLogger = new Logger('readMcpPayloadWithRetry');
-
-async function readMcpPayloadWithRetry(
-  client: ReturnType<SupabaseService['getClient']>,
-  runId: string,
-): Promise<{ metadata: any } | null> {
-  const delays = [0, 100, 200, 400, 800];
-  for (const delay of delays) {
-    if (delay > 0) await new Promise((r) => setTimeout(r, delay));
-    const { data, error } = await client
-      .from('content_assets')
-      .select('metadata')
-      .eq('run_id', runId)
-      .eq('kind', 'mcp_payload')
-      .order('created_at', { ascending: false })
-      .limit(1);
-    mcpPayloadLogger.log(
-      `[PIPE] mcp_payload retry runId=${runId} delayMs=${delay} rows=${data?.length ?? 'null'} err=${error?.message ?? 'none'}`,
-    );
-    if (data && data.length > 0) return data[0] as { metadata: any };
-  }
-  mcpPayloadLogger.warn(
-    `[PIPE] mcp_payload MISS runId=${runId} after ${delays.length} attempts`,
-  );
-  return null;
 }

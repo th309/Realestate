@@ -11,6 +11,10 @@ import { writeFileSync } from 'fs';
 import { randomBytes } from 'crypto';
 import { CostCapService } from '../../auto-ideation/cost-cap.service';
 import { recordDriverSpend } from './record-driver-spend';
+import {
+  captureScriptRevision,
+  isStepStaleAfterScriptEdit,
+} from './stale-script-revision-guard';
 
 @Injectable()
 export class TimeCaptionsHandler {
@@ -27,6 +31,11 @@ export class TimeCaptionsHandler {
     this.logger.log(`[PIPE] time-captions.handle START run=${runId}`);
     try {
       const client = this.supabase.getClient();
+      // Captions are script-derived: they are the timing of the narration, and
+      // the narration is the script. Both exits below therefore need the
+      // check — the short-circuit is fast, but it still calls
+      // handleStepSuccess, which would walk a restarted run forward.
+      const capturedRevision = await captureScriptRevision(client, runId);
 
       // Idempotency / native-captions short-circuit: if synthesize-audio
       // already wrote captions_timings (Edge native or Azure-via-Edge-shadow),
@@ -49,6 +58,13 @@ export class TimeCaptionsHandler {
         this.logger.log(
           `[PIPE] time-captions.handle SKIP run=${runId} — captions_timings already populated by ${source} (${wordCount} words)`,
         );
+        // Terminal-write boundary for the short-circuit exit.
+        const staleOnSkip = await isStepStaleAfterScriptEdit(
+          client,
+          this.logger,
+          { runId, step: 'timing_captions', capturedRevision },
+        );
+        if (staleOnSkip) return;
         await client.from('content_run_events').insert({
           run_id: runId,
           event_type: 'time_captions_done',
@@ -75,6 +91,16 @@ export class TimeCaptionsHandler {
       this.logger.log(
         `[PIPE] time-captions run=${runId} words=${result.words.length} segments=${result.segments.length} cost=$${result.cost.amount_usd.toFixed(4)}`,
       );
+
+      // Terminal-write boundary for the Whisper path. The delete below is
+      // destructive: a stale worker would drop the restarted run's captions
+      // and replace them with timings for the old narration.
+      const stale = await isStepStaleAfterScriptEdit(client, this.logger, {
+        runId,
+        step: 'timing_captions',
+        capturedRevision,
+      });
+      if (stale) return;
 
       // Idempotent: clear any prior caption assets so a retry doesn't duplicate.
       await client

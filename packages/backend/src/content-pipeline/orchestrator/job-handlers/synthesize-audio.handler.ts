@@ -7,6 +7,7 @@ import { join } from 'path';
 import { tmpdir } from 'os';
 import { randomBytes } from 'crypto';
 import { probeAudioDurationMs } from './audio-duration-probe';
+import { toSpokenText } from './narration-segmenter';
 import { captureNativeCaptions } from './synthesize-audio-chain';
 import {
   synthesizeNarration,
@@ -16,6 +17,10 @@ import { enforceAudioBudget } from './enforce-audio-budget';
 import { AlertDispatcherService } from '../../observability/alert-dispatcher.service';
 import { CostCapService } from '../../auto-ideation/cost-cap.service';
 import { recordDriverSpend } from './record-driver-spend';
+import {
+  captureScriptRevision,
+  isStepStaleAfterScriptEdit,
+} from './stale-script-revision-guard';
 
 @Injectable()
 export class SynthesizeAudioHandler {
@@ -34,6 +39,9 @@ export class SynthesizeAudioHandler {
     this.logger.log(`[PIPE] synthesize-audio.handle START run=${runId}`);
     try {
       const client = this.supabase.getClient();
+      // TTS is budgeted 180s — the widest edit window in the pipeline, and the
+      // one the script_revision column was added for.
+      const capturedRevision = await captureScriptRevision(client, runId);
       const { data: run } = await client
         .from('content_runs')
         .select('format, tts_provider, tts_voice_id')
@@ -62,7 +70,12 @@ export class SynthesizeAudioHandler {
       if (!scriptAsset) throw new Error('script asset not found');
 
       const script = scriptAsset.metadata.scripts[0];
-      // Substitute the {{SHORT_LINK}} template placeholder with the voice-
+      // Substitution lives in the shared narration module so the admin script
+      // editor's duration meter costs the same words this does — the token is
+      // one word stored but four spoken, and it ends nearly every script.
+      //
+      // Original note, still accurate: substitute the {{SHORT_LINK}} template
+      // placeholder with the voice-
       // friendly spelling of the brand domain. The placeholder pattern is
       // preserved in the stored script (review UI shows the template) and
       // in brand-voice-linter's LLM judge input — only the audio-bound text
@@ -71,10 +84,7 @@ export class SynthesizeAudioHandler {
       // rather than mangling "propertyiq.app" into one slurred syllable.
       // Visual short-link overlays (with per-run slugs) live on the video-
       // composition side and use the compact "propertyiq.app" form.
-      const spokenText = script.fullText.replace(
-        /\{\{SHORT_LINK\}\}/g,
-        'Property IQ dot app',
-      );
+      const spokenText = toSpokenText(script.fullText);
       const chain = this.ttsFactory
         .driverChain(run.tts_provider)
         .filter((d) => d.isConfigured());
@@ -118,6 +128,18 @@ export class SynthesizeAudioHandler {
       this.logger.log(
         `[PIPE] synthesize-audio run=${runId} driver=${driver.constructor.name} segments=${segmentCount} silenceMs=${silenceMs} wallMs=${result.durationMs} audioMs=${audioDurationMs} budgetMs=${audioBudgetMs} cost=$${result.cost.amount_usd.toFixed(4)}`,
       );
+
+      // Terminal-write boundary — placed before enforceAudioBudget because
+      // that is the first thing that can act on the run: it transitions back
+      // to `scripting` on overflow. Below it the storage upload replaces the
+      // run's audio asset, so a stale worker finishing after the restart's
+      // worker would overwrite good narration with narration of deleted text.
+      const stale = await isStepStaleAfterScriptEdit(client, this.logger, {
+        runId,
+        step: 'rendering_voice',
+        capturedRevision,
+      });
+      if (stale) return;
 
       const repairing = await enforceAudioBudget(
         this.scriptRepair,

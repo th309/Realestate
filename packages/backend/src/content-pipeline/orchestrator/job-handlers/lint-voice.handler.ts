@@ -1,9 +1,13 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '../../../supabase/supabase.service';
 import { RunOrchestratorService } from '../run-orchestrator.service';
 import { ScriptRepairService } from '../script-repair.service';
 import { BrandVoiceLinterService } from '../../gates/brand-voice-linter.service';
 import { ScriptGateViolation } from '../../drivers/script-generator.interface';
+import {
+  captureScriptRevision,
+  isStepStaleAfterScriptEdit,
+} from './stale-script-revision-guard';
 
 interface LinterViolation {
   claim?: { quote?: string; subject?: string };
@@ -20,6 +24,8 @@ function toGateViolations(
 
 @Injectable()
 export class LintVoiceHandler {
+  private readonly logger = new Logger(LintVoiceHandler.name);
+
   constructor(
     private readonly orchestrator: RunOrchestratorService,
     private readonly scriptRepair: ScriptRepairService,
@@ -30,6 +36,11 @@ export class LintVoiceHandler {
   async handle(runId: string): Promise<void> {
     try {
       const client = this.supabase.getClient();
+      // The LLM judge call below is slow enough to be edited across. This is
+      // also the handler that produced the reported symptom: transitionTo
+      // ('rendering_voice') is illegal from verifying_data, so an unguarded
+      // stale linter throws, hits the catch, and fails the restarted run.
+      const capturedRevision = await captureScriptRevision(client, runId);
       const { data: scriptAsset } = await client
         .from('content_assets')
         .select('metadata')
@@ -46,6 +57,17 @@ export class LintVoiceHandler {
           ? 'warned'
           : 'passed'
         : 'failed';
+      // Terminal-write boundary. Guards all three exits at once: the gate row,
+      // the onward transition, and scriptRepair.attemptRepair — that last one
+      // transitions to `scripting`, which verifying_data also rejects, so a
+      // stale repair attempt fails the run just as hard as a stale pass.
+      const stale = await isStepStaleAfterScriptEdit(client, this.logger, {
+        runId,
+        step: 'linting_voice',
+        capturedRevision,
+      });
+      if (stale) return;
+
       await client.from('content_run_gates').insert({
         run_id: runId,
         gate: 'brand_voice_linter',

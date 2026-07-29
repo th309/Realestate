@@ -8,6 +8,7 @@ import { PlatformOAuthCallbackController } from './platform-oauth-callback.contr
 import { ContentRunsService } from './content-runs.service';
 import { ContentPipelineQueriesService } from './content-pipeline-queries.service';
 import { RunActionsService } from './run-actions.service';
+import { RunDeleteService } from './run-delete.service';
 import { RunThumbnailService } from './run-thumbnail.service';
 import { RunMediaSlotService } from './media/run-media-slot.service';
 import { MagnetLibraryService } from './magnets/magnet-library.service';
@@ -130,6 +131,7 @@ import { CONTENT_PIPELINE_ANALYTICS_PROVIDERS } from './content-pipeline-analyti
     ContentRunsService,
     ContentPipelineQueriesService,
     RunActionsService,
+    RunDeleteService,
     RunThumbnailService,
     RunMediaSlotService,
     CopySuggestService,

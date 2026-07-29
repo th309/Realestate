@@ -5,6 +5,10 @@ import {
   getAssetSignedUrl as getAssetSignedUrlFn,
   SignedAssetKind,
 } from './asset-signing';
+import {
+  getFormatSampleVideos as getFormatSampleVideosFn,
+  type FormatSampleVideo,
+} from './format-sample-videos';
 import { AutoIdeationService } from './auto-ideation/auto-ideation.service';
 import { CostCapService } from './auto-ideation/cost-cap.service';
 import { PostsService } from './posts/posts.service';
@@ -29,68 +33,9 @@ export class ContentPipelineQueriesService {
     private readonly posts: PostsService,
   ) {}
 
-  /**
-   * For each format, return a signed URL to the most recent successful
-   * run's video_master so the /new wizard's format picker can show what
-   * the format ACTUALLY produces today (instead of the static MP4
-   * baked into /public/format-previews/ at P1 time).
-   *
-   * Picks the newest run in published / published_partial /
-   * ready_for_review state per format. Returns null for any format that
-   * hasn't produced a video yet — caller falls back to the static MP4.
-   *
-   * Caps at 200 most-recent runs scanned to avoid hammering the DB once
-   * the run table grows.
-   */
-  async getFormatSampleVideos(): Promise<
-    Record<
-      string,
-      { runId: string; marketName: string; videoUrl: string | null }
-    >
-  > {
-    const client = this.supabase.getClient();
-    const { data: runs } = await client
-      .from('content_runs')
-      .select('id, format, market_query, status, created_at')
-      .in('status', ['published', 'published_partial', 'ready_for_review'])
-      .order('created_at', { ascending: false })
-      .limit(200);
-    if (!runs || runs.length === 0) return {};
-
-    const byFormat = new Map<
-      string,
-      { id: string; format: string; market_query: string }
-    >();
-    for (const r of runs) {
-      const fmt = r.format as string;
-      if (!byFormat.has(fmt)) {
-        byFormat.set(fmt, {
-          id: r.id as string,
-          format: fmt,
-          market_query: (r.market_query as string) ?? 'Unknown',
-        });
-      }
-    }
-
-    const result: Record<
-      string,
-      { runId: string; marketName: string; videoUrl: string | null }
-    > = {};
-    await Promise.all(
-      Array.from(byFormat.entries()).map(async ([format, run]) => {
-        const signed = await getAssetSignedUrlFn(
-          client,
-          run.id,
-          'video_master',
-        );
-        result[format] = {
-          runId: run.id,
-          marketName: run.market_query,
-          videoUrl: signed?.url ?? null,
-        };
-      }),
-    );
-    return result;
+  /** Delegates to `format-sample-videos.ts` — see that file for selection rules. */
+  getFormatSampleVideos(): Promise<Record<string, FormatSampleVideo>> {
+    return getFormatSampleVideosFn(this.supabase.getClient());
   }
 
   async getDashboard(
@@ -228,12 +173,32 @@ export class ContentPipelineQueriesService {
       client.from('platform_posts').select('*').eq('run_id', runId),
     ]);
     if (run.error || !run.data) throw new Error('run not found');
+
+    // Pace columns for the script editor's duration meter. Derived exactly as
+    // synthesize-audio.handler.ts does it, so the number the operator sees
+    // while typing is the number enforce-audio-budget will check against.
+    // Infographic runs have no format_templates row by design — `null` there,
+    // and the editor simply renders without a meter.
+    const { data: fmt } = await client
+      .from('format_templates')
+      .select('duration_seconds, audio_buffer_seconds, natural_wpm')
+      .eq('format', run.data.format)
+      .maybeSingle();
+
     return {
       run: run.data,
       assets: assets.data ?? [],
       events: events.data ?? [],
       gates: gates.data ?? [],
       posts: posts.data ?? [],
+      scriptBudget: fmt
+        ? {
+            capSeconds: fmt.duration_seconds - fmt.audio_buffer_seconds,
+            durationSeconds: fmt.duration_seconds,
+            audioBufferSeconds: fmt.audio_buffer_seconds,
+            naturalWpm: fmt.natural_wpm,
+          }
+        : null,
     };
   }
 

@@ -2,11 +2,17 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { cancelRun, fetchRun, retryRun } from "../../lib/content-pipeline-api";
+import {
+  cancelRun,
+  fetchRun,
+  retryRun,
+  type PipelineStatus,
+} from "../../lib/content-pipeline-api";
 import { PipelineVisualization } from "./pipeline-visualization";
 import { EventLog } from "./event-log";
 import { ArtifactsPanel } from "./artifacts-panel";
 import { GateReviewCallout } from "./gate-review-callout";
+import { ScriptPanel } from "./script-panel";
 import { StatusChip } from "../../components/home/StatusChip";
 
 // Stop auto-refetch in these states — polling isn't useful because the run
@@ -61,15 +67,16 @@ export default function RunDetailPage() {
 
   if (!data) return <div className="p-8">Loading...</div>;
 
-  const eventsByType = new Map<string, string>();
-  for (const e of data.events as any[]) {
-    if (e.event_type === "status_changed" && e.payload?.to) {
-      eventsByType.set(
-        e.payload.to,
-        new Date(e.created_at).toLocaleTimeString(),
-      );
-    }
-  }
+  // Ordered, not collapsed into a per-status map: an operator script edit can
+  // send a run backwards, so the same status can be entered more than once and
+  // the visualization needs the sequence to tell where a halted run stopped.
+  // `events` arrives ordered by created_at ascending.
+  const statusHistory = (data.events as any[])
+    .filter((e) => e.event_type === "status_changed" && e.payload?.to)
+    .map((e) => ({
+      status: e.payload.to as PipelineStatus,
+      at: new Date(e.created_at).toLocaleTimeString(),
+    }));
 
   const isFailed = data.run.status === "failed";
   const canCancel = !TRULY_TERMINAL.includes(data.run.status);
@@ -137,7 +144,7 @@ export default function RunDetailPage() {
       <PipelineVisualization
         status={data.run.status}
         format={data.run.format}
-        eventsByType={eventsByType}
+        statusHistory={statusHistory}
         trailing={
           canCancel ? (
             <button
@@ -151,6 +158,8 @@ export default function RunDetailPage() {
           ) : null
         }
       />
+
+      <ScriptPanel runId={id} data={data} />
 
       <div className="grid grid-cols-[1fr_320px] gap-6">
         <ArtifactsPanel runId={id} assets={data.assets} />

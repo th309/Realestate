@@ -2,7 +2,7 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   fetchAssetSignedUrl,
-  displayScriptText,
+  type ContentAsset,
 } from "../../lib/content-pipeline-api";
 
 export function ArtifactsPanel({
@@ -10,25 +10,16 @@ export function ArtifactsPanel({
   assets,
 }: {
   runId: string;
-  assets: Array<{ kind: string; storage_url: string; metadata: any }>;
+  assets: ContentAsset[];
 }) {
-  const script = assets.find((a) => a.kind === "script");
+  // The script moved to ScriptPanel, which renders it editable with a duration
+  // meter. Duplicating it read-only here would show the {{SHORT_LINK}} template
+  // in one place and its rendered form in the other.
   const audio = assets.find((a) => a.kind === "audio");
   const video = assets.find((a) => a.kind === "video_master");
 
   return (
     <div className="space-y-6">
-      {script && (
-        <section>
-          <h3 className="font-semibold mb-2">Script</h3>
-          <pre className="bg-surface-container-low rounded-xl p-4 text-sm whitespace-pre-wrap">
-            {displayScriptText(
-              script.metadata?.scripts?.[0]?.fullText,
-              "pending...",
-            )}
-          </pre>
-        </section>
-      )}
       {audio && (
         <section>
           <h3 className="font-semibold mb-2">Voice</h3>

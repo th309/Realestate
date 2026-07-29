@@ -2,6 +2,10 @@ import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '../../../supabase/supabase.service';
 import { RunOrchestratorService } from '../run-orchestrator.service';
 import { DataVerifierService } from '../../gates/data-verifier.service';
+import {
+  captureScriptRevision,
+  isStepStaleAfterScriptEdit,
+} from './stale-script-revision-guard';
 
 @Injectable()
 export class VerifyDataHandler {
@@ -17,6 +21,11 @@ export class VerifyDataHandler {
     this.logger.log(`[PIPE] verify-data.handle START run=${runId}`);
     try {
       const client = this.supabase.getClient();
+      // This step is the one an edit restarts, so it races itself: saving
+      // during fact-check re-enters at verifying_data (the self-edge in
+      // ALLOWED_TRANSITIONS) and enqueues a second verifier. Only the newer
+      // one may record a verdict.
+      const capturedRevision = await captureScriptRevision(client, runId);
       const { data: runRow } = await client
         .from('content_runs')
         .select('format')
@@ -66,6 +75,17 @@ export class VerifyDataHandler {
       this.logger.log(
         `[PIPE] verify-data gate result passed=${result.passed} violations=${result.violations.length} confidenceViolations=${result.confidenceViolations?.length ?? 0}`,
       );
+
+      // Terminal-write boundary. The gate row is the durable verdict on a
+      // specific script; persisting one for text the operator has already
+      // replaced would make the review queue show a pass/fail that belongs to
+      // nothing, and the transition below would fight the restarted run.
+      const stale = await isStepStaleAfterScriptEdit(client, this.logger, {
+        runId,
+        step: 'verifying_data',
+        capturedRevision,
+      });
+      if (stale) return;
 
       await client.from('content_run_gates').insert({
         run_id: runId,

@@ -23,6 +23,12 @@ export interface GenerateLeadMagnetJob {
   };
 }
 
+/**
+ * NO script_revision guard here, deliberately. Lead magnets are rendered for a
+ * user + geography off the back of a signup, not for a content run — this
+ * handler takes no runId, reads no script, and never touches the run state
+ * machine. There is nothing for an operator's script edit to invalidate.
+ */
 @Injectable()
 export class GenerateLeadMagnetHandler {
   private readonly logger = new Logger(GenerateLeadMagnetHandler.name);
