@@ -6,33 +6,42 @@ import {
 } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { RunOrchestratorService } from './orchestrator/run-orchestrator.service';
+import { RunDeleteService } from './run-delete.service';
+import type { DeleteRunResult } from './run-delete.service';
 import type { PipelineStatus } from './types';
 import { resolveNextPipelineStepAfterReview } from './next-pipeline-step-after-review';
 
-const IN_FLIGHT_STATES: ReadonlySet<PipelineStatus> = new Set([
-  'queued',
-  'fetching_data',
+// Re-exported so existing importers of DeleteRunResult keep their import path.
+export type { DeleteRunResult };
+
+/**
+ * Stages at which a run has a script the operator can replace.
+ *
+ * Excluded, and why:
+ *   queued / fetching_data / generating_infographic — generate-script has not
+ *     run, so there is no script asset to edit.
+ *   publishing — posting is irreversible; restarting mid-publish risks
+ *     double-posting.
+ *   published / published_partial / rejected / cancelled / infographic_ready —
+ *     terminal.
+ */
+const SCRIPT_EDITABLE_STATES: ReadonlySet<PipelineStatus> = new Set([
   'scripting',
   'verifying_data',
   'linting_voice',
   'rendering_voice',
   'timing_captions',
   'rendering_video',
-  'publishing',
+  'ready_for_review',
+  'failed',
 ] as const);
-
-export type DeleteRunResult = {
-  action: 'deleted';
-  previousStatus: PipelineStatus;
-  wasInFlight: boolean;
-  cascade: { storageObjects: number; platformsLive: string[] };
-};
 
 /**
  * Operator-driven mutations on existing runs: approve, reject, cancel,
  * retry, and edit-script-then-relint. Reads live in
  * `content-pipeline-queries.service.ts`; new-run creation lives in
- * `content-runs.service.ts`.
+ * `content-runs.service.ts`; the delete cascade lives in
+ * `run-delete.service.ts`.
  */
 @Injectable()
 export class RunActionsService {
@@ -41,6 +50,7 @@ export class RunActionsService {
   constructor(
     private readonly supabase: SupabaseService,
     private readonly orchestrator: RunOrchestratorService,
+    private readonly runDelete: RunDeleteService,
   ) {}
 
   async approveRun(runId: string): Promise<void> {
@@ -108,15 +118,52 @@ export class RunActionsService {
     return { nextStatus: next };
   }
 
+  /**
+   * Replace a run's script and re-enter the pipeline.
+   *
+   * Editable at every stage where a script asset exists. Saving from a
+   * mid-flight state restarts the run at `verifying_data` so the edited claims
+   * are fact-checked again; the worker still running against the old text
+   * discards itself on the `script_revision` check rather than clobbering the
+   * restart.
+   *
+   * From `ready_for_review` the historic resolver still decides the target
+   * (`verifying_data` when the data verifier last failed, else `linting_voice`)
+   * — the review queue depends on that behaviour and on the `{ nextStatus }`
+   * response shape.
+   *
+   * Order matters: the status guard runs BEFORE the write. Previously the asset
+   * was overwritten first and `transitionTo` threw afterwards on an illegal
+   * transition, which persisted the edit, returned a 500, and left the run in
+   * its original state.
+   */
   async editScript(
     runId: string,
     variantId: 'A' | 'B',
     newFullText: string,
   ): Promise<{ nextStatus: PipelineStatus }> {
     const client = this.supabase.getClient();
-    const nextStatus = await this.nextPipelineStepAfterReview(runId, {
-      mode: 'edit_script',
-    });
+
+    const { data: run, error: runError } = await client
+      .from('content_runs')
+      .select('status')
+      .eq('id', runId)
+      .maybeSingle();
+    if (runError || !run) throw new NotFoundException(`run ${runId} not found`);
+
+    const status = run.status as PipelineStatus;
+    if (!SCRIPT_EDITABLE_STATES.has(status)) {
+      throw new BadRequestException(
+        `edit_script_invalid_state: status is ${status}, which has no editable script`,
+      );
+    }
+
+    // `ready_for_review` keeps the historic gate-aware resolution; every other
+    // stage restarts at fact-check because the script changed under it.
+    const nextStatus: PipelineStatus =
+      status === 'ready_for_review'
+        ? await this.nextPipelineStepAfterReview(runId, { mode: 'edit_script' })
+        : 'verifying_data';
 
     const { data: scriptAsset, error } = await client
       .from('content_assets')
@@ -124,7 +171,8 @@ export class RunActionsService {
       .eq('run_id', runId)
       .eq('kind', 'script')
       .single();
-    if (error || !scriptAsset) throw new Error('script asset not found');
+    if (error || !scriptAsset)
+      throw new NotFoundException(`script asset not found for run ${runId}`);
 
     const existingMetadata = (scriptAsset.metadata ?? {}) as Record<
       string,
@@ -135,9 +183,30 @@ export class RunActionsService {
       fullText: string;
       [key: string]: unknown;
     }>;
+    if (!scripts.some((s) => s.variantId === variantId)) {
+      throw new BadRequestException(
+        `edit_script_unknown_variant: run ${runId} has no variant ${variantId}`,
+      );
+    }
     const updated = scripts.map((s) =>
       s.variantId === variantId ? { ...s, fullText: newFullText } : s,
     );
+
+    // Re-read the status immediately before writing. `transitionTo` validates
+    // again at the end, but by then the asset is already committed — if a worker
+    // advanced the run between the guard above and here, we would persist an
+    // edit and then throw. Checking at the last moment shrinks that window to
+    // the writes themselves.
+    const { data: current } = await client
+      .from('content_runs')
+      .select('status')
+      .eq('id', runId)
+      .maybeSingle();
+    if (current && current.status !== status) {
+      throw new BadRequestException(
+        `edit_script_status_moved: run advanced from ${status} to ${current.status} while editing — reload and try again`,
+      );
+    }
 
     await client
       .from('content_assets')
@@ -145,10 +214,34 @@ export class RunActionsService {
       .eq('run_id', runId)
       .eq('kind', 'script');
 
+    // Keep `hook_variants` in step — generate-script writes the same array there
+    // and this method used to leave that copy stale after every edit.
+    await client
+      .from('content_runs')
+      .update({ hook_variants: updated })
+      .eq('id', runId);
+
+    // Bump the epoch so any in-flight handler discards its result. Done in the
+    // database (see migration 20260729143000): a read-modify-write here would
+    // let two concurrent edits collapse into a single revision, which is exactly
+    // the case the guard exists to catch.
+    const { data: revision, error: revisionError } = await client.rpc(
+      'increment_script_revision',
+      { p_run_id: runId },
+    );
+    if (revisionError) {
+      throw new Error(
+        `edit_script_revision_bump_failed: ${revisionError.message}`,
+      );
+    }
+
     await this.orchestrator.transitionTo(runId, nextStatus, {
       reason: 'operator_edit',
       enqueueNext: true,
     });
+    this.logger.log(
+      `[ACTION] edit-script run=${runId} from=${status} next=${nextStatus} rev=${revision}`,
+    );
     return { nextStatus };
   }
 
@@ -156,111 +249,8 @@ export class RunActionsService {
     await this.orchestrator.retryRun(runId);
   }
 
-  /**
-   * Unconditional hard delete. For in-flight runs (queued..publishing) we
-   * best-effort transition to `cancelled` first so any active worker sees
-   * the cancellation signal and exits cleanly; if that transition fails
-   * (e.g. row already terminal, queue unavailable) we proceed with the
-   * delete anyway. Workers that finish a step after the row is gone will
-   * fail to update and log a harmless warning.
-   *
-   * FK ON DELETE CASCADE removes content_assets, content_run_events,
-   * content_run_steps, platform_posts. Storage objects are removed
-   * best-effort; partial failures are logged but don't block the response
-   * (orphaned files get swept by future cron).
-   *
-   * Does NOT take down already-published posts on social platforms — the
-   * `platform_posts.status='posted'` rows are deleted from PropertyIQ but
-   * the actual TikTok/IG/FB/LinkedIn/YouTube posts remain live.
-   */
-  async deleteRun(runId: string): Promise<DeleteRunResult> {
-    const client = this.supabase.getClient();
-    const { data: run, error: runErr } = await client
-      .from('content_runs')
-      .select('id, status')
-      .eq('id', runId)
-      .maybeSingle();
-    if (runErr) throw runErr;
-    if (!run) throw new NotFoundException(`run ${runId} not found`);
-
-    const status = run.status as PipelineStatus;
-    const wasInFlight = IN_FLIGHT_STATES.has(status);
-
-    if (wasInFlight) {
-      try {
-        await this.cancelRun(runId, 'user_deleted_in_flight');
-      } catch (e) {
-        this.logger.warn(
-          `[ACTION] delete-run cancel-step failed run=${runId}: ${(e as Error).message} — proceeding with hard delete`,
-        );
-      }
-    }
-
-    // Look up still-live platform posts before delete so we can echo back
-    // what remains on social platforms — useful for the operator's audit.
-    const { data: postedPosts } = await client
-      .from('platform_posts')
-      .select('platform')
-      .eq('run_id', runId)
-      .eq('status', 'posted');
-    const platformsLive = (postedPosts ?? []).map((p) => p.platform as string);
-
-    // Enumerate storage paths for the run before DB delete so we know what
-    // to clean up afterward (the rows vanish on cascade).
-    const { data: assets } = await client
-      .from('content_assets')
-      .select('storage_url')
-      .eq('run_id', runId);
-    const storagePaths = (assets ?? [])
-      .map((a) => {
-        const url = a.storage_url as string | null;
-        if (!url) return null;
-        const m = url.match(/^supabase:\/\/[^/]+\/(.+)$/);
-        return m ? m[1] : null;
-      })
-      .filter((p): p is string => p !== null);
-
-    // Audit trail before the cascade obliterates content_run_events.
-    await client.from('content_run_events').insert({
-      run_id: runId,
-      event_type: 'run_deleted',
-      payload: {
-        previousStatus: status,
-        platformsLive,
-        storageObjectCount: storagePaths.length,
-      },
-    });
-
-    // FK cascade handles all child rows.
-    const { error: delErr } = await client
-      .from('content_runs')
-      .delete()
-      .eq('id', runId);
-    if (delErr) throw delErr;
-
-    // Storage cleanup — best effort. Supabase remove() takes an array.
-    let cleanedStorage = 0;
-    if (storagePaths.length > 0) {
-      const { data: removed, error: removeErr } = await client.storage
-        .from('content-pipeline')
-        .remove(storagePaths);
-      if (removeErr) {
-        this.logger.warn(
-          `[ACTION] delete-run storage cleanup partial: ${removeErr.message}`,
-        );
-      } else {
-        cleanedStorage = removed?.length ?? 0;
-      }
-    }
-
-    this.logger.log(
-      `[ACTION] delete-run run=${runId} action=deleted previousStatus=${status} wasInFlight=${wasInFlight} storage=${cleanedStorage}/${storagePaths.length} platformsLive=${platformsLive.join(',') || 'none'}`,
-    );
-    return {
-      action: 'deleted',
-      previousStatus: status,
-      wasInFlight,
-      cascade: { storageObjects: cleanedStorage, platformsLive },
-    };
+  /** Delegates to RunDeleteService — see that file for the cascade semantics. */
+  deleteRun(runId: string): Promise<DeleteRunResult> {
+    return this.runDelete.deleteRun(runId);
   }
 }

@@ -5,6 +5,10 @@
  * only {hook, body, cta}. Everything here normalizes across both and builds the
  * "Make this video" handoff into the run wizard — kept React-free so it's unit
  * testable.
+ *
+ * This module reads copy for display and is deliberately one-way. Writing an
+ * edit back is the inverse problem (which of the two shapes does this row use?)
+ * and lives in `video-script-edits.ts`.
  */
 import type { PostCopy } from "../lib/posts-api";
 import { isValidRunFormat } from "../lib/format-previews";

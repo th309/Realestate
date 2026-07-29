@@ -3,6 +3,20 @@
  * All calls go through the canonical fetch layer.
  */
 import { fetchAPI, fetchAPIRaw } from "@/lib/data/fetchers/base";
+import type { RunDetail } from "./run-detail-types";
+
+// The run-detail read model lives in `run-detail-types.ts` (extracted to keep
+// this file under the 300-line hard limit) and is re-exported here.
+export type {
+  RunDetail,
+  RunRow,
+  RunEvent,
+  RunGate,
+  ContentAsset,
+  ScriptVariant,
+  RunScriptBudget,
+} from "./run-detail-types";
+export { findScriptVariant } from "./run-detail-types";
 
 export type PipelineStatus =
   | "queued"
@@ -43,8 +57,8 @@ export type ContentFormat =
 // `dashboard-api.ts` (extracted to keep this file under the 300-line hard
 // limit) and is re-exported at the bottom of this file.
 
-export async function fetchRun(id: string) {
-  const res = await fetchAPI<{ data: any }>(
+export async function fetchRun(id: string): Promise<RunDetail> {
+  const res = await fetchAPI<{ data: RunDetail }>(
     `/api/admin/content-pipeline/runs/${id}`,
   );
   return res.data;

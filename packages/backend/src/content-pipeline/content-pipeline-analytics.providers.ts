@@ -30,6 +30,7 @@ import { AutoIdeationScoreScanCron } from './crons/auto-ideation-score-scan.cron
 import { AutoIdeationRankScanCron } from './crons/auto-ideation-rank-scan.cron';
 import { AutoIdeationThresholdScanCron } from './crons/auto-ideation-threshold-scan.cron';
 import { RecoverStuckRunsCron } from './crons/recover-stuck-runs.cron';
+import { ReconcilePublishGapsCron } from './crons/reconcile-publish-gaps.cron';
 import { CleanupTransientRefsCron } from './crons/cleanup-transient-refs.cron';
 import { RefreshArchetypesCron } from './crons/refresh-archetypes.cron';
 import { FeedTopUpCron } from './crons/feed-topup.cron';
@@ -72,6 +73,7 @@ export const CONTENT_PIPELINE_ANALYTICS_PROVIDERS: Provider[] = [
   AutoIdeationRankScanCron,
   AutoIdeationThresholdScanCron,
   RecoverStuckRunsCron,
+  ReconcilePublishGapsCron,
   CleanupTransientRefsCron,
   RefreshArchetypesCron,
   FeedTopUpCron,

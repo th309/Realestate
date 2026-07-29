@@ -1,6 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { settlePublished } from './settle-published';
 import { SupabaseService } from '../../../supabase/supabase.service';
 import { RunOrchestratorService } from '../run-orchestrator.service';
+import {
+  captureScriptRevision,
+  isStepStaleAfterScriptEdit,
+} from './stale-script-revision-guard';
 import { YouTubeShortsPublisher } from '../../drivers/youtube-shorts-publisher';
 import { YouTubeLongFormPublisher } from '../../drivers/youtube-longform-publisher';
 import { join } from 'path';
@@ -11,8 +16,18 @@ import { downloadVideoToTempFile } from './youtube-publish-assets';
 import { createShortLinkForRun } from './youtube-publish-short-link';
 import { buildYouTubePublishMetadata } from './youtube-publish-metadata';
 
+/**
+ * Both lanes below check the script epoch immediately before calling the
+ * publisher, NOT before their closing transition. The title/description are
+ * built from hook_variants, so a worker holding a superseded script would post
+ * copy the operator already replaced — and once the video exists on YouTube,
+ * bailing out would orphan it with no platform_posts row to reconcile against.
+ * The upload is the last irreversible step, so the check sits in front of it.
+ */
 @Injectable()
 export class PublishYouTubeShortsHandler {
+  private readonly logger = new Logger(PublishYouTubeShortsHandler.name);
+
   constructor(
     private readonly supabase: SupabaseService,
     private readonly orchestrator: RunOrchestratorService,
@@ -34,6 +49,7 @@ export class PublishYouTubeShortsHandler {
   private async handleYouTubeShorts(runId: string): Promise<void> {
     const client = this.supabase.getClient();
     try {
+      const capturedRevision = await captureScriptRevision(client, runId);
       const { data: run } = await client
         .from('content_runs')
         .select('format, resolved_geo, hook_variants, approval_mode')
@@ -72,6 +88,14 @@ export class PublishYouTubeShortsHandler {
         script,
         lane: 'shorts',
       });
+
+      // Terminal-write boundary — see the class docblock.
+      const stale = await isStepStaleAfterScriptEdit(client, this.logger, {
+        runId,
+        step: 'publish-youtube-shorts',
+        capturedRevision,
+      });
+      if (stale) return;
 
       const result = await this.publisher.publish({
         runId,
@@ -121,9 +145,7 @@ export class PublishYouTubeShortsHandler {
         },
       });
 
-      await this.orchestrator.transitionTo(runId, 'published', {
-        enqueueNext: false,
-      });
+      await settlePublished(this.orchestrator, this.logger, runId, 'youtube');
     } catch (err) {
       await client.from('platform_posts').insert({
         run_id: runId,
@@ -141,6 +163,7 @@ export class PublishYouTubeShortsHandler {
   private async handleYouTubeLong(runId: string): Promise<void> {
     const client = this.supabase.getClient();
     try {
+      const capturedRevision = await captureScriptRevision(client, runId);
       const { data: run } = await client
         .from('content_runs')
         .select('format, resolved_geo, hook_variants, approval_mode')
@@ -193,6 +216,15 @@ export class PublishYouTubeShortsHandler {
         writeFileSync(captionsSrtPath, srtText, 'utf8');
       }
 
+      // Terminal-write boundary — see the class docblock. The SRT written just
+      // above is a temp file, so discarding here leaks nothing.
+      const stale = await isStepStaleAfterScriptEdit(client, this.logger, {
+        runId,
+        step: 'publish-youtube-long',
+        capturedRevision,
+      });
+      if (stale) return;
+
       const result = await this.longFormPublisher.publish({
         runId,
         videoPath,
@@ -242,9 +274,7 @@ export class PublishYouTubeShortsHandler {
         },
       });
 
-      await this.orchestrator.transitionTo(runId, 'published', {
-        enqueueNext: false,
-      });
+      await settlePublished(this.orchestrator, this.logger, runId, 'youtube');
     } catch (err) {
       await client.from('platform_posts').insert({
         run_id: runId,

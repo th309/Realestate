@@ -3,7 +3,14 @@
 import { useMemo } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { fetchPosts, generatePost, skipPost } from "../lib/posts-api";
+import {
+  fetchPosts,
+  generatePost,
+  skipPost,
+  type PostCopy,
+  type PostsListResult,
+} from "../lib/posts-api";
+import { useUpdatePostCopy } from "../lib/use-post-mutations";
 import { useToast } from "../lib/toast";
 import { VideoScriptCard } from "./VideoScriptCard";
 
@@ -52,6 +59,33 @@ export default function VideoScriptsPage() {
     onError: (e: Error) => toast.error(`Couldn't skip: ${e.message}`),
   });
 
+  // Reuses the pipeline's copy mutation, so an edit made here also lands in the
+  // planner and review caches. Those are the only lists it patches, though — this
+  // page has its own key, so the saved row is written back here explicitly rather
+  // than waiting on the 60s refetch. The card and its "Make this video" link both
+  // read from that row, so they update together.
+  const copyMut = useUpdatePostCopy();
+
+  function saveScriptCopy(id: string, copy: PostCopy, onSaved: () => void) {
+    copyMut.mutate(
+      { id, copy },
+      {
+        onSuccess: (saved) => {
+          qc.setQueryData<PostsListResult>(VIDEO_SCRIPTS_KEY, (old) =>
+            old
+              ? {
+                  ...old,
+                  posts: old.posts.map((p) => (p.id === id ? saved : p)),
+                }
+              : old,
+          );
+          qc.invalidateQueries({ queryKey: VIDEO_SCRIPTS_KEY });
+          onSaved();
+        },
+      },
+    );
+  }
+
   return (
     <div className="min-h-screen bg-surface text-on-surface">
       <div className="mx-auto max-w-6xl space-y-6 p-8">
@@ -93,6 +127,10 @@ export default function VideoScriptsPage() {
                 post={post}
                 onSkip={(id) => skipMut.mutate(id)}
                 skipping={skipMut.isPending && skipMut.variables === post.id}
+                onSaveCopy={saveScriptCopy}
+                savingCopy={
+                  copyMut.isPending && copyMut.variables?.id === post.id
+                }
               />
             ))}
           </div>

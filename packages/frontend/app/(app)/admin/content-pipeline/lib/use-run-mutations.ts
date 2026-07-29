@@ -4,6 +4,7 @@ import {
   approveRun,
   cancelRun,
   continuePipelineFromReview,
+  editScript,
   rejectRun,
   retryRun,
 } from "./content-pipeline-api";
@@ -100,6 +101,41 @@ export function useResumePipelineFromReview() {
     },
     onError: (err: Error) =>
       toast.error(`Continue pipeline failed: ${err.message}`),
+  });
+}
+
+/**
+ * Save a new script and let the pipeline re-enter itself.
+ *
+ * `ScriptEditor` used to call `editScript` directly with local state, so a save
+ * invalidated nothing and raised no toast — the run detail page kept showing the
+ * old text until something else refetched it. Routing through here brings it in
+ * line with every other mutation.
+ */
+export function useEditScript() {
+  const qc = useQueryClient();
+  const toast = useToast();
+  return useMutation({
+    mutationFn: ({
+      id,
+      variantId,
+      fullText,
+    }: {
+      id: string;
+      variantId: "A" | "B";
+      fullText: string;
+    }) => editScript(id, variantId, fullText),
+    onSuccess: (data, { id }) => {
+      invalidateRunListsAndDetail(qc, id);
+      invalidateRunDetailPage(qc, id);
+      toast.success(
+        data.nextStatus === "verifying_data"
+          ? "Script saved — fact-check queued"
+          : "Script saved — voice lint queued",
+      );
+    },
+    onError: (err: Error) =>
+      toast.error(`Couldn't save script: ${err.message}`),
   });
 }
 

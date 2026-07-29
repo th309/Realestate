@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { settlePublished } from './settle-published';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { writeFileSync } from 'fs';
@@ -7,6 +8,10 @@ import { SupabaseService } from '../../../supabase/supabase.service';
 import { RunOrchestratorService } from '../run-orchestrator.service';
 import { LinkedInPublisher } from '../../drivers/linkedin-publisher';
 import { LeadMagnetBindingService } from '../../magnets/lead-magnet-binding.service';
+import {
+  captureScriptRevision,
+  isStepStaleAfterScriptEdit,
+} from './stale-script-revision-guard';
 
 /**
  * Substitute the stored script's {{SHORT_LINK}} template placeholder
@@ -33,6 +38,7 @@ export class PublishLinkedInHandler {
     this.logger.log(`[PIPE] publish-linkedin.handle START run=${runId}`);
     const client = this.supabase.getClient();
     try {
+      const capturedRevision = await captureScriptRevision(client, runId);
       const { data: run } = await client
         .from('content_runs')
         .select('format, resolved_geo, hook_variants, approval_mode')
@@ -68,6 +74,17 @@ export class PublishLinkedInHandler {
       this.logger.log(
         `[PIPE] publish-linkedin run=${runId} postMode=${postMode}`,
       );
+
+      // Terminal-write boundary, before the external post rather than before
+      // the transition: the caption above comes from hook_variants, and once
+      // the share exists on LinkedIn, bailing would orphan it with no
+      // platform_posts row. Last reversible moment.
+      const stale = await isStepStaleAfterScriptEdit(client, this.logger, {
+        runId,
+        step: 'publish-linkedin',
+        capturedRevision,
+      });
+      if (stale) return;
 
       const result = await this.publisher.publish({
         runId,
@@ -126,9 +143,7 @@ export class PublishLinkedInHandler {
           format: run.format,
         },
       });
-      await this.orchestrator.transitionTo(runId, 'published', {
-        enqueueNext: false,
-      });
+      await settlePublished(this.orchestrator, this.logger, runId, 'linkedin');
     } catch (err) {
       const e = err as Error & { code?: string };
       const message = e.message ?? 'unknown';

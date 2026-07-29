@@ -19,6 +19,12 @@ import { SupabaseService } from '../../../supabase/supabase.service';
  * state machine. Publishers fall back to the platform's default thumbnail
  * when no `thumbnail` asset exists. Task 2.17 adds the operator override
  * (frame regen + manual upload) on top of this base flow.
+ *
+ * NO script_revision guard here, deliberately. Being outside the state machine
+ * is exactly what the guard protects against — this handler cannot transition a
+ * run, cannot reach handleStepFailure, and so cannot clobber a restart. A stale
+ * thumbnail is self-correcting: the restarted run renders its video again and
+ * re-enqueues this job, overwriting runs/<id>/thumbnail.png.
  */
 @Injectable()
 export class RenderThumbnailHandler {

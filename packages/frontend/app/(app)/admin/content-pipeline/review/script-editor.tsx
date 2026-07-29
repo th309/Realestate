@@ -1,7 +1,19 @@
 "use client";
 import { useState } from "react";
-import { editScript } from "../lib/content-pipeline-api";
+import { useEditScript } from "../lib/use-run-mutations";
 
+/**
+ * Modal script editor for the review queue.
+ *
+ * The run detail page has a richer inline editor (`runs/[id]/script-panel.tsx`)
+ * with a duration meter; this stays modal because the review queue is a
+ * keyboard-driven triage flow where the editor is a deliberate interruption and
+ * `onSaved` advances to the next item.
+ *
+ * Saves go through `useEditScript` so the run detail page and the queue both
+ * refresh — calling the API directly here meant a save invalidated nothing and
+ * raised no toast.
+ */
 export function ScriptEditor({
   runId,
   variantId,
@@ -16,37 +28,47 @@ export function ScriptEditor({
   onSaved: () => void;
 }) {
   const [text, setText] = useState(initial);
-  const [saving, setSaving] = useState(false);
+  const editScript = useEditScript();
 
-  async function save() {
-    setSaving(true);
-    try {
-      await editScript(runId, variantId, text);
-      onSaved();
-    } finally {
-      setSaving(false);
-    }
+  function save() {
+    if (editScript.isPending) return;
+    editScript.mutate(
+      { id: runId, variantId, fullText: text },
+      { onSuccess: () => onSaved() },
+    );
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 z-40 flex items-center justify-center p-6">
-      <div className="bg-surface rounded-xl p-6 w-full max-w-3xl shadow-lg">
-        <h3 className="font-semibold mb-4">Edit script</h3>
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 p-6">
+      <div className="w-full max-w-3xl rounded-[28px] bg-surface p-6 shadow-lg">
+        <h3 className="mb-1 font-semibold">Edit script</h3>
+        <p className="mb-4 text-sm text-on-surface-variant">
+          Saving restarts this run at fact-check.
+        </p>
         <textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
-          className="w-full h-48 rounded-lg border border-outline-variant p-4 font-mono text-sm"
+          onKeyDown={(e) => {
+            if (e.key === "Escape") onClose();
+            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) save();
+          }}
+          className="h-48 w-full rounded-lg border border-outline-variant p-4 font-mono text-sm focus-visible:border-primary focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
         />
-        <div className="flex gap-3 justify-end mt-4">
-          <button onClick={onClose} className="px-4 py-2">
+        <div className="mt-4 flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full px-4 py-2 text-sm font-medium text-on-surface-variant transition-colors duration-200 hover:bg-surface-container-high"
+          >
             Cancel
           </button>
           <button
+            type="button"
             onClick={save}
-            disabled={saving}
-            className="bg-primary text-on-primary rounded-full px-6 py-2 font-semibold disabled:opacity-50"
+            disabled={editScript.isPending}
+            className="rounded-full bg-primary px-6 py-2 font-semibold text-on-primary transition-colors duration-200 hover:bg-primary/90 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
-            {saving ? "Saving..." : "Save and re-check"}
+            {editScript.isPending ? "Saving…" : "Save and restart"}
           </button>
         </div>
       </div>

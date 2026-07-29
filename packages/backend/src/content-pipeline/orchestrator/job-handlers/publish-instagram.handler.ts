@@ -1,10 +1,15 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { settlePublished } from './settle-published';
 import { randomBytes } from 'crypto';
 import { SupabaseService } from '../../../supabase/supabase.service';
 import { RunOrchestratorService } from '../run-orchestrator.service';
 import { InstagramReelsPublisher } from '../../drivers/instagram-reels-publisher';
 import { getAssetSignedUrl } from '../../asset-signing';
 import { LeadMagnetBindingService } from '../../magnets/lead-magnet-binding.service';
+import {
+  captureScriptRevision,
+  isStepStaleAfterScriptEdit,
+} from './stale-script-revision-guard';
 
 /**
  * Substitute the stored script's {{SHORT_LINK}} template placeholder
@@ -31,6 +36,7 @@ export class PublishInstagramHandler {
     this.logger.log(`[PIPE] publish-instagram.handle START run=${runId}`);
     const client = this.supabase.getClient();
     try {
+      const capturedRevision = await captureScriptRevision(client, runId);
       const { data: run } = await client
         .from('content_runs')
         .select('format, resolved_geo, hook_variants, approval_mode')
@@ -58,6 +64,17 @@ export class PublishInstagramHandler {
       this.logger.log(
         `[PIPE] publish-instagram run=${runId} postMode=${postMode}`,
       );
+
+      // Terminal-write boundary, before the external post rather than before
+      // the transition: the caption above comes from hook_variants, and once
+      // the reel exists on Instagram, bailing would orphan it with no
+      // platform_posts row. Last reversible moment.
+      const stale = await isStepStaleAfterScriptEdit(client, this.logger, {
+        runId,
+        step: 'publish-instagram',
+        capturedRevision,
+      });
+      if (stale) return;
 
       const result = await this.publisher.publish({
         runId,
@@ -116,9 +133,7 @@ export class PublishInstagramHandler {
           format: run.format,
         },
       });
-      await this.orchestrator.transitionTo(runId, 'published', {
-        enqueueNext: false,
-      });
+      await settlePublished(this.orchestrator, this.logger, runId, 'instagram');
     } catch (err) {
       const e = err as Error & { code?: string; containerId?: string };
       const message = e.message ?? 'unknown';

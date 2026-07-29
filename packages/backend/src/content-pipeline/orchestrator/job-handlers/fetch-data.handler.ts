@@ -7,6 +7,13 @@ import {
   getMetricLabel,
 } from '../../ranking/ranking-display-metadata';
 
+/**
+ * NO script_revision guard here, deliberately. This step runs at
+ * `fetching_data`, which SCRIPT_EDITABLE_STATES excludes because
+ * generate-script has not run yet — there is no script asset for an operator
+ * to edit, so no epoch can move under this handler and its only onward
+ * transition (`scripting`) can never be raced by an edit.
+ */
 @Injectable()
 export class FetchDataHandler {
   constructor(

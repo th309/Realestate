@@ -32,6 +32,7 @@
     "@nestjs/throttler": "^6.5.0",
     "@propertyiq/analyzer-core": "*",
     "@propertyiq/emails": "*",
+    "@propertyiq/video-template": "*",
     "@sentry/nestjs": "^10.47.0",
     "@sentry/profiling-node": "^10.47.0",
     "@supabase/supabase-js": "^2.104.1",

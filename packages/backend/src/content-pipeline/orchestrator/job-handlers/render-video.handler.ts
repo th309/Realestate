@@ -14,6 +14,10 @@ import { loadLongFormRenderPlan } from './long-form-render-plan-loader';
 import { buildRenderVideoProps } from './render-video-props';
 import { CostCapService } from '../../auto-ideation/cost-cap.service';
 import { recordDriverSpend } from './record-driver-spend';
+import {
+  captureScriptRevision,
+  isStepStaleAfterScriptEdit,
+} from './stale-script-revision-guard';
 
 @Injectable()
 export class RenderVideoHandler {
@@ -36,6 +40,11 @@ export class RenderVideoHandler {
     );
     try {
       const client = this.supabase.getClient();
+      // Remotion is budgeted 360s, the longest stage in the pipeline. The
+      // composition embeds the narration audio and the caption words, so the
+      // rendered file is script-derived even though this handler never reads
+      // the script text directly.
+      const capturedRevision = await captureScriptRevision(client, runId);
       const { data: run } = await client
         .from('content_runs')
         .select('format, resolved_geo, hook_variants')
@@ -175,6 +184,18 @@ export class RenderVideoHandler {
       this.logger.log(
         `[PIPE] render-video run=${runId} result.videoPath=${result.videoPath} durationMs=${result.durationMs} renderWallMs=${result.renderWallMs}`,
       );
+
+      // Terminal-write boundary. The upload writes runs/<id>/video.mp4 with
+      // upsert:true, so a stale render silently becomes the run's master video
+      // — the operator would review, approve and publish a video of the script
+      // they replaced. handleStepSuccess further down would also push the
+      // restarted run straight from verifying_data to linting_voice.
+      const stale = await isStepStaleAfterScriptEdit(client, this.logger, {
+        runId,
+        step: 'rendering_video',
+        capturedRevision,
+      });
+      if (stale) return;
 
       const storageUrl = await this.uploadToStorage(runId, result.videoPath);
       this.logger.log(

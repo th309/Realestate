@@ -4,6 +4,20 @@ import { PipelineStatus } from '../types';
 // at any point before the pipeline reaches a natural terminal. Terminal
 // states (including `cancelled` itself) accept no further transitions —
 // a cancelled run cannot be resumed; the operator creates a fresh run.
+// OPERATOR SCRIPT EDITS
+// An operator may edit the script at any stage where a script asset exists, and
+// saving re-enters the pipeline at `verifying_data` so the edited claims get
+// fact-checked again. That is why `verifying_data` appears as a legal target
+// from mid-flight states it would never follow in normal operation. Those edges
+// are reachable ONLY via RunActionsService.editScript.
+//
+// `queued` and `fetching_data` are absent by design: generate-script has not run
+// yet, so there is no script to edit. `publishing` is absent deliberately —
+// posting is irreversible and restarting mid-publish risks double-posting.
+//
+// The zombie-worker race these edges create is handled by
+// content_runs.script_revision (migration 20260729143000), which handlers check
+// before their terminal write.
 export const ALLOWED_TRANSITIONS: Record<PipelineStatus, PipelineStatus[]> = {
   queued: ['fetching_data', 'generating_infographic', 'cancelled'],
   // Infographic lane. The local NotebookLM worker owns these transitions and
@@ -12,7 +26,15 @@ export const ALLOWED_TRANSITIONS: Record<PipelineStatus, PipelineStatus[]> = {
   infographic_ready: [],
   fetching_data: ['scripting', 'failed', 'cancelled'],
   scripting: ['verifying_data', 'failed', 'cancelled'],
-  verifying_data: ['linting_voice', 'ready_for_review', 'failed', 'cancelled'],
+  // Self-edge: editing while fact-check is running restarts fact-check against
+  // the new text. The in-flight verifier discards itself on the revision check.
+  verifying_data: [
+    'verifying_data',
+    'linting_voice',
+    'ready_for_review',
+    'failed',
+    'cancelled',
+  ],
   // `scripting` is reachable from `linting_voice` via the script-repair loop:
   // when the brand-voice gate fails and the run still has retry budget,
   // ScriptRepairService transitions back to scripting with the violations
@@ -21,6 +43,7 @@ export const ALLOWED_TRANSITIONS: Record<PipelineStatus, PipelineStatus[]> = {
     'rendering_voice',
     'ready_for_review',
     'scripting',
+    'verifying_data',
     'failed',
     'cancelled',
   ],
@@ -33,11 +56,18 @@ export const ALLOWED_TRANSITIONS: Record<PipelineStatus, PipelineStatus[]> = {
     'timing_captions',
     'rendering_video',
     'scripting',
+    'verifying_data',
     'failed',
     'cancelled',
   ],
-  timing_captions: ['rendering_video', 'failed', 'cancelled'],
-  rendering_video: ['publishing', 'ready_for_review', 'failed', 'cancelled'],
+  timing_captions: ['rendering_video', 'verifying_data', 'failed', 'cancelled'],
+  rendering_video: [
+    'publishing',
+    'ready_for_review',
+    'verifying_data',
+    'failed',
+    'cancelled',
+  ],
   ready_for_review: [
     'publishing',
     'linting_voice',
@@ -49,7 +79,12 @@ export const ALLOWED_TRANSITIONS: Record<PipelineStatus, PipelineStatus[]> = {
   published: [],
   published_partial: [],
   rejected: [],
-  failed: ['queued'],
+  // `verifying_data` is how a failed run comes back to life after the operator
+  // shortens an over-budget script. This is the common case: audio overflow is
+  // the one repair-exhausted path that lands in `failed` rather than
+  // `ready_for_review`, so before this edge existed there was no way to fix the
+  // script that caused it. (`queued` remains the full-restart path via retryRun.)
+  failed: ['queued', 'verifying_data'],
   cancelled: [],
 };
 
