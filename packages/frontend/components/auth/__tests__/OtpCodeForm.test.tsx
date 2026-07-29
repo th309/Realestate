@@ -190,4 +190,84 @@ describe("OtpCodeForm", () => {
     renderForm({ autoFocus: false });
     expect(screen.getByLabelText(/verification code/i)).not.toHaveFocus();
   });
+
+  /**
+   * Measured 2026-07-29 over 90 days: 23 sessions reached this screen, 12
+   * verified, 3 attempted without ever verifying (one burning all 5 attempts),
+   * and 8 never entered a code. The form emitted `_attempt`, `_verified` and
+   * `_resent` only — so a rejected code was recorded as an attempt with no
+   * matching success, and exhausting the cap was indistinguishable from
+   * walking away. Zero `_resent` events across all 23 sessions is either
+   * "nobody needed a new code" or "resend is broken", and nothing in the data
+   * separated those. Every branch that shows the user an error now emits one.
+   */
+  describe("failure instrumentation", () => {
+    beforeEach(() => trackEventSpy.mockClear());
+
+    it("emits a failed event carrying the attempt number on a rejected code", async () => {
+      verify.mockResolvedValue({
+        error: { message: "Token has expired or is invalid" },
+        session: null,
+      });
+      renderForm();
+      fireEvent.change(screen.getByLabelText(/verification code/i), {
+        target: { value: "000000" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: /^verify$/i }));
+
+      await waitFor(() => {
+        expect(trackEventSpy).toHaveBeenCalledWith(
+          "conversion.test_otp_failed",
+          { attempt: 1 },
+        );
+      });
+    });
+
+    it("emits an exhausted event when the attempt cap is reached", async () => {
+      verify.mockResolvedValue({
+        error: { message: "Token has expired or is invalid" },
+        session: null,
+      });
+      renderForm();
+      const input = screen.getByLabelText(/verification code/i);
+      for (let i = 0; i < 5; i++) {
+        fireEvent.change(input, { target: { value: "000000" } });
+        fireEvent.click(screen.getByRole("button", { name: /^verify$/i }));
+        await waitFor(() => expect(verify).toHaveBeenCalledTimes(i + 1));
+      }
+
+      expect(trackEventSpy).toHaveBeenCalledWith(
+        "conversion.test_otp_exhausted",
+        { attempts: 5 },
+      );
+    });
+
+    it("emits a categorised resend_failed event when requesting a new code errors", async () => {
+      resend.mockResolvedValue({ error: { message: "rate limit exceeded" } });
+      renderForm();
+      fireEvent.click(screen.getByRole("button", { name: /resend code/i }));
+
+      await waitFor(() => {
+        expect(trackEventSpy).toHaveBeenCalledWith(
+          "conversion.test_otp_resend_failed",
+          { reason: "rate_limited" },
+        );
+      });
+    });
+
+    it("categorises a non-rate-limit resend failure as other, never the raw message", async () => {
+      resend.mockResolvedValue({
+        error: { message: "smtp upstream refused sender bob@example.com" },
+      });
+      renderForm();
+      fireEvent.click(screen.getByRole("button", { name: /resend code/i }));
+
+      await waitFor(() => {
+        expect(trackEventSpy).toHaveBeenCalledWith(
+          "conversion.test_otp_resend_failed",
+          { reason: "other" },
+        );
+      });
+    });
+  });
 });

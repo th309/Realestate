@@ -26,6 +26,18 @@ export function friendlyOtpError(message: string): string {
   return message;
 }
 
+/**
+ * Reduce a resend failure to a fixed category for analytics.
+ *
+ * Same allow-list discipline as `classifyAuthError`: provider messages are
+ * freeform upstream text that can interpolate account details (an SMTP
+ * rejection quotes the sender address), so the raw string must never reach the
+ * shared `user_events` store. Anything unrecognised collapses to "other".
+ */
+export function classifyResendError(message: string): "rate_limited" | "other" {
+  return message.toLowerCase().includes("rate") ? "rate_limited" : "other";
+}
+
 export interface OtpCodeFormProps {
   /** Email the code was sent to — passed through to `verify`/shown nowhere here. */
   email: string;
@@ -84,6 +96,16 @@ export function OtpCodeForm({
     if (vErr || !session) {
       const next = attempts + 1;
       setAttempts(next);
+      // A bare `_attempt` with no matching `_verified` was the only trace a
+      // rejected code left, so "entered a wrong code" and "closed the tab
+      // mid-verify" produced identical data. Emit the rejection itself.
+      trackEvent(`${eventPrefix}_failed`, { attempt: next });
+      if (next >= OTP_MAX_ATTEMPTS) {
+        // Hard lockout — the visitor cannot proceed without a new code. Kept
+        // separate from `_failed` because it is a dead end, not a retry.
+        trackEvent(`${eventPrefix}_exhausted`, { attempts: next });
+        flush();
+      }
       setError(
         next >= OTP_MAX_ATTEMPTS
           ? "Too many attempts. Request a new code below."
@@ -104,6 +126,13 @@ export function OtpCodeForm({
     const { error: rErr } = await resend();
     setResending(false);
     if (rErr) {
+      // Zero `_resent` events across 90 days is ambiguous between "nobody
+      // needed a new code" and "resend always fails". Only a failure event
+      // distinguishes them. Category only — never the raw provider string.
+      trackEvent(`${eventPrefix}_resend_failed`, {
+        reason: classifyResendError(rErr.message),
+      });
+      flush();
       setError(
         rErr.message.toLowerCase().includes("rate")
           ? "Please wait a moment before requesting another code."

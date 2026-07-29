@@ -7,6 +7,7 @@ import type { Session } from "@supabase/supabase-js";
 import { useAuth } from "@/lib/auth";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { trackEvent, flush } from "@/lib/analytics/tracker";
+import { createSignupPathEngagementTracker } from "@/lib/analytics/signup-path-engagement";
 import {
   allRequirementsMet,
   classifyAuthError,
@@ -15,6 +16,7 @@ import {
 import { OtpConfirmation } from "./OtpConfirmation";
 import { SignUpCredentialsForm } from "./SignUpCredentialsForm";
 import { completeSignup } from "./complete-signup";
+import { classifySignupResult } from "./signup-result";
 
 export default function SignUpPage() {
   return (
@@ -56,6 +58,14 @@ function SignUpContent() {
   useEffect(() => {
     trackEvent("conversion.signup_start", { redirect_to: redirectTo });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // signup_start fires on mount, before a path is chosen, so it cannot say
+  // whether an abandonment belongs to the email form or the Google button. The
+  // OAuth side already announces itself (signup_oauth_click); this is the email
+  // side's equivalent. Lazy useState initialiser so the latch is created once
+  // per mount and survives re-renders — a ref would work equally well, but the
+  // stored value here IS the marker function returned by the factory.
+  const [markEmailPathEngaged] = useState(createSignupPathEngagementTracker);
 
   // Restore the OTP screen after a refresh. Runs client-only AFTER hydration so
   // the server and first client render match (no hydration mismatch); the
@@ -120,7 +130,16 @@ function SignUpContent() {
       user,
     } = await signUp(email, password, redirectTo);
 
-    if (authError) {
+    // One exhaustive verdict instead of a chain ending in an implicit "else it
+    // must have worked". That else is what let a null user be announced as a
+    // sent confirmation code — see signup-result.ts.
+    const outcome = classifySignupResult({
+      error: authError,
+      session,
+      user,
+    });
+
+    if (authError && outcome === "error") {
       // Category only — never the raw provider string (see classifyAuthError).
       trackEvent("conversion.signup_submit_error", {
         reason: classifyAuthError(authError.message),
@@ -132,7 +151,7 @@ function SignUpContent() {
     }
 
     // Autoconfirm path (rare in prod): a session is returned immediately.
-    if (session) {
+    if (session && outcome === "autoconfirmed") {
       const destination = await completeSignup(session, {
         email,
         explicitRedirect,
@@ -145,9 +164,19 @@ function SignUpContent() {
 
     // Already-registered (confirmed) users get an obfuscated user with no
     // identities and no session — route them to sign in, don't show OTP.
-    if (user && (user.identities?.length ?? 0) === 0) {
+    if (outcome === "already_registered") {
       trackSubmitBlocked("already_registered");
       setError("This email is already registered. Please sign in instead.");
+      setLoading(false);
+      return;
+    }
+
+    // No error, no session, no user. Nothing was created and no code was sent,
+    // so showing the code screen strands the visitor waiting on an email that
+    // will never arrive — and logs a pending confirmation that never happened.
+    if (outcome === "no_user") {
+      trackSubmitBlocked("no_user_returned");
+      setError("Something went wrong creating your account. Please try again.");
       setLoading(false);
       return;
     }
@@ -244,15 +273,27 @@ function SignUpContent() {
         ) : (
           <SignUpCredentialsForm
             email={email}
-            onEmailChange={setEmail}
+            onEmailChange={(value) => {
+              markEmailPathEngaged("email");
+              setEmail(value);
+            }}
             password={password}
-            onPasswordChange={setPassword}
+            onPasswordChange={(value) => {
+              markEmailPathEngaged("password");
+              setPassword(value);
+            }}
             confirmPassword={confirmPassword}
-            onConfirmPasswordChange={setConfirmPassword}
+            onConfirmPasswordChange={(value) => {
+              markEmailPathEngaged("confirm_password");
+              setConfirmPassword(value);
+            }}
             loading={loading}
             error={error}
             tosAccepted={tosAccepted}
-            onTosAcceptedChange={setTosAccepted}
+            onTosAcceptedChange={(value) => {
+              markEmailPathEngaged("tos");
+              setTosAccepted(value);
+            }}
             tosRef={tosRef}
             tosError={tosError}
             explicitRedirect={explicitRedirect}
