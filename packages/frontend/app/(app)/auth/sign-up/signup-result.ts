@@ -31,6 +31,20 @@ export type SignupOutcome =
   /** Brand-new or existing-unconfirmed: a 6-digit code really was sent. */
   | "awaiting_otp";
 
+/**
+ * Compile-time proof that every `SignupOutcome` has been handled.
+ *
+ * Callers must branch with a `switch` whose every case returns, then call this
+ * afterwards. If `SignupOutcome` gains a member that the switch does not
+ * cover, `value` is no longer `never` and the call fails to compile — which is
+ * the whole point. Without it, an unhandled outcome falls past the branches and
+ * lands on whatever code follows, which in the sign-up page is the "we sent you
+ * a code" path: the exact silent-default bug this module exists to remove.
+ */
+export function assertNever(value: never): never {
+  throw new Error(`Unhandled signup outcome: ${String(value)}`);
+}
+
 export function classifySignupResult(result: {
   error: unknown | null;
   session: unknown | null;

@@ -16,7 +16,7 @@ import {
 import { OtpConfirmation } from "./OtpConfirmation";
 import { SignUpCredentialsForm } from "./SignUpCredentialsForm";
 import { completeSignup } from "./complete-signup";
-import { classifySignupResult } from "./signup-result";
+import { assertNever, classifySignupResult } from "./signup-result";
 
 export default function SignUpPage() {
   return (
@@ -139,63 +139,90 @@ function SignUpContent() {
       user,
     });
 
-    if (authError && outcome === "error") {
-      // Category only — never the raw provider string (see classifyAuthError).
-      trackEvent("conversion.signup_submit_error", {
-        reason: classifyAuthError(authError.message),
-      });
-      flush();
-      setError(authError.message);
-      setLoading(false);
-      return;
+    // A switch, not an if-chain: every case returns, so the assertNever below
+    // narrows to `never` and a future SignupOutcome member cannot compile until
+    // it is handled here. An if-chain would let it fall silently into the
+    // "code was sent" path at the bottom — the same bug shape this replaced.
+    switch (outcome) {
+      case "error": {
+        // authError is non-null whenever the outcome is "error" (it is derived
+        // from exactly that field), but the link is invisible to TypeScript
+        // across the call, so fall back rather than assert non-null.
+        const message =
+          authError?.message ?? "We couldn't create your account.";
+        // Category only — never the raw provider string (see classifyAuthError).
+        trackEvent("conversion.signup_submit_error", {
+          reason: classifyAuthError(message),
+        });
+        flush();
+        setError(message);
+        setLoading(false);
+        return;
+      }
+
+      // Autoconfirm path (rare in prod): a session is returned immediately.
+      case "autoconfirmed": {
+        if (session) {
+          const destination = await completeSignup(session, {
+            email,
+            explicitRedirect,
+            redirectTo,
+            method: "email",
+          });
+          router.push(destination);
+          return;
+        }
+        // Unreachable — the outcome is derived from `session` being truthy.
+        // Stopping here is still correct: never fall through to the OTP screen.
+        setLoading(false);
+        return;
+      }
+
+      // Already-registered (confirmed) users get an obfuscated user with no
+      // identities and no session — route them to sign in, don't show OTP.
+      case "already_registered": {
+        trackSubmitBlocked("already_registered");
+        setError("This email is already registered. Please sign in instead.");
+        setLoading(false);
+        return;
+      }
+
+      // No error, no session, no user. Nothing was created and no code was
+      // sent, so showing the code screen strands the visitor waiting on an
+      // email that will never arrive — and logs a pending confirmation that
+      // never happened.
+      case "no_user": {
+        trackSubmitBlocked("no_user_returned");
+        setError(
+          "Something went wrong creating your account. Please try again.",
+        );
+        setLoading(false);
+        return;
+      }
+
+      // Brand-new OR existing-unconfirmed: Supabase sent a 6-digit OTP code.
+      // Persist the email so a refresh on the OTP screen recovers, record the
+      // funnel stage, and show the code-entry screen.
+      case "awaiting_otp": {
+        try {
+          window.sessionStorage.setItem(
+            "piq_signup_pending",
+            JSON.stringify({ email }),
+          );
+        } catch {
+          /* ignore */
+        }
+        trackEvent("conversion.signup_pending_confirmation", {
+          method: "email",
+        });
+        flush();
+        setAwaitingOtp(true);
+        setLoading(false);
+        return;
+      }
     }
 
-    // Autoconfirm path (rare in prod): a session is returned immediately.
-    if (session && outcome === "autoconfirmed") {
-      const destination = await completeSignup(session, {
-        email,
-        explicitRedirect,
-        redirectTo,
-        method: "email",
-      });
-      router.push(destination);
-      return;
-    }
-
-    // Already-registered (confirmed) users get an obfuscated user with no
-    // identities and no session — route them to sign in, don't show OTP.
-    if (outcome === "already_registered") {
-      trackSubmitBlocked("already_registered");
-      setError("This email is already registered. Please sign in instead.");
-      setLoading(false);
-      return;
-    }
-
-    // No error, no session, no user. Nothing was created and no code was sent,
-    // so showing the code screen strands the visitor waiting on an email that
-    // will never arrive — and logs a pending confirmation that never happened.
-    if (outcome === "no_user") {
-      trackSubmitBlocked("no_user_returned");
-      setError("Something went wrong creating your account. Please try again.");
-      setLoading(false);
-      return;
-    }
-
-    // Brand-new OR existing-unconfirmed: Supabase sent a 6-digit OTP code.
-    // Persist the email so a refresh on the OTP screen recovers, record the
-    // funnel stage, and show the code-entry screen.
-    try {
-      window.sessionStorage.setItem(
-        "piq_signup_pending",
-        JSON.stringify({ email }),
-      );
-    } catch {
-      /* ignore */
-    }
-    trackEvent("conversion.signup_pending_confirmation", { method: "email" });
-    flush();
-    setAwaitingOtp(true);
-    setLoading(false);
+    assertNever(outcome);
   };
 
   const handleOtpVerified = async (session: Session) => {
