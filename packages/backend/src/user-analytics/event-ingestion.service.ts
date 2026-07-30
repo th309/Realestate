@@ -4,6 +4,7 @@ import { SessionManagerService } from './session-manager.service';
 import { IdentityStitchingService } from './identity-stitching.service';
 import type { IngestableEvent, IngestionResult } from './user-analytics.types';
 import { classifySessionAtInsert } from './bot-detection';
+import { InternalUserRegistryService } from './internal-user-registry.service';
 
 @Injectable()
 export class EventIngestionService {
@@ -13,6 +14,7 @@ export class EventIngestionService {
     private readonly supabase: SupabaseService,
     private readonly sessionManager: SessionManagerService,
     private readonly identityStitching: IdentityStitchingService,
+    private readonly internalUsers: InternalUserRegistryService,
   ) {}
 
   async ingestBatch(
@@ -47,8 +49,17 @@ export class EventIngestionService {
       // emitter human on arrival. session-manager promotes both the session
       // and its events to false once the session earns it.
       const isBot = classifySessionAtInsert(clientUserAgent);
+      // Resolved ONCE per batch, not once per event: the id set is cached in
+      // memory behind a TTL, and asking per row would still cost a set lookup
+      // per row for an answer that cannot change within a batch.
+      const internalUserIds = await this.internalUsers.getInternalUserIds();
       const rows = regular.map((e) => ({
         is_bot: isBot,
+        // Per row, unlike is_bot: a batch is one HTTP request from one browser,
+        // but its events can straddle a sign-in, and only the ones carrying the
+        // user_id are provably ours at this point. session-manager promotes the
+        // earlier ones once the session is known to be internal.
+        is_internal: !!e.user_id && internalUserIds.has(e.user_id),
         client_event_id: e.client_event_id || null,
         visitor_id: e.visitor_id,
         session_id: e.session_id,

@@ -1,17 +1,28 @@
 /**
  * Analytics Tab Navigation
  *
- * Five-tab bar with M3 active indicator underline.
- * Tabs: Overview, Journeys, Retention, Acquisition, Conversion.
+ * Six-tab bar with M3 active indicator underline.
+ * Tabs: Overview, Journeys, Visitors, Retention, Acquisition, Conversion.
+ *
+ * Visitors sits next to Journeys deliberately: Journeys aggregates paths across
+ * everyone, Visitors follows one person down one of them.
  */
 
 "use client";
 
-import { BarChart3, Route, RefreshCcw, Users, TrendingUp } from "lucide-react";
+import {
+  BarChart3,
+  Route,
+  RefreshCcw,
+  Users,
+  TrendingUp,
+  UserSearch,
+} from "lucide-react";
 
 type TabId =
   | "overview"
   | "journeys"
+  | "visitors"
   | "retention"
   | "acquisition"
   | "conversion";
@@ -25,6 +36,7 @@ interface Tab {
 const TABS: Tab[] = [
   { id: "overview", label: "Overview", icon: BarChart3 },
   { id: "journeys", label: "Journeys", icon: Route },
+  { id: "visitors", label: "Visitors", icon: UserSearch },
   { id: "retention", label: "Retention", icon: RefreshCcw },
   { id: "acquisition", label: "Acquisition", icon: Users },
   { id: "conversion", label: "Conversion", icon: TrendingUp },
@@ -37,9 +49,9 @@ interface AnalyticsTabNavProps {
 
 export function AnalyticsTabNav({ activeTab, onChange }: AnalyticsTabNavProps) {
   return (
-    <div className="border-b border-outline-variant">
+    <div className="border-b border-outline-variant overflow-x-auto">
       <nav
-        className="flex gap-1"
+        className="flex gap-1 min-w-max"
         role="tablist"
         aria-label="Analytics sections"
       >
@@ -51,7 +63,7 @@ export function AnalyticsTabNav({ activeTab, onChange }: AnalyticsTabNavProps) {
               role="tab"
               aria-selected={isActive}
               onClick={() => onChange(id)}
-              className={`relative flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
+              className={`relative flex shrink-0 items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors ${
                 isActive
                   ? "text-primary"
                   : "text-on-surface-variant hover:text-on-surface hover:bg-surface-container"

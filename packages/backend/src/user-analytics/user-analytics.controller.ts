@@ -18,11 +18,15 @@ import { RetentionAnalyticsService } from './retention-analytics.service';
 import { AcquisitionAnalyticsService } from './acquisition-analytics.service';
 import { ConversionAnalyticsService } from './conversion-analytics.service';
 import { FunnelEngineService } from './funnel-engine.service';
+import { VisitorJourneyService } from './visitor-journey.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import {
   AnalyticsQueryDto,
   CreateAnnotationDto,
   CreateFunnelDto,
+  VisitorIdParamDto,
+  VisitorListQueryDto,
+  VisitorTimelineQueryDto,
 } from './dto/analytics-query.dto';
 import type { AnalyticsFilters } from './user-analytics.types';
 import { parseTrafficSegment } from './traffic-segment';
@@ -39,6 +43,7 @@ export class UserAnalyticsController {
     private readonly acquisition: AcquisitionAnalyticsService,
     private readonly conversion: ConversionAnalyticsService,
     private readonly funnelEngine: FunnelEngineService,
+    private readonly visitorJourney: VisitorJourneyService,
     private readonly supabase: SupabaseService,
   ) {}
 
@@ -88,6 +93,35 @@ export class UserAnalyticsController {
   async getConversion(@Query() query: AnalyticsQueryDto) {
     const { days, filters } = this.parseFilters(query);
     return this.conversion.getConversion(days, filters);
+  }
+
+  /**
+   * Visitor list for the Visitors tab.
+   *
+   * Declared before the `:visitorId` route so an exact `/visitors` can never be
+   * captured as an id — Nest matches in declaration order.
+   */
+  @Get('visitors')
+  async getVisitors(@Query() query: VisitorListQueryDto) {
+    const { days, filters } = this.parseFilters(query);
+    return this.visitorJourney.listVisitors(days, filters, {
+      // Only the literal string "true" opts in. An unrecognised value must
+      // widen the list back to everyone rather than silently hiding visitors.
+      onlyConverted: query.converted === 'true',
+      limit: query.limit ? parseInt(query.limit, 10) : undefined,
+    });
+  }
+
+  /** One visitor's whole journey, across every session they have had. */
+  @Get('visitors/:visitorId')
+  async getVisitorTimeline(
+    @Param() params: VisitorIdParamDto,
+    @Query() query: VisitorTimelineQueryDto,
+  ) {
+    return this.visitorJourney.getTimeline(
+      params.visitorId,
+      query.limit ? parseInt(query.limit, 10) : undefined,
+    );
   }
 
   @Post('annotations')

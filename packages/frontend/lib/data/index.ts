@@ -279,6 +279,12 @@ export {
   // Admin analytics overview
   useOverviewAnalytics,
   overviewAnalyticsQueryKey,
+
+  // Admin analytics visitors (master/detail journey explorer)
+  useVisitorList,
+  visitorListQueryKey,
+  useVisitorTimeline,
+  visitorTimelineQueryKey,
 } from "./hooks";
 
 // ============================================================================

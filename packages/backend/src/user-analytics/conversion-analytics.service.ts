@@ -11,10 +11,15 @@ import {
   queryPaywallEffectiveness,
   queryFeatureCorrelation,
   queryTierMigration,
-  queryRevenueMetrics,
   queryConversionAnnotations,
 } from './conversion-panel-queries';
+import { queryRevenueMetrics } from './conversion-revenue-queries';
 
+// v3: the paywall and feature panels changed SHAPE (resource->gate,
+// converterRate->conversionRate). A cached v2 payload deserialises into the new
+// types without complaint and then crashes on first property access, because
+// the cache stores JSON and TypeScript is not there at runtime. Any change to
+// what these panels RETURN must bump this, not just changes to what they mean.
 const CONVERSION_CACHE_TTL = 600;
 
 /**
@@ -44,7 +49,7 @@ export class ConversionAnalyticsService {
     filters: AnalyticsFilters,
   ): Promise<ConversionData> {
     const segment = filters.traffic ?? DEFAULT_TRAFFIC_SEGMENT;
-    const cacheKey = `analytics:conversion:v2:${days}:${segment}:${JSON.stringify(filters)}`;
+    const cacheKey = `analytics:conversion:v3:${days}:${segment}:${JSON.stringify(filters)}`;
     const cached = await this.redis.getByKey(cacheKey);
     if (cached) return cached as ConversionData;
 
@@ -61,8 +66,8 @@ export class ConversionAnalyticsService {
       annotations,
     ] = await Promise.all([
       this.buildFullFunnel(startDate, filters),
-      queryPaywallEffectiveness(client, startDate),
-      queryFeatureCorrelation(client, startDate),
+      queryPaywallEffectiveness(client, startDate, segment),
+      queryFeatureCorrelation(client, startDate, segment),
       queryRevenueMetrics(client),
       queryConversionAnnotations(client, startDate),
     ]);

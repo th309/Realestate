@@ -39,8 +39,17 @@ export function buildSessionUpdatePlan(args: {
   pageviewCount: number;
   exitPage: string | null;
   props: Record<string, string | undefined>;
+  /** Whether this batch identifies the session as one of ours. */
+  isInternal?: boolean;
 }): SessionUpdatePlan {
-  const { existing, events, pageviewCount, exitPage, props } = args;
+  const {
+    existing,
+    events,
+    pageviewCount,
+    exitPage,
+    props,
+    isInternal = false,
+  } = args;
 
   const previousPageCount = existing.page_count ?? 0;
   const previousFeatureCount = existing.feature_events_count ?? 0;
@@ -85,6 +94,13 @@ export function buildSessionUpdatePlan(args: {
   // definitive and outranks behaviour, so `true` is never rewritten.
   const promotesToHuman = hasHumanEvidence && existing.is_bot === null;
   if (promotesToHuman) payload['is_bot'] = false;
+
+  // One-way, and written only when true. A session commonly starts anonymous
+  // and acquires a user_id partway through, so the flag has to be promotable
+  // after insert. Writing `false` on the batches that follow would flip it
+  // straight back — the sign-in is evidence, its absence in a later batch is
+  // not counter-evidence.
+  if (isInternal) payload['is_internal'] = true;
 
   // Fill acquisition fields only where the existing row is null, so the insert
   // winner's real value is never overwritten. landing_page is deliberately

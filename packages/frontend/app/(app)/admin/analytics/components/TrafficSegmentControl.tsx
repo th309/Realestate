@@ -10,6 +10,10 @@
  * The counts are the point. A filtered number and a broken number look
  * identical unless you say what was removed — which is exactly how ~46,000
  * crawler sessions sat on this page for months reading as visitors.
+ *
+ * Internal is our own browsing, and it is the one segment worth stating even
+ * when you never select it: it is human by every behavioural test, so before it
+ * was subtracted roughly one in eight "people" on this page was us.
  */
 
 "use client";
@@ -24,7 +28,11 @@ const SEGMENTS: {
   label: string;
   hint: string;
 }[] = [
-  { value: "human", label: "People", hint: "Verified human on evidence" },
+  {
+    value: "human",
+    label: "People",
+    hint: "Verified human on evidence, excluding our own browsing",
+  },
   { value: "bot", label: "Bots", hint: "Classified automated traffic" },
   {
     value: "unclassified",
@@ -32,9 +40,14 @@ const SEGMENTS: {
     hint: "Recorded before traffic classification existed — genuinely unknown",
   },
   {
+    value: "internal",
+    label: "Internal",
+    hint: "Our own browsing — admins and the owner, signed in",
+  },
+  {
     value: "all",
     label: "Everything",
-    hint: "All recorded traffic, unfiltered",
+    hint: "All recorded traffic, including our own",
   },
 ];
 
@@ -106,6 +119,12 @@ export function TrafficSegmentControl({
             label="unclassified"
             n={counts.unclassified}
             emphasised={active === "unclassified"}
+          />
+          {" · "}
+          <SegmentCount
+            label="internal"
+            n={counts.internal}
+            emphasised={active === "internal"}
           />
           <span className="ml-1.5 text-on-surface-variant/70">
             of {formatCount(counts.total)} sessions

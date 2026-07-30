@@ -34,6 +34,7 @@ export const TRAFFIC_SEGMENTS = [
   "human",
   "bot",
   "unclassified",
+  "internal",
   "all",
 ] as const;
 
@@ -49,16 +50,24 @@ export interface AnalyticsFilters {
    * Which population every number on the page describes. Defaults to `human`
    * server-side. NOT the complement of `bot`: ~46,000 of 48,600 sessions in the
    * trailing 30 days are unclassified — written before classification existed
-   * and unknowable after the fact — so they are their own bucket.
+   * and unknowable after the fact — so they are their own bucket. `internal` is
+   * our own admin/owner browsing, subtracted from human, bot AND unclassified.
    */
   traffic?: TrafficSegment;
 }
 
-/** Session counts per classification for the current window. */
+/**
+ * Session counts per classification for the current window.
+ *
+ * The four buckets are disjoint and sum to `total`, so a number that moves
+ * between them is visibly moving rather than appearing from nowhere.
+ */
 export interface TrafficSegmentCounts {
   human: number;
   bot: number;
   unclassified: number;
+  /** Our own browsing. Excluded from the other three, not additional to them. */
+  internal: number;
   total: number;
 }
 
@@ -128,6 +137,12 @@ export interface NavigationFlow {
   fromPage: string;
   toPage: string;
   transitions: number;
+  /**
+   * Distinct visitors who made this transition — a second dimension, not a
+   * restatement of `transitions`. One visitor looping a page 26 times is 26
+   * transitions and 1 visitor.
+   */
+  visitors?: number;
 }
 
 export interface PathSequence {
@@ -238,19 +253,24 @@ export interface AcquisitionData {
 }
 
 export interface PaywallMetric {
-  resource: string;
+  /** Resolved from event properties (feature/trigger/geoLevel), not event_label. */
+  gate: string;
+  surface: string;
   views: number;
-  clicks: number;
-  ctr: number;
-  conversions: number;
+  viewers: number;
+  ctaClicks: number;
+  /** null when there were no gate views — 0/0, not a 0% click-through. */
+  ctr: number | null;
 }
 
 export interface FeatureConvMetric {
   feature: string;
-  converterRate: number;
-  nonConverterRate: number;
   users: number;
-  signalStrength: number;
+  converted: number;
+  conversionRate: number;
+  baselineRate: number;
+  /** Multiple of baseline; null when there is no baseline to divide by. */
+  lift: number | null;
 }
 
 export interface TierFlow {
@@ -270,7 +290,18 @@ export interface ConversionData {
   customFunnels: { name: string; steps: FunnelStep[] }[];
   paywallEffectiveness: PaywallMetric[];
   featureCorrelation: FeatureConvMetric[];
-  revenueMetrics: { mrr: number; arpu: number; tierDistribution: TierCount[] };
+  revenueMetrics: {
+    mrr: number;
+    /** null when nobody is billed — 0/0 is undefined, not zero. */
+    arpu: number | null;
+    tierDistribution: TierCount[];
+    compedCount?: number;
+    /** Billed but payment failing — a subset of MRR, not additional to it. */
+    dunningCount?: number;
+  };
   tierMigration: TierFlow[];
   annotations: Annotation[];
 }
+
+// Visitors tab — see ./admin-analytics-visitors.types.ts
+export * from "./admin-analytics-visitors.types";

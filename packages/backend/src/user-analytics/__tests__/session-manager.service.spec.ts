@@ -9,10 +9,13 @@
  * - Acquisition fields are backfilled only where the existing row is null, so
  *   the insert winner's real attribution is never overwritten
  * - converted is a one-way ratchet
+ * - is_internal is stamped at insert and promotable after it, since a session
+ *   routinely starts anonymous and signs in partway through
  */
 
 import { Test, TestingModule } from '@nestjs/testing';
 import { SessionManagerService } from '../session-manager.service';
+import { InternalUserRegistryService } from '../internal-user-registry.service';
 import { SupabaseService } from '../../supabase/supabase.service';
 import type { IngestableEvent } from '../user-analytics.types';
 
@@ -43,12 +46,25 @@ describe('SessionManagerService', () => {
   let insertError: { code: string; message: string } | null;
   let updateError: { message: string } | null;
   let selectError: { message: string } | null;
+  let mockInternalUsers: { isAnyInternal: jest.Mock; isInternal: jest.Mock };
+
+  /** `mock.calls` is typed `any[]`; narrowed once here rather than per assertion. */
+  const readUpdatePayload = (): Record<string, unknown> =>
+    (mockQueryBuilder.update.mock.calls as unknown[][])[0][0] as Record<
+      string,
+      unknown
+    >;
 
   beforeEach(async () => {
     existingRow = null;
     insertError = null;
     updateError = null;
     selectError = null;
+
+    mockInternalUsers = {
+      isAnyInternal: jest.fn().mockResolvedValue(false),
+      isInternal: jest.fn().mockResolvedValue(false),
+    };
 
     mockQueryBuilder = {
       from: jest.fn().mockReturnThis(),
@@ -77,6 +93,10 @@ describe('SessionManagerService', () => {
         {
           provide: SupabaseService,
           useValue: { getClient: jest.fn(() => mockQueryBuilder) },
+        },
+        {
+          provide: InternalUserRegistryService,
+          useValue: mockInternalUsers,
         },
       ],
     }).compile();
@@ -163,10 +183,7 @@ describe('SessionManagerService', () => {
 
       await service.upsertSession('s1', [pageviewEvent()]);
 
-      const payload = mockQueryBuilder.update.mock.calls[0][0] as Record<
-        string,
-        unknown
-      >;
+      const payload = readUpdatePayload();
       expect(payload).not.toHaveProperty('landing_page');
     });
 
@@ -181,10 +198,7 @@ describe('SessionManagerService', () => {
 
       await service.upsertSession('s1', [pageviewEvent()]);
 
-      const payload = mockQueryBuilder.update.mock.calls[0][0] as Record<
-        string,
-        unknown
-      >;
+      const payload = readUpdatePayload();
       expect(payload).not.toHaveProperty('entry_type');
       // Still fills the one field that genuinely was null.
       expect(payload.referrer_domain).toBe('www.google.com');
@@ -259,11 +273,77 @@ describe('SessionManagerService', () => {
 
       await service.upsertSession('s1', [pageviewEvent()]);
 
-      const payload = mockQueryBuilder.update.mock.calls[0][0] as Record<
-        string,
-        unknown
-      >;
+      const payload = readUpdatePayload();
       expect(payload).not.toHaveProperty('converted');
+    });
+  });
+
+  describe('upsertSession flags our own browsing as internal traffic', () => {
+    it('stamps is_internal false on a new session from an unknown user', async () => {
+      await service.upsertSession('s1', [pageviewEvent({ user_id: 'u-cust' })]);
+
+      expect(mockQueryBuilder.insert).toHaveBeenCalledWith(
+        expect.objectContaining({ is_internal: false }),
+      );
+    });
+
+    it('stamps is_internal true on a new session from an internal user', async () => {
+      mockInternalUsers.isAnyInternal.mockResolvedValue(true);
+
+      await service.upsertSession('s1', [
+        pageviewEvent({ user_id: 'u-admin' }),
+      ]);
+
+      expect(mockQueryBuilder.insert).toHaveBeenCalledWith(
+        expect.objectContaining({ is_internal: true }),
+      );
+    });
+
+    it('checks every event in the batch, not just the first', async () => {
+      // The pageview that opens a session carries no user_id; the sign-in
+      // event later in the same batch is the one that identifies us. Reading
+      // only events[0] would miss every admin session that began logged out.
+      await service.upsertSession('s1', [
+        pageviewEvent(),
+        pageviewEvent({ user_id: 'u-admin' }),
+      ]);
+
+      expect(mockInternalUsers.isAnyInternal).toHaveBeenCalledWith([
+        undefined,
+        'u-admin',
+      ]);
+    });
+
+    it('promotes an existing session once it becomes known', async () => {
+      mockInternalUsers.isAnyInternal.mockResolvedValue(true);
+      existingRow = {
+        session_id: 's1',
+        page_count: 1,
+        feature_events_count: 0,
+      };
+
+      await service.upsertSession('s1', [
+        pageviewEvent({ user_id: 'u-admin' }),
+      ]);
+
+      expect(mockQueryBuilder.update).toHaveBeenCalledWith(
+        expect.objectContaining({ is_internal: true }),
+      );
+    });
+
+    it('never writes is_internal false on update, which would undo a promotion', async () => {
+      // A later batch from an already-promoted session commonly carries no
+      // user_id again. Absence of the signal is not evidence against it.
+      existingRow = {
+        session_id: 's1',
+        page_count: 1,
+        feature_events_count: 0,
+      };
+
+      await service.upsertSession('s1', [pageviewEvent()]);
+
+      const payload = readUpdatePayload();
+      expect(payload).not.toHaveProperty('is_internal');
     });
   });
 });

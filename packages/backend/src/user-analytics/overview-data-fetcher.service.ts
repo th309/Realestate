@@ -144,10 +144,10 @@ export class OverviewDataFetcherService {
       this.logger.error(
         `[OverviewDataFetcher] Traffic segments rpc failed: ${error.message}`,
       );
-      return { human: 0, bot: 0, unclassified: 0, total: 0 };
+      return { human: 0, bot: 0, unclassified: 0, internal: 0, total: 0 };
     }
     const row = data?.[0] as TrafficSegmentCounts | undefined;
-    return row ?? { human: 0, bot: 0, unclassified: 0, total: 0 };
+    return row ?? { human: 0, bot: 0, unclassified: 0, internal: 0, total: 0 };
   }
 
   async fetchTopPages(

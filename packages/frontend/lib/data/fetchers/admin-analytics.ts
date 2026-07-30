@@ -16,6 +16,8 @@ import type {
   AnalyticsFilters,
   FunnelStep,
   Annotation,
+  VisitorListResult,
+  VisitorTimeline,
 } from "./admin-analytics.types";
 
 function buildQueryString(days: number, filters?: AnalyticsFilters): string {
@@ -76,6 +78,45 @@ export function fetchConversionAnalytics(
   filters?: AnalyticsFilters,
 ): Promise<ConversionData> {
   return fetchAnalytics<ConversionData>("conversion", days, filters);
+}
+
+export interface VisitorListOptions {
+  /** Restrict to visitors who completed a signup inside the window. */
+  converted?: boolean;
+  limit?: number;
+}
+
+/**
+ * Visitors for the Visitors tab, most recently active first.
+ *
+ * Inherits the shared query string, so the traffic segment travels with it and
+ * the list describes the same population as every other tab.
+ */
+export async function fetchVisitorList(
+  days: number,
+  filters?: AnalyticsFilters,
+  options: VisitorListOptions = {},
+): Promise<VisitorListResult> {
+  const params = new URLSearchParams(buildQueryString(days, filters));
+  if (options.converted) params.set("converted", "true");
+  if (options.limit) params.set("limit", String(options.limit));
+
+  const res = await fetchAPIRaw(`/api/admin/analytics/visitors?${params}`);
+  if (!res.ok) throw new Error(`Visitor list fetch failed: ${res.status}`);
+  return res.json();
+}
+
+/** One visitor's journey across every session they have had. */
+export async function fetchVisitorTimeline(
+  visitorId: string,
+  limit?: number,
+): Promise<VisitorTimeline> {
+  const qs = limit ? `?limit=${limit}` : "";
+  const res = await fetchAPIRaw(
+    `/api/admin/analytics/visitors/${encodeURIComponent(visitorId)}${qs}`,
+  );
+  if (!res.ok) throw new Error(`Visitor timeline fetch failed: ${res.status}`);
+  return res.json();
 }
 
 export async function exportAnalyticsCsv(

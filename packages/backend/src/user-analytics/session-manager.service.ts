@@ -2,6 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { IngestableEvent } from './user-analytics.types';
 import { classifySessionAtInsert } from './bot-detection';
+import { InternalUserRegistryService } from './internal-user-registry.service';
+import { mirrorSessionClassificationOntoEvents } from './event-classification-mirror';
 import {
   buildSessionUpdatePlan,
   type ExistingSessionRow,
@@ -11,7 +13,10 @@ import {
 export class SessionManagerService {
   private readonly logger = new Logger(SessionManagerService.name);
 
-  constructor(private readonly supabase: SupabaseService) {}
+  constructor(
+    private readonly supabase: SupabaseService,
+    private readonly internalUsers: InternalUserRegistryService,
+  ) {}
 
   async upsertSession(
     sessionId: string,
@@ -59,6 +64,14 @@ export class SessionManagerService {
       (e) => e.event_action === 'signup_complete',
     );
 
+    // Our own browsing, flagged at write time. Checked across every event in
+    // the batch rather than just the first: a session starts anonymous and only
+    // acquires a user_id partway through, so the first event routinely has none
+    // even when the visitor is us.
+    const isInternal = await this.internalUsers.isAnyInternal(
+      events.map((e) => e.user_id),
+    );
+
     if (!existing) {
       const { error: insertError } = await client.from('user_sessions').insert({
         session_id: sessionId,
@@ -82,6 +95,10 @@ export class SessionManagerService {
         // here is what re-contaminated the human segment within hours of the
         // backfill. Promotion to false happens below, once the session earns it.
         is_bot: classifySessionAtInsert(clientUserAgent),
+        // Two-state, unlike is_bot: an id either resolves to one of us or it
+        // does not, and "no user_id yet" is simply not-internal-so-far. The
+        // update path promotes it if a sign-in follows.
+        is_internal: isInternal,
         device_type: props['device_type'] ?? null,
         screen_width: props['screen_width']
           ? Number(props['screen_width'])
@@ -118,12 +135,17 @@ export class SessionManagerService {
       return;
     }
 
+    // Narrowed once. The select is typed loosely, and both the update plan and
+    // the event mirror below read the same row.
+    const existingRow = existing as unknown as ExistingSessionRow;
+
     const { payload: cleanPayload, promotesToHuman } = buildSessionUpdatePlan({
-      existing: existing as unknown as ExistingSessionRow,
+      existing: existingRow,
       events,
       pageviewCount,
       exitPage,
       props,
+      isInternal,
     });
 
     const { error: updateError } = await client
@@ -137,23 +159,20 @@ export class SessionManagerService {
       );
     }
 
-    // Mirror the verdict onto the session's events. They carry a denormalised
-    // copy because the event panels query user_events directly and PostgREST
-    // cannot express the join; without this, a promoted human's events stay
-    // NULL and drop out of the human segment while their session appears in it.
-    // Fires once per session, on the promotion batch only.
-    if (promotesToHuman) {
-      const { error: mirrorError } = await client
-        .from('user_events')
-        .update({ is_bot: false })
-        .eq('session_id', sessionId)
-        .is('is_bot', null);
+    // Keep the events' denormalised copies of the classification in step with
+    // the session's. See event-classification-mirror.ts for why this runs on
+    // every batch rather than only on the one that settles a verdict.
+    const failures = await mirrorSessionClassificationOntoEvents({
+      client,
+      sessionId,
+      botVerdict: promotesToHuman ? false : existingRow.is_bot,
+      isInternal,
+    });
 
-      if (mirrorError) {
-        this.logger.error(
-          `Failed to mirror classification onto events for ${sessionId}: ${mirrorError.message}`,
-        );
-      }
+    for (const failure of failures) {
+      this.logger.error(
+        `Failed to mirror ${failure} onto events for ${sessionId}`,
+      );
     }
   }
 
@@ -177,7 +196,11 @@ export class SessionManagerService {
       .eq('session_id', sessionId)
       .maybeSingle();
 
-    const nextCount = (existing?.heartbeat_count ?? 0) + 1;
+    const heartbeatRow = existing as {
+      heartbeat_count: number | null;
+      is_bot: boolean | null;
+    } | null;
+    const nextCount = (heartbeatRow?.heartbeat_count ?? 0) + 1;
 
     // A SECOND heartbeat is human evidence. The first fires at
     // EARLY_HEARTBEAT_MS (5s), which crawlers reach too because they block on
@@ -188,7 +211,7 @@ export class SessionManagerService {
       last_activity_at: new Date().toISOString(),
       heartbeat_count: nextCount,
     };
-    if (nextCount > 1 && existing?.is_bot === null) {
+    if (nextCount > 1 && heartbeatRow?.is_bot === null) {
       payload.is_bot = false;
     }
 
@@ -222,9 +245,14 @@ export class SessionManagerService {
       return;
     }
 
-    if (!staleSessions?.length) return;
+    const staleRows = (staleSessions ?? []) as {
+      session_id: string;
+      started_at: string;
+      last_activity_at: string;
+    }[];
+    if (staleRows.length === 0) return;
 
-    for (const session of staleSessions) {
+    for (const session of staleRows) {
       const start = new Date(session.started_at).getTime();
       const end = new Date(session.last_activity_at).getTime();
       const durationSeconds = Math.round((end - start) / 1000);
@@ -241,6 +269,6 @@ export class SessionManagerService {
       }
     }
 
-    this.logger.log(`Closed ${staleSessions.length} stale sessions`);
+    this.logger.log(`Closed ${staleRows.length} stale sessions`);
   }
 }

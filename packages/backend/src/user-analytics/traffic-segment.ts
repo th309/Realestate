@@ -7,12 +7,21 @@
  * before classification existed, and unknowable after the fact because the
  * early-heartbeat signal that would have judged them did not exist yet. They
  * are their own bucket, never folded into humans.
+ *
+ * `internal` cuts across that axis rather than extending it. Our own browsing
+ * is human by every behavioural test — 99 of 767 human sessions in a trailing
+ * 30-day window were ours — so it has to be subtracted explicitly or it reads
+ * as customer demand. It is excluded from human, bot AND unclassified, and
+ * appears only under `internal` and `all`. The rule lives in one place, the
+ * `public.analytics_in_segment` SQL function; this list only has to agree with
+ * the names it accepts.
  */
 
 export const TRAFFIC_SEGMENTS = [
   'human',
   'bot',
   'unclassified',
+  'internal',
   'all',
 ] as const;
 

@@ -148,8 +148,11 @@ const HUMAN_EVIDENCE_ACTIONS = new Set<string>([
   'analyzer_grade',
   'mcp_connected',
   'pro_feature_used',
-  // signup funnel — deliberate steps only
-  'signup_start',
+  // Signup funnel — deliberate steps only.
+  // `signup_start` is deliberately ABSENT: it fires from a mount effect in
+  // app/(app)/auth/sign-up/page.tsx, before the visitor touches anything, so
+  // any JS-executing client that merely loads /auth/sign-up would qualify.
+  // signup_email_engaged is its deliberate counterpart — first field touch.
   'signup_email_engaged',
   'signup_oauth_click',
   'signup_submit_blocked',
@@ -176,7 +179,8 @@ const HUMAN_EVIDENCE_ACTIONS = new Set<string>([
   'sticky_bar_email_submitted',
   // onboarding + app install
   'tab',
-  'quiz_start',
+  // `quiz_start` is ABSENT for the same reason as signup_start: it fires from a
+  // mount effect in app/(app)/onboarding/hooks/useQuiz.ts, not from a click.
   'installed',
   'install_banner_dismissed',
 ]);

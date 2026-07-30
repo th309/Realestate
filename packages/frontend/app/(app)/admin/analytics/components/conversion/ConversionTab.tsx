@@ -1,13 +1,22 @@
 /**
  * ConversionTab
  *
- * Full conversion funnel, custom funnels, paywall effectiveness,
- * feature-conversion correlation, revenue metrics, and tier migration.
+ * Conversion funnel, paywall effectiveness, feature-conversion correlation and
+ * revenue.
  *
  * Layout:
  * 1. FullFunnel (full-width)
  * 2. Grid: FeatureCorrelationChart (left) + PaywallEffectiveness (right)
- * 3. Grid: TierMigrationFlow (left) + RevenueMetrics (right)
+ * 3. Revenue (full-width)
+ *
+ * The tier-migration panel was removed rather than left rendering an empty
+ * state. Tier-to-tier movement was derived from an `upgrade_complete` event
+ * that has never been emitted, and there is no tier-change audit table to
+ * derive it from — `user_profiles` holds only the current tier. The backend
+ * returns `tierMigration: []` permanently and by design, so an empty panel
+ * would have implied the data was merely missing rather than unobtainable.
+ * The tier information the page CAN support is the current paid-tier
+ * breakdown, which RevenueMetrics renders.
  */
 
 "use client";
@@ -22,7 +31,6 @@ import { EmptyState, SkeletonLoader } from "../shared";
 import { FullFunnel } from "./FullFunnel";
 import { FeatureCorrelationChart } from "./FeatureCorrelationChart";
 import { PaywallEffectiveness } from "./PaywallEffectiveness";
-import { TierMigrationFlow } from "./TierMigrationFlow";
 import { RevenueMetrics } from "./RevenueMetrics";
 
 interface ConversionTabProps {
@@ -48,11 +56,7 @@ function PanelCard({
   );
 }
 
-export function ConversionTab({
-  days,
-  filters,
-  onDrillDown,
-}: ConversionTabProps) {
+export function ConversionTab({ days, filters }: ConversionTabProps) {
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["analytics", "conversion", days, filters],
     queryFn: () => fetchConversionAnalytics(days, filters),
@@ -82,10 +86,6 @@ export function ConversionTab({
     );
   }
 
-  const handleFunnelDrillDown = (stepName: string) => {
-    onDrillDown("funnelStep", stepName);
-  };
-
   return (
     <div className="space-y-6">
       {/* Row 1: Full Funnel */}
@@ -94,10 +94,7 @@ export function ConversionTab({
           Conversion Funnel
         </h2>
         <div className="bg-surface-container-low border border-outline-variant rounded-xl p-6">
-          <FullFunnel
-            steps={data.fullFunnel}
-            onStepClick={handleFunnelDrillDown}
-          />
+          <FullFunnel steps={data.fullFunnel} />
         </div>
       </div>
 
@@ -111,19 +108,14 @@ export function ConversionTab({
         </PanelCard>
       </div>
 
-      {/* Row 3: Tier Migration + Revenue Metrics */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <PanelCard title="Tier Migration Flow">
-          <TierMigrationFlow tierMigration={data.tierMigration} />
-        </PanelCard>
-        <PanelCard title="Revenue Metrics">
-          <RevenueMetrics
-            mrr={data.revenueMetrics.mrr}
-            arpu={data.revenueMetrics.arpu}
-            tierDistribution={data.revenueMetrics.tierDistribution}
-          />
-        </PanelCard>
-      </div>
+      {/* Row 3: Revenue */}
+      <PanelCard title="Revenue">
+        <RevenueMetrics
+          mrr={data.revenueMetrics.mrr}
+          arpu={data.revenueMetrics.arpu}
+          tierDistribution={data.revenueMetrics.tierDistribution}
+        />
+      </PanelCard>
     </div>
   );
 }

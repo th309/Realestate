@@ -1,9 +1,16 @@
 /**
  * SessionDurationDist
  *
- * Bar chart visualizing the distribution of session durations across
- * five buckets: <30s, 30s-2m, 2-5m, 5-10m, 10m+.
- * Uses Recharts BarChart with M3-consistent styling.
+ * Bar chart of the session-duration histogram.
+ *
+ * The buckets are asymmetric on purpose, and the boundaries are owned by SQL
+ * (supabase/migrations/20260729213000_analytics_journeys.sql) — this list only
+ * mirrors them for display order. Two instrumentation artifacts drive the
+ * choice: an early heartbeat fires ONCE at exactly 5 seconds, parking ~2,000
+ * sessions on that single value, and ~94% of sessions sit at 0 because they
+ * never heartbeated at all, meaning unmeasured rather than zero-length. Both get
+ * their own bucket. The previous `<30s` bar merged them with real short visits
+ * into one column that was ~97% "we never measured this".
  */
 
 "use client";
@@ -23,7 +30,22 @@ interface SessionDurationDistProps {
   buckets: DurationBucket[];
 }
 
-const BUCKET_ORDER = ["<30s", "30s-2m", "2-5m", "5-10m", "10m+"];
+const BUCKET_ORDER = [
+  "0s",
+  "1-4s",
+  "5s",
+  "6-29s",
+  "30s-2m",
+  "2-5m",
+  "5-10m",
+  "10m+",
+];
+
+/** Buckets that measure instrumentation, not attention. */
+const ARTIFACT_NOTES: Record<string, string> = {
+  "0s": "Never sent a heartbeat — duration unmeasured, not zero",
+  "5s": "The first heartbeat fires at exactly 5s",
+};
 
 function orderBuckets(buckets: DurationBucket[]): DurationBucket[] {
   return BUCKET_ORDER.map(
@@ -45,12 +67,17 @@ function CustomTooltip({ active, payload, label, total }: CustomTooltipProps) {
   const count = payload[0].value;
   const share = total > 0 ? ((count / total) * 100).toFixed(1) : "0.0";
 
+  const note = label ? ARTIFACT_NOTES[label] : undefined;
+
   return (
-    <div className="bg-surface-container-high border border-outline-variant rounded-xl px-3 py-2 shadow-lg text-xs">
+    <div className="bg-surface-container-high border border-outline-variant rounded-xl px-3 py-2 shadow-lg text-xs max-w-[220px]">
       <p className="font-medium text-on-surface mb-1">{label}</p>
       <p className="tabular-nums text-on-surface-variant">
         {count.toLocaleString()} sessions ({share}%)
       </p>
+      {note && (
+        <p className="mt-1 text-on-surface-variant opacity-80">{note}</p>
+      )}
     </div>
   );
 }
@@ -83,7 +110,11 @@ export function SessionDurationDist({ buckets }: SessionDurationDistProps) {
           />
           <XAxis
             dataKey="bucket"
-            tick={{ fontSize: 11, fill: "var(--color-on-surface-variant)" }}
+            // interval={0} forces every label to render. Recharts otherwise
+            // drops labels that would overlap, and the two it would drop first
+            // are the ones that carry the meaning here.
+            interval={0}
+            tick={{ fontSize: 10, fill: "var(--color-on-surface-variant)" }}
             axisLine={false}
             tickLine={false}
           />
@@ -115,6 +146,12 @@ export function SessionDurationDist({ buckets }: SessionDurationDistProps) {
           {total.toLocaleString()}
         </span>
       </div>
+      <p className="mt-2 text-[11px] leading-snug text-on-surface-variant">
+        <span className="font-medium">0s</span> means no heartbeat ever fired —
+        the duration is unmeasured, not zero.{" "}
+        <span className="font-medium">5s</span> is the first heartbeat, so it is
+        a single instrumented instant rather than a range.
+      </p>
     </div>
   );
 }

@@ -173,3 +173,10 @@ export {
   useOverviewAnalytics,
   overviewAnalyticsQueryKey,
 } from "./useOverviewAnalytics";
+
+// Admin analytics visitors (master/detail journey explorer)
+export { useVisitorList, visitorListQueryKey } from "./useVisitorList";
+export {
+  useVisitorTimeline,
+  visitorTimelineQueryKey,
+} from "./useVisitorTimeline";

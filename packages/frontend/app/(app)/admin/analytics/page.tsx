@@ -24,6 +24,7 @@ import type {
 type TabId =
   | "overview"
   | "journeys"
+  | "visitors"
   | "retention"
   | "acquisition"
   | "conversion";
@@ -36,6 +37,11 @@ const OverviewTab = dynamic(() =>
 const JourneysTab = dynamic(() =>
   import("./components/journeys/JourneysTab").then((m) => ({
     default: m.JourneysTab,
+  })),
+);
+const VisitorsTab = dynamic(() =>
+  import("./components/visitors/VisitorsTab").then((m) => ({
+    default: m.VisitorsTab,
   })),
 );
 const RetentionTab = dynamic(() =>
@@ -200,6 +206,7 @@ export default function AnalyticsPage() {
       <div className="min-h-[400px]">
         {activeTab === "overview" && <OverviewTab {...tabProps} />}
         {activeTab === "journeys" && <JourneysTab {...tabProps} />}
+        {activeTab === "visitors" && <VisitorsTab {...tabProps} />}
         {activeTab === "retention" && <RetentionTab {...tabProps} />}
         {activeTab === "acquisition" && <AcquisitionTab {...tabProps} />}
         {activeTab === "conversion" && <ConversionTab {...tabProps} />}

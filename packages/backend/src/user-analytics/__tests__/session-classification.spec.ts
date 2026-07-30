@@ -50,13 +50,29 @@ describe('isHumanEvidenceAction separates deliberate acts from auto-fired teleme
     for (const action of [
       'region_select',
       'search',
-      'signup_start',
       'pricing_cta_click',
       'signup_email_engaged',
+      'signup_oauth_click',
       'pro_feature_used',
     ]) {
       expect(isHumanEvidenceAction(action)).toBe(true);
     }
+  });
+
+  it('rejects mount-fired funnel events that merely record a page being shown', () => {
+    // Both fire from useEffect(..., []) — signup_start in
+    // app/(app)/auth/sign-up/page.tsx, quiz_start in
+    // app/(app)/onboarding/hooks/useQuiz.ts — so they record the form being
+    // SHOWN, not touched. Any JS-executing crawler that loads /auth/sign-up
+    // would otherwise be promoted to human on its first batch, which is exactly
+    // the contamination this rule exists to prevent. 70 sessions had been
+    // promoted on that basis before it was caught.
+    expect(isHumanEvidenceAction('signup_start')).toBe(false);
+    expect(isHumanEvidenceAction('quiz_start')).toBe(false);
+
+    // Their deliberate counterparts must still count.
+    expect(isHumanEvidenceAction('signup_email_engaged')).toBe(true);
+    expect(isHumanEvidenceAction('signup_oauth_click')).toBe(true);
   });
 
   it('rejects the events that render automatically on every page', () => {

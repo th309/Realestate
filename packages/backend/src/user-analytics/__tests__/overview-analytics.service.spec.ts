@@ -49,7 +49,13 @@ const DAILY = [
   },
 ];
 
-const SEGMENTS = { human: 790, bot: 1568, unclassified: 46285, total: 48643 };
+const SEGMENTS = {
+  human: 790,
+  bot: 1568,
+  unclassified: 46285,
+  internal: 99,
+  total: 48742,
+};
 
 describe('OverviewAnalyticsService', () => {
   let service: OverviewAnalyticsService;
@@ -114,8 +120,9 @@ describe('OverviewAnalyticsService', () => {
       await service.getOverview(7, { traffic: 'human' });
       await service.getOverview(7, { traffic: 'bot' });
 
-      const [humanKey] = mockRedis.setByKey.mock.calls[0];
-      const [botKey] = mockRedis.setByKey.mock.calls[1];
+      // `mock.calls` is typed `any[]`; narrowed at the read.
+      const [humanKey] = mockRedis.setByKey.mock.calls[0] as string[];
+      const [botKey] = mockRedis.setByKey.mock.calls[1] as string[];
 
       expect(humanKey).not.toEqual(botKey);
       expect(humanKey).toContain('human');
@@ -124,11 +131,11 @@ describe('OverviewAnalyticsService', () => {
 
     it('reads the segment-specific key, so a cached bot view cannot serve a human request', async () => {
       await service.getOverview(7, { traffic: 'bot' });
-      const [botReadKey] = mockRedis.getByKey.mock.calls[0];
+      const [botReadKey] = mockRedis.getByKey.mock.calls[0] as string[];
 
       mockRedis.getByKey.mockClear();
       await service.getOverview(7, { traffic: 'human' });
-      const [humanReadKey] = mockRedis.getByKey.mock.calls[0];
+      const [humanReadKey] = mockRedis.getByKey.mock.calls[0] as string[];
 
       expect(botReadKey).not.toEqual(humanReadKey);
     });

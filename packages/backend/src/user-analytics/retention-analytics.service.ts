@@ -9,17 +9,51 @@ import type {
   TimeSeriesPoint,
   Annotation,
 } from './user-analytics.types';
+import { DEFAULT_TRAFFIC_SEGMENT } from './traffic-segment';
 import {
-  groupByCohortWeek,
-  groupSessionsByUser,
-  computeCohortRetentionRows,
-  averageWeeklyCurveAcrossCohorts,
-  applyTierFilterToIdentities,
-  countUniqueVisitors,
-  aggregateUserSessionStats,
+  toCohortRows,
+  buildTierCurves,
+  type CohortRetentionRpcRow,
 } from './retention-cohort-utils';
 
+/**
+ * Retention reads go through SQL aggregate functions, never through
+ * `.select()` + aggregate-in-JS.
+ *
+ * Every panel here used to fetch session rows and reduce them in Node. PostgREST
+ * caps an unranged `.select()` at 1,000 rows without erroring, so each number
+ * was a correct calculation over a truncated population — DAU/WAU/MAU was
+ * derived from at most 1,000 of ~48,000 trailing-30-day sessions, and the churn
+ * list had no date predicate at all, so its 1,000 rows were an arbitrary slice
+ * of all history. Aggregating server-side removes the failure mode rather than
+ * raising the ceiling: there is no array left to truncate.
+ */
+
 const RETENTION_CACHE_TTL_SECONDS = 900;
+
+/** Matrix width. Matches p_weeks in analytics_cohort_retention. */
+const COHORT_WEEKS = 12;
+
+/** A user is "at risk" once they have been silent this long. */
+const CHURN_INACTIVE_DAYS = 14;
+
+/** ...and only if they were engaged enough for the silence to mean something. */
+const CHURN_MIN_SESSIONS = 3;
+
+const CHURN_MAX_USERS = 100;
+
+/**
+ * Churn always looks back at least this far, regardless of the selected window.
+ *
+ * The window alone cannot bound it: on a 7-day view, "last seen more than 14
+ * days ago" and "active in the last 7 days" have no overlap, so the panel would
+ * be empty by construction rather than by evidence. A quarter comfortably spans
+ * the inactivity threshold while still excluding accounts that went quiet years
+ * ago — which the old unbounded scan was reporting as fresh churn signals.
+ */
+const CHURN_LOOKBACK_DAYS = 90;
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 @Injectable()
 export class RetentionAnalyticsService {
@@ -34,15 +68,23 @@ export class RetentionAnalyticsService {
     days: number,
     filters: AnalyticsFilters,
   ): Promise<RetentionData> {
-    const cacheKey = `analytics:retention:${days}:${JSON.stringify(filters)}`;
+    // The traffic segment MUST be part of the key. It changes which population
+    // DAU/WAU/MAU and the engagement trend describe, so sharing an entry across
+    // segments would serve bot figures under a "human" label. The `v2` prefix
+    // also strands entries written by the truncated implementation.
+    const segment = filters.traffic ?? DEFAULT_TRAFFIC_SEGMENT;
+    const cacheKey = `analytics:retention:v2:${days}:${segment}:${JSON.stringify(filters)}`;
+
     const cached = await this.redis.getByKey(cacheKey);
     if (cached) {
       this.logger.log(`[RetentionAnalytics] Cache HIT for key ${cacheKey}`);
       return cached as RetentionData;
     }
 
-    const startDate = new Date(
-      Date.now() - days * 24 * 60 * 60 * 1000,
+    const now = Date.now();
+    const startDate = new Date(now - days * DAY_MS).toISOString();
+    const churnStart = new Date(
+      now - Math.max(days, CHURN_LOOKBACK_DAYS) * DAY_MS,
     ).toISOString();
 
     const [
@@ -56,7 +98,7 @@ export class RetentionAnalyticsService {
       this.buildCohortMatrix(startDate, filters),
       this.computeDauWauMau(filters),
       this.buildRetentionCurvesByTier(startDate, filters),
-      this.detectChurnSignals(filters),
+      this.detectChurnSignals(churnStart, filters),
       this.buildEngagementTrend(startDate, filters),
       this.fetchAnnotations(startDate),
     ]);
@@ -78,191 +120,154 @@ export class RetentionAnalyticsService {
   // Private query methods
   // ---------------------------------------------------------------------------
 
+  /**
+   * The cohort RPC takes no traffic segment on purpose — it is scoped to
+   * `user_id is not null` and a crawler never signs in. Passing `human` would
+   * additionally drop every session written before bot classification existed
+   * (`is_bot` NULL), which is most of the signed-in history.
+   */
+  private async fetchCohortRetention(
+    startDate: string,
+    filters: AnalyticsFilters,
+    byTier: boolean,
+  ): Promise<CohortRetentionRpcRow[]> {
+    const { data, error } = await this.supabase
+      .getClient()
+      .rpc('analytics_cohort_retention', {
+        p_start: startDate,
+        p_tier: filters.tier ?? null,
+        p_weeks: COHORT_WEEKS,
+        p_by_tier: byTier,
+      });
+
+    if (error) {
+      this.logger.error(
+        `[RetentionAnalytics] Cohort retention rpc failed: ${error.message}`,
+      );
+      return [];
+    }
+    // Returns a single jsonb document rather than a row set, because the 1,000
+    // row cap applies to table-returning RPCs too and this result grows with
+    // (weeks x tiers) over an unbounded `days`.
+    return (data ?? []) as CohortRetentionRpcRow[];
+  }
+
   private async buildCohortMatrix(
     startDate: string,
     filters: AnalyticsFilters,
   ): Promise<CohortRow[]> {
-    const client = this.supabase.getClient();
-
-    const [{ data: identities }, { data: sessions }] = await Promise.all([
-      client
-        .from('visitor_identities')
-        .select('user_id, signup_cohort')
-        .gte('signup_cohort', startDate),
-      client
-        .from('user_sessions')
-        .select('user_id, started_at, user_tier')
-        .not('user_id', 'is', null)
-        .gte('started_at', startDate),
-    ]);
-
-    if (!identities?.length) return [];
-
-    const filteredIdentities = applyTierFilterToIdentities(
-      identities,
-      sessions ?? [],
-      filters.tier,
+    return toCohortRows(
+      await this.fetchCohortRetention(startDate, filters, false),
     );
-    const cohortMap = groupByCohortWeek(filteredIdentities);
-    const sessionsByUser = groupSessionsByUser(sessions ?? []);
-    return computeCohortRetentionRows(cohortMap, sessionsByUser);
-  }
-
-  private async computeDauWauMau(
-    filters: AnalyticsFilters,
-  ): Promise<RetentionData['dauWauMau']> {
-    const client = this.supabase.getClient();
-    const now = Date.now();
-
-    const { data: sessions } = await client
-      .from('user_sessions')
-      .select('visitor_id, started_at, user_tier')
-      .eq('is_bot', false)
-      .gte(
-        'started_at',
-        new Date(now - 30 * 24 * 60 * 60 * 1000).toISOString(),
-      );
-
-    const rows = (sessions ?? []).filter(
-      (s) => !filters.tier || s.user_tier === filters.tier,
-    );
-
-    const dau = countUniqueVisitors(
-      rows,
-      new Date(now - 1 * 24 * 60 * 60 * 1000).toISOString(),
-    );
-    const wau = countUniqueVisitors(
-      rows,
-      new Date(now - 7 * 24 * 60 * 60 * 1000).toISOString(),
-    );
-    const mau = countUniqueVisitors(
-      rows,
-      new Date(now - 30 * 24 * 60 * 60 * 1000).toISOString(),
-    );
-    const stickiness = mau > 0 ? parseFloat((dau / mau).toFixed(4)) : 0;
-
-    return { dau, wau, mau, stickiness };
   }
 
   private async buildRetentionCurvesByTier(
     startDate: string,
     filters: AnalyticsFilters,
   ): Promise<{ tier: string; curve: number[] }[]> {
-    const client = this.supabase.getClient();
-
-    const [{ data: identities }, { data: sessions }] = await Promise.all([
-      client
-        .from('visitor_identities')
-        .select('user_id, signup_cohort')
-        .gte('signup_cohort', startDate),
-      client
-        .from('user_sessions')
-        .select('user_id, started_at, user_tier')
-        .not('user_id', 'is', null)
-        .gte('started_at', startDate),
-    ]);
-
-    if (!identities?.length || !sessions?.length) return [];
-
-    const typedSessions = sessions as {
-      user_id: string;
-      started_at: string;
-      user_tier: string;
-    }[];
-    const tierSet = new Set(
-      typedSessions
-        .filter((s) => !filters.tier || s.user_tier === filters.tier)
-        .map((s) => s.user_tier)
-        .filter(Boolean),
+    return buildTierCurves(
+      await this.fetchCohortRetention(startDate, filters, true),
     );
-    const sessionsByUser = groupSessionsByUser(typedSessions);
+  }
 
-    return Array.from(tierSet).map((tier) => {
-      const tierUserIds = new Set(
-        typedSessions.filter((s) => s.user_tier === tier).map((s) => s.user_id),
+  /**
+   * Keyed on visitor_id, which is only meaningful once bots are excluded: a
+   * crawler population runs ~1.00 sessions per visitor and never returns, so an
+   * unsegmented MAU is a count of one-shot fetches. Hence the segment is a
+   * first-class parameter here rather than a hardcoded `is_bot = false`.
+   */
+  private async computeDauWauMau(
+    filters: AnalyticsFilters,
+  ): Promise<RetentionData['dauWauMau']> {
+    const { data, error } = await this.supabase
+      .getClient()
+      .rpc('analytics_active_users', {
+        p_traffic: filters.traffic ?? DEFAULT_TRAFFIC_SEGMENT,
+        p_tier: filters.tier ?? null,
+      });
+
+    if (error) {
+      this.logger.error(
+        `[RetentionAnalytics] Active users rpc failed: ${error.message}`,
       );
-      const tierIdentities = (
-        identities as { user_id: string; signup_cohort: string }[]
-      ).filter((i) => tierUserIds.has(i.user_id));
-      const cohortMap = groupByCohortWeek(tierIdentities);
-      const rows = computeCohortRetentionRows(cohortMap, sessionsByUser);
-      return { tier, curve: averageWeeklyCurveAcrossCohorts(rows) };
-    });
+      return { dau: 0, wau: 0, mau: 0, stickiness: 0 };
+    }
+
+    const row = (data ?? [])[0] as Record<string, unknown> | undefined;
+    return {
+      dau: Number(row?.dau ?? 0),
+      wau: Number(row?.wau ?? 0),
+      mau: Number(row?.mau ?? 0),
+      stickiness: Number(row?.stickiness ?? 0),
+    };
   }
 
   private async detectChurnSignals(
+    churnStart: string,
     filters: AnalyticsFilters,
   ): Promise<ChurnRiskUser[]> {
-    const client = this.supabase.getClient();
+    const { data, error } = await this.supabase
+      .getClient()
+      .rpc('analytics_churn_risk_users', {
+        p_start: churnStart,
+        p_inactive_days: CHURN_INACTIVE_DAYS,
+        p_min_sessions: CHURN_MIN_SESSIONS,
+        p_tier: filters.tier ?? null,
+        p_limit: CHURN_MAX_USERS,
+      });
 
-    const { data: sessions } = await client
-      .from('user_sessions')
-      .select('user_id, user_tier, last_activity_at')
-      .not('user_id', 'is', null);
+    if (error) {
+      this.logger.error(
+        `[RetentionAnalytics] Churn risk rpc failed: ${error.message}`,
+      );
+      return [];
+    }
 
-    if (!sessions?.length) return [];
-
-    const churnCutoff = new Date(
-      Date.now() - 14 * 24 * 60 * 60 * 1000,
-    ).toISOString();
-    const userStats = aggregateUserSessionStats(
-      sessions as {
-        user_id: string;
-        user_tier: string;
-        last_activity_at: string;
-      }[],
-    );
-
-    return Object.entries(userStats)
-      .filter(([, stats]) => {
-        return (
-          stats.lastActivityAt < churnCutoff &&
-          stats.sessionCount >= 3 &&
-          (!filters.tier || stats.tier === filters.tier)
-        );
-      })
-      .map(([userId, stats]) => ({
-        userId,
-        lastSeen: stats.lastActivityAt,
-        sessionCount: stats.sessionCount,
-        tier: stats.tier,
+    return ((data ?? []) as Record<string, any>[]).map(
+      (row): ChurnRiskUser => ({
+        userId: String(row.user_id),
+        // The whole point of this panel is deciding who to contact, and it
+        // previously rendered a column of UUIDs. Undefined only when the auth
+        // user row is gone (deleted account), which is still a churn signal —
+        // the RPC left-joins so those rows survive rather than disappearing.
+        email: row.email ?? undefined,
+        lastSeen: row.last_seen,
+        sessionCount: Number(row.session_count ?? 0),
+        tier: row.tier ?? null,
         topFeatures: [],
-      }))
-      .slice(0, 100);
+      }),
+    );
   }
 
   private async buildEngagementTrend(
     startDate: string,
     filters: AnalyticsFilters,
   ): Promise<TimeSeriesPoint[]> {
-    const client = this.supabase.getClient();
+    // Same daily rollup the overview sparklines use. It was the sixth instance
+    // of the truncated pattern, and it hardcoded `is_bot = false` where the rest
+    // of the tab now honours the selected segment.
+    const { data, error } = await this.supabase
+      .getClient()
+      .rpc('analytics_daily_visitors', {
+        p_start: startDate,
+        p_end: null,
+        p_traffic: filters.traffic ?? DEFAULT_TRAFFIC_SEGMENT,
+        p_tier: filters.tier ?? null,
+      });
 
-    const { data: sessions } = await client
-      .from('user_sessions')
-      .select('visitor_id, started_at, user_tier')
-      .eq('is_bot', false)
-      .gte('started_at', startDate);
-
-    if (!sessions?.length) return [];
-
-    const filtered = (
-      sessions as {
-        visitor_id: string;
-        started_at: string;
-        user_tier: string;
-      }[]
-    ).filter((s) => !filters.tier || s.user_tier === filters.tier);
-
-    const dailyVisitors: Record<string, Set<string>> = {};
-    for (const session of filtered) {
-      const date = session.started_at.slice(0, 10);
-      if (!dailyVisitors[date]) dailyVisitors[date] = new Set();
-      dailyVisitors[date].add(session.visitor_id);
+    if (error) {
+      this.logger.error(
+        `[RetentionAnalytics] Daily visitors rpc failed: ${error.message}`,
+      );
+      return [];
     }
 
-    return Object.entries(dailyVisitors)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, visitors]) => ({ date, value: visitors.size }));
+    return ((data ?? []) as Record<string, any>[]).map(
+      (row): TimeSeriesPoint => ({
+        date: String(row.day),
+        value: Number(row.visitors ?? 0),
+      }),
+    );
   }
 
   private async fetchAnnotations(startDate: string): Promise<Annotation[]> {

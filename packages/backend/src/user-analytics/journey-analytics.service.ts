@@ -4,25 +4,38 @@ import { RedisService } from '../redis/redis.service';
 import type {
   JourneyData,
   AnalyticsFilters,
-  NavigationFlow,
-  PathSequence,
-  LandingPageMetric,
-  ExitPageMetric,
-  DurationBucket,
   Annotation,
 } from './user-analytics.types';
+import { DEFAULT_TRAFFIC_SEGMENT } from './traffic-segment';
 import {
-  aggregateLandingPages,
-  computeAvgPagesPerSession,
-  bucketSessionDurations,
-} from './journey-session-aggregators';
-import {
-  resolveDeviceSessionIds,
+  JourneyRpcArgs,
+  queryAvgPagesPerSession,
+  queryCommonPaths,
+  queryDurationBuckets,
+  queryExitPages,
+  queryLandingPages,
+  queryNavigationFlows,
   queryOutboundDestinations,
-} from './journey-outbound-queries';
+} from './journey-panel-queries';
 
 const CACHE_TTL_SECONDS = 900;
 
+interface AnnotationRow {
+  id: string;
+  annotation_date: string;
+  label: string;
+  description: string | null;
+}
+
+/**
+ * Assembles the Journeys tab.
+ *
+ * Every panel is a SQL aggregate. This service previously fetched raw rows and
+ * reduced them in Node behind `.limit(5000)` / `.limit(10000)`, both of which
+ * exceed PostgREST's 1,000-row max-rows ceiling and therefore never applied —
+ * so each panel described ~1,000 of ~112,000 events without any error to say so.
+ * See journey-panel-queries.ts and the migration for the full account.
+ */
 @Injectable()
 export class JourneyAnalyticsService {
   private readonly logger = new Logger(JourneyAnalyticsService.name);
@@ -36,37 +49,45 @@ export class JourneyAnalyticsService {
     days: number,
     filters: AnalyticsFilters,
   ): Promise<JourneyData> {
-    const cacheKey = `analytics:journeys:${days}:${JSON.stringify(filters)}`;
-    const cached = await this.redis.getByKey(cacheKey);
-    if (cached) return cached as JourneyData;
+    // The traffic segment MUST be part of the key. It changes which population
+    // every number describes, so sharing a cache entry across segments would
+    // serve bot figures under a "human" label.
+    const segment = filters.traffic ?? DEFAULT_TRAFFIC_SEGMENT;
+    const cacheKey = `analytics:journeys:v2:${days}:${segment}:${JSON.stringify(filters)}`;
 
-    const startDate = new Date(Date.now() - days * 86400000).toISOString();
+    const cached = (await this.redis.getByKey(cacheKey)) as JourneyData | null;
+    if (cached) return cached;
+
     const client = this.supabase.getClient();
 
-    // `user_events` has no device_type column, so a device filter has to be
-    // resolved to a session-id set from `user_sessions` and applied in memory.
-    // Previously these queries filtered user_events on device_type directly,
-    // which errored (42703) and silently returned [] for the whole tab.
-    const deviceSessionIds = await resolveDeviceSessionIds(
-      client,
-      startDate,
-      filters,
-    );
+    // Built once so no panel can silently run against a different population
+    // than the one rendered beside it.
+    const args: JourneyRpcArgs = {
+      p_start: new Date(Date.now() - days * 86400000).toISOString(),
+      p_end: null,
+      p_traffic: segment,
+      p_tier: filters.tier ?? null,
+      p_device: filters.device ?? null,
+    };
 
     const [
       navigationFlows,
-      { landingPages, avgPagesPerSession, sessionDurationDistribution },
+      landingPages,
       exitPages,
       commonPaths,
+      sessionDurationDistribution,
       outboundDestinations,
+      avgPagesPerSession,
       annotations,
     ] = await Promise.all([
-      this.fetchNavigationFlows(client, startDate, filters, deviceSessionIds),
-      this.fetchSessionAggregates(client, startDate, filters),
-      this.fetchExitPages(client, startDate, filters),
-      this.fetchCommonPaths(client, startDate, filters, deviceSessionIds),
-      queryOutboundDestinations(client, startDate, filters, deviceSessionIds),
-      this.fetchAnnotations(client, startDate),
+      queryNavigationFlows(client, args),
+      queryLandingPages(client, args),
+      queryExitPages(client, args),
+      queryCommonPaths(client, args),
+      queryDurationBuckets(client, args),
+      queryOutboundDestinations(client, args),
+      queryAvgPagesPerSession(client, args),
+      this.fetchAnnotations(client, args.p_start),
     ]);
 
     const result: JourneyData = {
@@ -84,166 +105,6 @@ export class JourneyAnalyticsService {
     return result;
   }
 
-  private async fetchNavigationFlows(
-    client: ReturnType<SupabaseService['getClient']>,
-    startDate: string,
-    filters: AnalyticsFilters,
-    deviceSessionIds: Set<string> | null,
-  ): Promise<NavigationFlow[]> {
-    let query = client
-      .from('user_events')
-      .select('session_id, page_path, previous_page_path')
-      .eq('event_category', 'pageview')
-      .eq('is_bot', false)
-      .not('previous_page_path', 'is', null)
-      .gte('created_at', startDate)
-      .limit(5000);
-
-    if (filters.tier) query = query.eq('user_tier', filters.tier);
-
-    const { data: flowEvents, error } = await query;
-    if (error) {
-      this.logger.error(
-        `Failed to fetch navigation flow events: ${error.message}`,
-      );
-      return [];
-    }
-
-    const transitionCounts = new Map<string, number>();
-    for (const row of flowEvents ?? []) {
-      if (deviceSessionIds && !deviceSessionIds.has(row.session_id)) continue;
-      const key = `${row.previous_page_path}|||${row.page_path}`;
-      transitionCounts.set(key, (transitionCounts.get(key) ?? 0) + 1);
-    }
-
-    return Array.from(transitionCounts.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 50)
-      .map(([key, transitions]) => {
-        const [fromPage, toPage] = key.split('|||');
-        return { fromPage, toPage, transitions };
-      });
-  }
-
-  private async fetchSessionAggregates(
-    client: ReturnType<SupabaseService['getClient']>,
-    startDate: string,
-    filters: AnalyticsFilters,
-  ): Promise<{
-    landingPages: LandingPageMetric[];
-    avgPagesPerSession: number;
-    sessionDurationDistribution: DurationBucket[];
-  }> {
-    let query = client
-      .from('user_sessions')
-      .select('landing_page, is_bounce, duration_seconds, page_count')
-      .eq('is_bot', false)
-      .gte('started_at', startDate)
-      .not('landing_page', 'is', null)
-      .limit(5000);
-
-    if (filters.tier) query = query.eq('user_tier', filters.tier);
-    if (filters.device) query = query.eq('device_type', filters.device);
-
-    const { data: sessions, error } = await query;
-    if (error) {
-      this.logger.error(
-        `Failed to fetch sessions for aggregates: ${error.message}`,
-      );
-      return {
-        landingPages: [],
-        avgPagesPerSession: 0,
-        sessionDurationDistribution: [],
-      };
-    }
-
-    const rows = sessions ?? [];
-    const landingPages = aggregateLandingPages(rows);
-    const avgPagesPerSession = computeAvgPagesPerSession(rows);
-    const sessionDurationDistribution = bucketSessionDurations(rows);
-
-    return { landingPages, avgPagesPerSession, sessionDurationDistribution };
-  }
-
-  private async fetchExitPages(
-    client: ReturnType<SupabaseService['getClient']>,
-    startDate: string,
-    filters: AnalyticsFilters,
-  ): Promise<ExitPageMetric[]> {
-    let query = client
-      .from('user_sessions')
-      .select('exit_page')
-      .eq('is_bot', false)
-      .gte('started_at', startDate)
-      .not('exit_page', 'is', null)
-      .limit(5000);
-
-    if (filters.tier) query = query.eq('user_tier', filters.tier);
-    if (filters.device) query = query.eq('device_type', filters.device);
-
-    const { data: exitData, error } = await query;
-    if (error) {
-      this.logger.error(`Failed to fetch exit pages: ${error.message}`);
-      return [];
-    }
-
-    const exitCounts = new Map<string, number>();
-    for (const row of exitData ?? []) {
-      exitCounts.set(row.exit_page, (exitCounts.get(row.exit_page) ?? 0) + 1);
-    }
-
-    return Array.from(exitCounts.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 20)
-      .map(([page, exits]) => ({ page, exits }));
-  }
-
-  private async fetchCommonPaths(
-    client: ReturnType<SupabaseService['getClient']>,
-    startDate: string,
-    filters: AnalyticsFilters,
-    deviceSessionIds: Set<string> | null,
-  ): Promise<PathSequence[]> {
-    let query = client
-      .from('user_events')
-      .select('session_id, page_path, created_at')
-      .eq('event_category', 'pageview')
-      .eq('is_bot', false)
-      .gte('created_at', startDate)
-      .order('created_at', { ascending: true })
-      .limit(10000);
-
-    if (filters.tier) query = query.eq('user_tier', filters.tier);
-
-    const { data: pathEvents, error } = await query;
-    if (error) {
-      this.logger.error(`Failed to fetch path events: ${error.message}`);
-      return [];
-    }
-
-    const sessionPages = new Map<string, string[]>();
-    for (const row of pathEvents ?? []) {
-      if (deviceSessionIds && !deviceSessionIds.has(row.session_id)) continue;
-      const pages = sessionPages.get(row.session_id) ?? [];
-      pages.push(row.page_path);
-      sessionPages.set(row.session_id, pages);
-    }
-
-    const prefixCounts = new Map<string, number>();
-    for (const pages of sessionPages.values()) {
-      const prefix = pages.slice(0, 3).join(' → ');
-      prefixCounts.set(prefix, (prefixCounts.get(prefix) ?? 0) + 1);
-    }
-
-    return Array.from(prefixCounts.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 20)
-      .map(([prefix, sessions]) => ({
-        path: prefix.split(' → '),
-        sessions,
-      }));
-  }
-
   private async fetchAnnotations(
     client: ReturnType<SupabaseService['getClient']>,
     startDate: string,
@@ -259,7 +120,10 @@ export class JourneyAnalyticsService {
       return [];
     }
 
-    return (data ?? []).map((row) => ({
+    // Supabase hands back `any` without generated DB types; name the shape at
+    // the boundary rather than letting it leak into the mapping below.
+    const rows = (data ?? []) as AnnotationRow[];
+    return rows.map((row) => ({
       id: row.id,
       annotationDate: row.annotation_date,
       label: row.label,

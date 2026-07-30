@@ -25,10 +25,25 @@ jest.mock('../conversion-panel-queries', () => ({
   queryPaywallEffectiveness: jest.fn().mockResolvedValue([]),
   queryFeatureCorrelation: jest.fn().mockResolvedValue([]),
   queryTierMigration: jest.fn().mockReturnValue([]),
-  queryRevenueMetrics: jest
-    .fn()
-    .mockResolvedValue({ mrr: 240, arpu: 120, tierDistribution: [] }),
   queryConversionAnnotations: jest.fn().mockResolvedValue([]),
+}));
+
+/**
+ * Revenue moved to its own module at the 300-line limit, but this mock did not
+ * move with it: `queryRevenueMetrics` was still stubbed on
+ * '../conversion-panel-queries', which no longer exports it. The stub therefore
+ * bound to nothing, the REAL query ran against `mockClient`, and every test that
+ * reached it died on `.not is not a function` — the mock client has no `.not`.
+ * Seven of eight tests in this file were failing for that reason alone.
+ */
+jest.mock('../conversion-revenue-queries', () => ({
+  queryRevenueMetrics: jest.fn().mockResolvedValue({
+    mrr: 240,
+    arpu: 120,
+    tierDistribution: [],
+    compedCount: 0,
+    dunningCount: 0,
+  }),
 }));
 
 const mockClient: any = {
@@ -166,6 +181,10 @@ describe('ConversionAnalyticsService', () => {
         mrr: 240,
         arpu: 120,
         tierDistribution: [],
+        compedCount: 0,
+        // Subscribers whose payment is failing. Passed through separately so
+        // uncollected MRR does not look identical to collected MRR.
+        dunningCount: 0,
       });
     });
 
