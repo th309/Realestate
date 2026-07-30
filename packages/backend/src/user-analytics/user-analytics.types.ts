@@ -12,7 +12,12 @@ import type { TrafficSegment } from './traffic-segment';
 export interface MetricWithTrend {
   current: number;
   previous: number;
-  changePercent: number;
+  /**
+   * null when the two windows are not comparable — specifically when the
+   * comparison period predates the instrumentation that classifies a session as
+   * human, which makes the delta a measure of coverage rather than of change.
+   */
+  changePercent: number | null;
 }
 
 export interface TimeSeriesPoint {
@@ -143,6 +148,8 @@ export interface OverviewData {
     pagesPerSession: MetricWithTrend;
     conversionRate: MetricWithTrend;
   };
+  /** False when trend deltas span the instrumentation boundary — hide arrows. */
+  trendsComparable?: boolean;
   sparklines: Record<string, number[]>;
   quickFunnel: FunnelStep[];
   topPages: PageMetric[];

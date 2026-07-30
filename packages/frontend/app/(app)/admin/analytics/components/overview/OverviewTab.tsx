@@ -67,6 +67,7 @@ export function OverviewTab({
         kpis={data.kpis}
         sparklines={data.sparklines}
         compare={compare}
+        trendsComparable={data.trendsComparable}
       />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <QuickFunnel steps={data.quickFunnel} />
