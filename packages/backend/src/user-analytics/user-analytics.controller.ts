@@ -25,6 +25,7 @@ import {
   CreateFunnelDto,
 } from './dto/analytics-query.dto';
 import type { AnalyticsFilters } from './user-analytics.types';
+import { parseTrafficSegment } from './traffic-segment';
 
 @UseGuards(AdminGuard)
 @Controller('api/admin/analytics')
@@ -50,6 +51,10 @@ export class UserAnalyticsController {
     if (query.tier) filters.tier = query.tier;
     if (query.device) filters.device = query.device;
     if (query.source) filters.source = query.source;
+    // Always set, never conditional: an absent or unrecognised value must
+    // resolve to `human` rather than leaving the segment undefined and letting
+    // a downstream default decide. parseTrafficSegment fails closed.
+    filters.traffic = parseTrafficSegment(query.traffic);
     if (query.startDate) filters.startDate = query.startDate;
     if (query.endDate) filters.endDate = query.endDate;
     return { days, filters };
@@ -193,7 +198,15 @@ export class UserAnalyticsController {
   }
 
   @Get('funnels/:id')
-  async evaluateFunnel(@Param('id') id: string, @Query('days') days: string) {
-    return this.funnelEngine.evaluateFunnel(id, parseInt(days || '30', 10));
+  async evaluateFunnel(
+    @Param('id') id: string,
+    @Query('days') days: string,
+    @Query('traffic') traffic?: string,
+  ) {
+    return this.funnelEngine.evaluateFunnel(
+      id,
+      parseInt(days || '30', 10),
+      parseTrafficSegment(traffic),
+    );
   }
 }

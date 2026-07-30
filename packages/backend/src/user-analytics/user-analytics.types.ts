@@ -3,6 +3,8 @@
  * Covers all 5 dashboard tabs + event ingestion shapes.
  */
 
+import type { TrafficSegment } from './traffic-segment';
+
 // ============================================================
 // Shared primitives
 // ============================================================
@@ -58,6 +60,20 @@ export interface AnalyticsFilters {
   source?: string;
   startDate?: string;
   endDate?: string;
+  /**
+   * Which population every number describes. Defaults to `human`.
+   * See traffic-segment.ts — `human` is NOT the complement of `bot`, because
+   * ~46,000 of 48,600 trailing-30-day sessions are unclassified.
+   */
+  traffic?: TrafficSegment;
+}
+
+/** Session counts per classification, so the UI can state what it excluded. */
+export interface TrafficSegmentCounts {
+  human: number;
+  bot: number;
+  unclassified: number;
+  total: number;
 }
 
 // ============================================================
@@ -93,9 +109,16 @@ export interface PageMetric {
   pagePath: string;
   pageGroup?: string;
   views: number;
-  bounceRate: number;
-  avgTimeSeconds: number;
-  conversionRate: number;
+  /** Distinct visitors who saw the page — the honest second dimension. */
+  visitors: number;
+  /**
+   * Optional because they are not derivable from a pageview-event rollup.
+   * They were previously hardcoded to 0, which rendered as a real "0%" bounce
+   * on every row. Undefined means "not measured", and the UI shows a dash.
+   */
+  bounceRate?: number;
+  avgTimeSeconds?: number;
+  conversionRate?: number;
 }
 
 export interface GoalProgress {
@@ -119,6 +142,12 @@ export interface OverviewData {
   quickFunnel: FunnelStep[];
   topPages: PageMetric[];
   activeUsersChart: TimeSeriesPoint[];
+  /**
+   * Session counts per classification for the SAME window, regardless of which
+   * segment is being displayed. Lets the UI say what it excluded — a filtered
+   * number and a broken one look identical unless the exclusion is stated.
+   */
+  trafficSegments?: TrafficSegmentCounts;
   goalProgress: GoalProgress[];
   annotations: Annotation[];
 }
