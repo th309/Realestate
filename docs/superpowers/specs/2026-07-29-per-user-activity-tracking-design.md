@@ -323,11 +323,38 @@ this threshold exists to prevent.
 - 30-day TTL purge alongside `analytics_purge_old_events`.
 - `rrweb-player` lazy-loaded into the timeline row.
 
-**Blocking prerequisite:** the privacy policy must disclose session recording before this is
-enabled for anyone but internal users. Ship with the flag on for `is_internal` only.
+**Blocking prerequisite — now satisfied.** The Privacy Policy and Terms were updated on
+2026-07-29 (Effective Date bumped on both) to disclose activity tracking for marketing and
+site improvement, account-linked activity history, and session recording. Even so, ship
+with the flag on for `is_internal` only, and widen deliberately.
 
 **Honest limitation:** captures nothing retroactively. It adds zero value against the four
 months of history already collected, which is why it is sequenced last.
+
+### 11.1 Commitments the published policy now makes — these are requirements, not options
+
+The updated documents promise specific behaviour. Until the code below exists, the policy
+is inaccurate, which is a worse problem than a missing feature.
+
+| Promise in the policy                                                                                                | Required implementation                                                                                                                                                                                                       |
+| -------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| "enable Do Not Track or Global Privacy Control in your browser" to limit first-party analytics and session recording | `tracker.ts` returns early when `navigator.globalPrivacyControl === true` or `navigator.doNotTrack === '1'`. Suppresses event batches, heartbeats, and replay capture alike. Roughly three lines, and it must gate all three. |
+| "contact us … and we will exclude your account"                                                                      | A persisted per-account exclusion the ingest path honours, checked the same way `InternalUserRegistryService` already resolves internal ids. An admin toggle on the user detail page sets it.                                 |
+| Recordings "exclude the contents of form fields" and mask "payment, authentication, and account-security screens"    | `maskAllInputs: true` is not sufficient on its own — verify the block classes are actually applied to the billing, auth, and account routes, by inspecting a real recording rather than trusting config.                      |
+| "not sold, and … not shared with advertising networks"                                                               | No replay or per-user event payload may be forwarded to GA or any third party. GA continues to receive only `sign_up` / `trial_start` / `purchase`, as it does today.                                                         |
+
+**Sequencing consequence:** the DNT/GPC check and the exclusion flag move into Phase 1
+alongside the other data-integrity work. They are the cheapest items in the whole design
+and the only ones with a compliance cost attached to skipping them.
+
+### 11.2 Pre-existing disclosure gap, fixed in passing
+
+Before this change, §5 of the Privacy Policy disclosed only Google Analytics. The primary
+pipeline is first-party — `tracker.ts` beacons to `/api/usage/events`, and GA receives just
+`sign_up` / `trial_start` / `purchase` (`tracker.ts:99-108`). The policy therefore
+under-described the actual collection independently of anything in this design. §5 now
+describes the first-party tracker, the browser identifier, and the retroactive association
+of pre-signup activity performed by `identity-stitching.service.ts`.
 
 ## 12. §8 — Cross-user behaviour
 
@@ -358,16 +385,16 @@ judgment, not an implementation detail.
 
 ## 14. Sequencing
 
-| Phase | Content                      | Gate                                          |
-| ----- | ---------------------------- | --------------------------------------------- |
-| 1     | §1 data integrity + backfill | 0 orphaned sessions                           |
-| 2     | §2 RPCs                      | Counts reconcile against direct SQL           |
-| 3     | §3 API + DTOs                | `npx tsc --noEmit` clean; 401 without admin   |
-| 4     | §4 per-user page + narration | Real user's timeline renders from live data   |
-| 5     | §5 list signals + split      | Every file within limits; behaviour unchanged |
-| 6     | §6 AI narrative              | Cache hit on unchanged user                   |
-| 7     | §8 behaviour tab             | Denominators present on every panel           |
-| 8     | §7 replay                    | Privacy policy updated first                  |
+| Phase | Content                                                                               | Gate                                                 |
+| ----- | ------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| 1     | §1 data integrity + backfill, plus the §11.1 DNT/GPC check and account-exclusion flag | 0 orphaned sessions; GPC set means zero rows written |
+| 2     | §2 RPCs                                                                               | Counts reconcile against direct SQL                  |
+| 3     | §3 API + DTOs                                                                         | `npx tsc --noEmit` clean; 401 without admin          |
+| 4     | §4 per-user page + narration                                                          | Real user's timeline renders from live data          |
+| 5     | §5 list signals + split                                                               | Every file within limits; behaviour unchanged        |
+| 6     | §6 AI narrative                                                                       | Cache hit on unchanged user                          |
+| 7     | §8 behaviour tab                                                                      | Denominators present on every panel                  |
+| 8     | §7 replay                                                                             | Privacy policy updated first                         |
 
 Phases 1–5 are the substance. 6–8 are additive and independently shippable.
 
