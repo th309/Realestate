@@ -8,6 +8,7 @@ import { EventIngestionController } from './event-ingestion.controller';
 import { EventIngestionService } from './event-ingestion.service';
 import { SessionManagerService } from './session-manager.service';
 import { IdentityStitchingService } from './identity-stitching.service';
+import { InternalUserRegistryService } from './internal-user-registry.service';
 import { OverviewAnalyticsService } from './overview-analytics.service';
 import { OverviewDataFetcherService } from './overview-data-fetcher.service';
 import { JourneyAnalyticsService } from './journey-analytics.service';
@@ -17,6 +18,7 @@ import { ConversionAnalyticsService } from './conversion-analytics.service';
 import { DailyRollupService } from './daily-rollup.service';
 import { FunnelEngineService } from './funnel-engine.service';
 import { PageClassifierService } from './page-classifier.service';
+import { VisitorJourneyService } from './visitor-journey.service';
 import { ServerEventEmitterService } from './server-event-emitter.service';
 import { UserAnalyticsController } from './user-analytics.controller';
 
@@ -32,6 +34,7 @@ import { UserAnalyticsController } from './user-analytics.controller';
     EventIngestionService,
     SessionManagerService,
     IdentityStitchingService,
+    InternalUserRegistryService,
     OverviewAnalyticsService,
     OverviewDataFetcherService,
     JourneyAnalyticsService,
@@ -42,12 +45,14 @@ import { UserAnalyticsController } from './user-analytics.controller';
     FunnelEngineService,
     PageClassifierService,
     ServerEventEmitterService,
+    VisitorJourneyService,
     { provide: APP_GUARD, useClass: ThrottlerGuard },
   ],
   exports: [
     EventIngestionService,
     SessionManagerService,
     IdentityStitchingService,
+    InternalUserRegistryService,
     OverviewAnalyticsService,
     JourneyAnalyticsService,
     RetentionAnalyticsService,
@@ -56,6 +61,7 @@ import { UserAnalyticsController } from './user-analytics.controller';
     FunnelEngineService,
     PageClassifierService,
     ServerEventEmitterService,
+    VisitorJourneyService,
   ],
 })
 export class UserAnalyticsModule {}

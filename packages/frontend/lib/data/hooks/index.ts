@@ -167,3 +167,16 @@ export {
 
 // Score heatmap (Market Momentum Map widget)
 export { useScoreHeatmap, type UseScoreHeatmapResult } from "./useScoreHeatmap";
+
+// Admin analytics overview (shared cache entry across the page shell + tab)
+export {
+  useOverviewAnalytics,
+  overviewAnalyticsQueryKey,
+} from "./useOverviewAnalytics";
+
+// Admin analytics visitors (master/detail journey explorer)
+export { useVisitorList, visitorListQueryKey } from "./useVisitorList";
+export {
+  useVisitorTimeline,
+  visitorTimelineQueryKey,
+} from "./useVisitorTimeline";

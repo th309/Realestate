@@ -13,6 +13,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { EventIngestionService } from '../event-ingestion.service';
 import { SessionManagerService } from '../session-manager.service';
 import { IdentityStitchingService } from '../identity-stitching.service';
+import { InternalUserRegistryService } from '../internal-user-registry.service';
 import { SupabaseService } from '../../supabase/supabase.service';
 
 // Chainable Supabase query builder mock
@@ -46,6 +47,12 @@ const mockIdentityStitching = {
   linkVisitorToUser: jest.fn().mockResolvedValue(undefined),
 };
 
+const INTERNAL_USER_ID = 'u-admin';
+
+const mockInternalUsers = {
+  getInternalUserIds: jest.fn().mockResolvedValue(new Set([INTERNAL_USER_ID])),
+};
+
 describe('EventIngestionService', () => {
   let service: EventIngestionService;
 
@@ -58,6 +65,10 @@ describe('EventIngestionService', () => {
         {
           provide: IdentityStitchingService,
           useValue: mockIdentityStitching,
+        },
+        {
+          provide: InternalUserRegistryService,
+          useValue: mockInternalUsers,
         },
       ],
     }).compile();
@@ -238,6 +249,72 @@ describe('EventIngestionService', () => {
         expect.any(Array),
         '',
       );
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Internal traffic flagging
+  // ---------------------------------------------------------------------------
+
+  describe('internal traffic flagging', () => {
+    it('stamps is_internal per event, so a batch straddling a sign-in is split correctly', async () => {
+      await service.ingestBatch([
+        {
+          event_category: 'pageview',
+          event_action: 'view',
+          session_id: 's1',
+          visitor_id: 'v1',
+          // Anonymous when the page opened — not provably ours yet.
+          // session-manager backfills this row once the session is known.
+        },
+        {
+          event_category: 'feature',
+          event_action: 'map_click',
+          session_id: 's1',
+          visitor_id: 'v1',
+          user_id: INTERNAL_USER_ID,
+        },
+        {
+          event_category: 'feature',
+          event_action: 'map_click',
+          session_id: 's2',
+          visitor_id: 'v2',
+          user_id: 'u-customer',
+        },
+      ]);
+
+      // `mock.calls` is typed `any[]`, so it is narrowed in one step here.
+      const rows = (
+        mockQueryBuilder.upsert.mock.calls as unknown[][]
+      )[0][0] as {
+        user_id: string | null;
+        is_internal: boolean;
+      }[];
+
+      expect(rows.map((r) => r.is_internal)).toEqual([false, true, false]);
+    });
+
+    it('resolves the internal id set once per batch, never per event', async () => {
+      // The set is cached behind a TTL, but a lookup per row would still turn
+      // one answer into N identical awaits on every ingestion request.
+      await service.ingestBatch([
+        {
+          event_category: 'pageview',
+          event_action: 'view',
+          session_id: 's1',
+          visitor_id: 'v1',
+          user_id: INTERNAL_USER_ID,
+        },
+        {
+          event_category: 'pageview',
+          event_action: 'view',
+          session_id: 's1',
+          visitor_id: 'v1',
+          user_id: INTERNAL_USER_ID,
+        },
+      ]);
+
+      expect(mockInternalUsers.getInternalUserIds).toHaveBeenCalledTimes(1);
     });
   });
 

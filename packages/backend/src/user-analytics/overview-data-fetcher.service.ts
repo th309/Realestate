@@ -5,14 +5,67 @@ import {
   FunnelStep,
   PageMetric,
   Annotation,
+  TrafficSegmentCounts,
 } from './user-analytics.types';
+import { DEFAULT_TRAFFIC_SEGMENT } from './traffic-segment';
 
-const FUNNEL_STAGES: { name: string; eventAction: string | null }[] = [
-  { name: 'Visited', eventAction: null },
-  { name: 'Signed Up', eventAction: 'signup' },
-  { name: 'Activated', eventAction: 'activation' },
-  { name: 'Converted', eventAction: 'subscription_started' },
+/**
+ * Overview reads go through SQL aggregate functions, never through
+ * `.select()` + aggregate-in-JS.
+ *
+ * The previous implementation fetched session rows and reduced them in Node.
+ * PostgREST caps an unranged `.select()` at 1,000 rows without erroring, so
+ * every KPI was a correct calculation over a truncated population — the
+ * dashboard's "1,000 TOTAL SESSIONS" was the cap itself, against ~48,000 real
+ * sessions in the same window. Aggregating server-side removes the failure mode
+ * rather than raising the ceiling: there is no array left to truncate.
+ */
+
+/**
+ * The signup funnel, defined against events that ACTUALLY EXIST.
+ *
+ * The previous stages matched `signup`, `activation` and `subscription_started`
+ * — none of which has ever been emitted, so stages 2-4 read 0 forever and the
+ * panel showed a 100% drop-off that described nothing. Verified against the
+ * live inventory of 41 distinct (category, action) pairs in user_events.
+ *
+ * Stage 3 is the one that makes the funnel diagnostic: it splits an abandoned
+ * signup by PATH, so "typed an email and gave up" stops being indistinguishable
+ * from "clicked Google and it broke".
+ */
+export const SIGNUP_FUNNEL_STAGES: {
+  name: string;
+  actions: string[] | null;
+}[] = [
+  { name: 'Visited', actions: null },
+  { name: 'Opened signup', actions: ['signup_start'] },
+  {
+    name: 'Engaged a path',
+    actions: ['signup_email_engaged', 'signup_oauth_click'],
+  },
+  { name: 'Code sent', actions: ['signup_pending_confirmation'] },
+  { name: 'Code verified', actions: ['signup_otp_verified'] },
+  { name: 'Account created', actions: ['signup_complete'] },
 ];
+
+export interface OverviewKpiRow {
+  unique_visitors: number;
+  total_sessions: number;
+  avg_session_duration: number;
+  bounce_rate: number;
+  pages_per_session: number;
+  converted_visitors: number;
+  conversion_rate: number;
+}
+
+export interface DailyPoint {
+  day: string;
+  visitors: number;
+  sessions: number;
+  avg_duration: number;
+  bounce_rate: number;
+  pages_per_session: number;
+}
 
 @Injectable()
 export class OverviewDataFetcherService {
@@ -20,81 +73,114 @@ export class OverviewDataFetcherService {
 
   constructor(private readonly supabase: SupabaseService) {}
 
-  async fetchSessionRows(
+  private segment(filters: AnalyticsFilters): string {
+    return filters.traffic ?? DEFAULT_TRAFFIC_SEGMENT;
+  }
+
+  async fetchKpis(
     startDate: Date,
     endDate: Date | null,
-    fields: string,
     filters: AnalyticsFilters,
-  ): Promise<any[]> {
-    const client = this.supabase.getClient();
-    let query = client
-      .from('user_sessions')
-      .select(fields)
-      .eq('is_bot', false)
-      .gte('started_at', startDate.toISOString());
+  ): Promise<OverviewKpiRow | null> {
+    const { data, error } = await this.supabase
+      .getClient()
+      .rpc('analytics_overview_kpis', {
+        p_start: startDate.toISOString(),
+        p_end: endDate ? endDate.toISOString() : null,
+        p_traffic: this.segment(filters),
+        p_tier: filters.tier ?? null,
+        p_device: filters.device ?? null,
+      });
 
-    if (endDate) {
-      query = query.lt('started_at', endDate.toISOString());
-    }
-
-    if (filters.tier) query = (query as any).eq('user_tier', filters.tier);
-    if (filters.device)
-      query = (query as any).eq('device_type', filters.device);
-
-    const { data, error } = await (query as any);
     if (error) {
       this.logger.error(
-        `[OverviewDataFetcher] Session query error: ${error.message}`,
+        `[OverviewDataFetcher] KPI rpc failed: ${error.message}`,
+      );
+      return null;
+    }
+    return (data?.[0] as OverviewKpiRow | undefined) ?? null;
+  }
+
+  async fetchDailySeries(
+    startDate: Date,
+    filters: AnalyticsFilters,
+  ): Promise<DailyPoint[]> {
+    const { data, error } = await this.supabase
+      .getClient()
+      .rpc('analytics_daily_visitors', {
+        p_start: startDate.toISOString(),
+        p_end: null,
+        p_traffic: this.segment(filters),
+        p_tier: filters.tier ?? null,
+      });
+
+    if (error) {
+      this.logger.error(
+        `[OverviewDataFetcher] Daily series rpc failed: ${error.message}`,
       );
       return [];
     }
-    return data ?? [];
+    return (data ?? []) as DailyPoint[];
+  }
+
+  /**
+   * How much traffic sits in each classification. Surfaced in the UI so an
+   * excluded population is stated rather than silently dropped — a corrected
+   * number is indistinguishable from a broken one unless you say what was
+   * removed.
+   */
+  async fetchTrafficSegments(
+    startDate: Date,
+    endDate: Date | null,
+  ): Promise<TrafficSegmentCounts> {
+    const { data, error } = await this.supabase
+      .getClient()
+      .rpc('analytics_traffic_segments', {
+        p_start: startDate.toISOString(),
+        p_end: endDate ? endDate.toISOString() : null,
+      });
+
+    if (error) {
+      this.logger.error(
+        `[OverviewDataFetcher] Traffic segments rpc failed: ${error.message}`,
+      );
+      return { human: 0, bot: 0, unclassified: 0, internal: 0, total: 0 };
+    }
+    const row = data?.[0] as TrafficSegmentCounts | undefined;
+    return row ?? { human: 0, bot: 0, unclassified: 0, internal: 0, total: 0 };
   }
 
   async fetchTopPages(
     startDate: Date,
     filters: AnalyticsFilters,
   ): Promise<PageMetric[]> {
-    const client = this.supabase.getClient();
-    let query = client
-      .from('user_events')
-      .select('page_path')
-      .eq('event_category', 'pageview')
-      .eq('is_bot', false)
-      .gte('created_at', startDate.toISOString())
-      .not('page_path', 'is', null);
+    const { data, error } = await this.supabase
+      .getClient()
+      .rpc('analytics_top_pages', {
+        p_start: startDate.toISOString(),
+        p_end: null,
+        p_traffic: this.segment(filters),
+        p_tier: filters.tier ?? null,
+        p_limit: 10,
+      });
 
-    if (filters.tier) query = query.eq('user_tier', filters.tier);
-    // No device filter here: user_events has no device_type column (it lives on
-    // user_sessions). Filtering on it errored with 42703 and blanked Top Pages
-    // entirely whenever a device was selected.
-
-    const { data, error } = await query;
     if (error) {
       this.logger.error(
-        `[OverviewDataFetcher] Top pages query error: ${error.message}`,
+        `[OverviewDataFetcher] Top pages rpc failed: ${error.message}`,
       );
       return [];
     }
 
-    const counts: Record<string, number> = {};
-    for (const row of data ?? []) {
-      const path = row.page_path as string;
-      counts[path] = (counts[path] ?? 0) + 1;
-    }
-
-    return Object.entries(counts)
-      .sort(([, a], [, b]) => b - a)
-      .slice(0, 10)
-      .map(
-        ([pagePath, views]): PageMetric => ({
-          pagePath,
-          views,
-          bounceRate: 0,
-          avgTimeSeconds: 0,
-          conversionRate: 0,
-        }),
-      );
+    // bounceRate / avgTimeSeconds / conversionRate are deliberately absent:
+    // they are not derivable from a pageview rollup, and hardcoding 0 rendered
+    // a real-looking "0%" on every row.
+    return (data ?? []).map(
+      (row: any): PageMetric => ({
+        pagePath: row.page_path,
+        views: Number(row.views),
+        visitors: Number(row.visitors),
+      }),
+    );
   }
 
   async fetchQuickFunnelStageCounts(
@@ -102,48 +188,45 @@ export class OverviewDataFetcherService {
     filters: AnalyticsFilters,
   ): Promise<FunnelStep[]> {
     const client = this.supabase.getClient();
-    const iso = startDate.toISOString();
-    const stageCounts: number[] = [];
+    const traffic = this.segment(filters);
 
-    for (const stage of FUNNEL_STAGES) {
-      if (stage.eventAction === null) {
-        const rows = await this.fetchSessionRows(
-          startDate,
-          null,
-          'visitor_id',
-          filters,
-        );
-        stageCounts.push(
-          new Set(rows.map((r) => r.visitor_id).filter(Boolean)).size,
-        );
-      } else {
-        let query = client
-          .from('user_events')
-          .select('visitor_id')
-          .eq('is_bot', false)
-          .gte('created_at', iso)
-          .eq('event_action', stage.eventAction);
+    const allActions = SIGNUP_FUNNEL_STAGES.flatMap((s) => s.actions ?? []);
 
-        if (filters.tier) query = query.eq('user_tier', filters.tier);
-        // See fetchTopPages: user_events has no device_type column, so this
-        // filter errored and zeroed every funnel stage when a device was set.
+    const [kpis, counts] = await Promise.all([
+      this.fetchKpis(startDate, null, filters),
+      client.rpc('analytics_event_visitor_counts', {
+        p_start: startDate.toISOString(),
+        p_actions: allActions,
+        p_end: null,
+        p_traffic: traffic,
+        p_tier: filters.tier ?? null,
+      }),
+    ]);
 
-        const { data, error } = await query;
-        if (error) {
-          this.logger.error(
-            `[OverviewDataFetcher] Funnel stage error: ${error.message}`,
-          );
-          stageCounts.push(0);
-        } else {
-          stageCounts.push(
-            new Set((data ?? []).map((r: any) => r.visitor_id).filter(Boolean))
-              .size,
-          );
-        }
-      }
+    if (counts.error) {
+      this.logger.error(
+        `[OverviewDataFetcher] Funnel rpc failed: ${counts.error.message}`,
+      );
+      return [];
     }
 
-    return FUNNEL_STAGES.map(
+    const visitorsByAction = new Map<string, number>();
+    for (const row of (counts.data ?? []) as any[]) {
+      visitorsByAction.set(row.event_action, Number(row.visitors));
+    }
+
+    // A stage with several actions is an OR (either path counts), so take the
+    // max rather than the sum — summing would double-count a visitor who tried
+    // both the email form and the Google button.
+    const stageCounts = SIGNUP_FUNNEL_STAGES.map((stage) => {
+      if (stage.actions === null) return kpis?.unique_visitors ?? 0;
+      return Math.max(
+        0,
+        ...stage.actions.map((a) => visitorsByAction.get(a) ?? 0),
+      );
+    });
+
+    return SIGNUP_FUNNEL_STAGES.map(
       (stage, i): FunnelStep => ({
         name: stage.name,
         count: stageCounts[i],

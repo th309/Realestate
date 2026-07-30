@@ -5,6 +5,8 @@ import { useQuery } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 import { AnalyticsDateRange } from "./components/AnalyticsDateRange";
 import { AnalyticsFilterBar } from "./components/AnalyticsFilterBar";
+import { TrafficSegmentControl } from "./components/TrafficSegmentControl";
+import { useOverviewAnalytics } from "@/lib/data";
 import { AnalyticsTabNav } from "./components/AnalyticsTabNav";
 import { DrillDownChips } from "./components/DrillDownChips";
 import { ExportCsvButton } from "./components/ExportCsvButton";
@@ -22,6 +24,7 @@ import type {
 type TabId =
   | "overview"
   | "journeys"
+  | "visitors"
   | "retention"
   | "acquisition"
   | "conversion";
@@ -34,6 +37,11 @@ const OverviewTab = dynamic(() =>
 const JourneysTab = dynamic(() =>
   import("./components/journeys/JourneysTab").then((m) => ({
     default: m.JourneysTab,
+  })),
+);
+const VisitorsTab = dynamic(() =>
+  import("./components/visitors/VisitorsTab").then((m) => ({
+    default: m.VisitorsTab,
   })),
 );
 const RetentionTab = dynamic(() =>
@@ -88,6 +96,14 @@ export default function AnalyticsPage() {
   const { startDate, endDate } = useMemo(
     () => computeDateWindow(days, customRange),
     [days, customRange],
+  );
+
+  // Shares OverviewTab's cache entry — the hook owns the key, so both resolve
+  // from a single request. Only the segment counts are read here; they are
+  // window-wide and identical whichever segment is displayed.
+  const { data: overviewForCounts } = useOverviewAnalytics(
+    days,
+    effectiveFilters,
   );
 
   // Fetch annotations for the active date window
@@ -162,6 +178,15 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
+      {/* Which population every number below describes. Kept separate from the
+          filter chips because it does not narrow a population — it chooses one,
+          and the same tile reads 790 or 48,643 depending on it. */}
+      <TrafficSegmentControl
+        value={filters.traffic ?? "human"}
+        counts={overviewForCounts?.trafficSegments}
+        onChange={(traffic) => setFilters({ ...filters, traffic })}
+      />
+
       {/* Filter bar */}
       <AnalyticsFilterBar filters={filters} onChange={setFilters} />
 
@@ -181,6 +206,7 @@ export default function AnalyticsPage() {
       <div className="min-h-[400px]">
         {activeTab === "overview" && <OverviewTab {...tabProps} />}
         {activeTab === "journeys" && <JourneysTab {...tabProps} />}
+        {activeTab === "visitors" && <VisitorsTab {...tabProps} />}
         {activeTab === "retention" && <RetentionTab {...tabProps} />}
         {activeTab === "acquisition" && <AcquisitionTab {...tabProps} />}
         {activeTab === "conversion" && <ConversionTab {...tabProps} />}

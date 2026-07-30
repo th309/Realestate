@@ -1,5 +1,22 @@
 /**
- * Pure query helpers for the acquisition analytics service.
+ * Query helpers for the acquisition analytics service.
+ *
+ * Every session aggregate here goes through a SQL aggregate function, never
+ * through `.select()` + reduce-in-JS.
+ *
+ * THE BUG THIS REPLACES: each helper ran
+ * `client.from('user_sessions').select(...)` with no `.range()`. PostgREST caps
+ * an unranged select at 1,000 rows and neither errors nor warns — it returns a
+ * well-formed array, and the JS then computes a perfectly correct percentage
+ * against the wrong denominator. A trailing-30-day window holds ~48,000
+ * sessions, so every Acquisition panel was reporting ~2% of the data as if it
+ * were all of it. Raising a `.limit()` is no defence; the max-rows cap applies
+ * regardless. Aggregating server-side removes the failure mode rather than
+ * moving the ceiling: there is no array left to truncate.
+ *
+ * It also makes the traffic segment a parameter instead of a hardcoded
+ * `is_bot = false`, so the bot/unclassified views stop being unreachable.
+ *
  * All functions operate directly on a SupabaseClient so they carry no
  * injectable state and can be tested in isolation.
  */
@@ -7,157 +24,145 @@
 import { Logger } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import {
+  AnalyticsFilters,
   SourceMetric,
   LandingPerf,
   TimeSeriesPoint,
   Annotation,
 } from './user-analytics.types';
+import { DEFAULT_TRAFFIC_SEGMENT } from './traffic-segment';
 
 const logger = new Logger('AcquisitionSessionQueries');
+
+/** Landing-page rows returned per call. Well above the ~40 distinct landing pages seen in a 30-day window. */
+const LANDING_PAGE_LIMIT = 50;
+
+function trafficSegment(filters: AnalyticsFilters): string {
+  return filters.traffic ?? DEFAULT_TRAFFIC_SEGMENT;
+}
+
+interface TrafficSourceRow {
+  entry_type: string | null;
+  source: string | null;
+  sessions: number | string;
+  visitors: number | string;
+}
+
+interface LandingPerformanceRow {
+  page: string;
+  sessions: number | string;
+  bounce_rate: number | string;
+  avg_time: number | string;
+  signups: number | string;
+  conversion_rate: number | string;
+}
+
+interface ChannelTrendRow {
+  day: string;
+  entry_type: string | null;
+  sessions: number | string;
+}
 
 export async function queryTrafficSources(
   client: SupabaseClient,
   startDate: string,
+  filters: AnalyticsFilters = {},
 ): Promise<SourceMetric[]> {
-  const { data: sessions, error } = await client
-    .from('user_sessions')
-    .select('entry_type, utm_source, referrer_domain')
-    .eq('is_bot', false)
-    .gte('started_at', startDate);
+  const { data, error } = await client.rpc('analytics_traffic_sources', {
+    p_start: startDate,
+    p_end: null,
+    p_traffic: trafficSegment(filters),
+  });
 
   if (error) {
     logger.error(
-      `[AcquisitionAnalytics] Traffic sources query failed: ${error.message}`,
+      `[AcquisitionAnalytics] Traffic sources rpc failed: ${error.message}`,
     );
     return [];
   }
 
-  const counts = new Map<string, { entryType: string; count: number }>();
+  const rows = (data ?? []) as TrafficSourceRow[];
 
-  for (const row of sessions ?? []) {
-    const entryType: string = row.entry_type ?? 'unknown';
-    const sourceLabel: string =
-      row.utm_source ?? row.referrer_domain ?? 'direct';
-    const mapKey = `${entryType}__${sourceLabel}`;
+  // The denominator is the sum over the FULL grouped result, so a share is a
+  // share of every session in the segment — not of the first page of them.
+  const total = rows.reduce((sum, row) => sum + Number(row.sessions), 0);
 
-    const existing = counts.get(mapKey);
-    if (existing) {
-      existing.count += 1;
-    } else {
-      counts.set(mapKey, { entryType, count: 1 });
-    }
-  }
-
-  const total = (sessions ?? []).length;
-
-  return Array.from(counts.entries())
-    .map(([key, { entryType, count }]) => ({
-      source: key.split('__')[1],
-      entryType,
-      sessions: count,
-      percentage: total > 0 ? Math.round((count / total) * 1000) / 10 : 0,
-    }))
+  return rows
+    .map((row) => {
+      const sessions = Number(row.sessions);
+      return {
+        source: row.source ?? 'direct',
+        entryType: row.entry_type ?? 'unknown',
+        sessions,
+        percentage: total > 0 ? Math.round((sessions / total) * 1000) / 10 : 0,
+      };
+    })
     .sort((a, b) => b.sessions - a.sessions);
 }
 
 export async function queryLandingPagePerformance(
   client: SupabaseClient,
   startDate: string,
+  filters: AnalyticsFilters = {},
 ): Promise<LandingPerf[]> {
-  const { data: sessions, error } = await client
-    .from('user_sessions')
-    .select('landing_page, is_bounce, duration_seconds, converted')
-    .eq('is_bot', false)
-    .gte('started_at', startDate)
-    .not('landing_page', 'is', null);
+  const { data, error } = await client.rpc('analytics_landing_performance', {
+    p_start: startDate,
+    p_end: null,
+    p_traffic: trafficSegment(filters),
+    p_limit: LANDING_PAGE_LIMIT,
+  });
 
   if (error) {
     logger.error(
-      `[AcquisitionAnalytics] Landing page performance query failed: ${error.message}`,
+      `[AcquisitionAnalytics] Landing performance rpc failed: ${error.message}`,
     );
     return [];
   }
 
-  const pageGroups = new Map<
-    string,
-    {
-      totalSessions: number;
-      bounces: number;
-      totalDuration: number;
-      signups: number;
-    }
-  >();
-
-  for (const row of sessions ?? []) {
-    const page: string = row.landing_page;
-    const existing = pageGroups.get(page) ?? {
-      totalSessions: 0,
-      bounces: 0,
-      totalDuration: 0,
-      signups: 0,
-    };
-
-    existing.totalSessions += 1;
-    existing.bounces += row.is_bounce ? 1 : 0;
-    existing.totalDuration += row.duration_seconds ?? 0;
-    existing.signups += row.converted ? 1 : 0;
-
-    pageGroups.set(page, existing);
-  }
-
-  return Array.from(pageGroups.entries())
-    .map(([page, stats]) => ({
-      page,
-      sessions: stats.totalSessions,
-      bounceRate:
-        stats.totalSessions > 0 ? stats.bounces / stats.totalSessions : 0,
-      avgTime:
-        stats.totalSessions > 0
-          ? Math.round(stats.totalDuration / stats.totalSessions)
-          : 0,
-      signups: stats.signups,
-      conversionRate:
-        stats.totalSessions > 0 ? stats.signups / stats.totalSessions : 0,
-    }))
-    .sort((a, b) => b.sessions - a.sessions);
+  // Already grouped, ordered by sessions desc and limited server-side.
+  return ((data ?? []) as LandingPerformanceRow[]).map((row) => ({
+    page: row.page,
+    sessions: Number(row.sessions),
+    bounceRate: Number(row.bounce_rate),
+    avgTime: Math.round(Number(row.avg_time)),
+    signups: Number(row.signups),
+    conversionRate: Number(row.conversion_rate),
+  }));
 }
 
 export async function queryChannelTrend(
   client: SupabaseClient,
   startDate: string,
+  filters: AnalyticsFilters = {},
 ): Promise<{ channel: string; data: TimeSeriesPoint[] }[]> {
-  const { data: sessions, error } = await client
-    .from('user_sessions')
-    .select('started_at, entry_type')
-    .eq('is_bot', false)
-    .gte('started_at', startDate);
+  const { data, error } = await client.rpc('analytics_channel_trend', {
+    p_start: startDate,
+    p_end: null,
+    p_traffic: trafficSegment(filters),
+  });
 
   if (error) {
     logger.error(
-      `[AcquisitionAnalytics] Channel trend query failed: ${error.message}`,
+      `[AcquisitionAnalytics] Channel trend rpc failed: ${error.message}`,
     );
     return [];
   }
 
-  const channelDates = new Map<string, Map<string, number>>();
+  const channelSeries = new Map<string, TimeSeriesPoint[]>();
 
-  for (const row of sessions ?? []) {
-    const channel: string = row.entry_type ?? 'unknown';
-    const date = (row.started_at as string).slice(0, 10);
-
-    if (!channelDates.has(channel)) {
-      channelDates.set(channel, new Map());
-    }
-
-    const dateCounts = channelDates.get(channel)!;
-    dateCounts.set(date, (dateCounts.get(date) ?? 0) + 1);
+  for (const row of (data ?? []) as ChannelTrendRow[]) {
+    const channel = row.entry_type ?? 'unknown';
+    const points = channelSeries.get(channel) ?? [];
+    points.push({
+      date: String(row.day).slice(0, 10),
+      value: Number(row.sessions),
+    });
+    channelSeries.set(channel, points);
   }
 
-  return Array.from(channelDates.entries()).map(([channel, dateCounts]) => ({
+  return Array.from(channelSeries.entries()).map(([channel, points]) => ({
     channel,
-    data: Array.from(dateCounts.entries())
-      .map(([date, value]) => ({ date, value }))
-      .sort((a, b) => a.date.localeCompare(b.date)),
+    data: points.sort((a, b) => a.date.localeCompare(b.date)),
   }));
 }
 

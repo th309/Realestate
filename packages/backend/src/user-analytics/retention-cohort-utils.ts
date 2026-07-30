@@ -1,80 +1,104 @@
 /**
- * Pure (stateless) helpers for cohort retention calculations.
+ * Pure (stateless) helpers for cohort retention.
  * No I/O — all functions take plain data and return plain data.
  * Consumed by RetentionAnalyticsService.
+ *
+ * These used to do the aggregation itself, over session rows fetched into Node.
+ * That is now `analytics_cohort_retention` (see the 20260729212500 migration):
+ * an unranged `.select()` is capped at 1,000 rows by PostgREST without erroring,
+ * so grouping in JS meant grouping a silent slice. What is left here is the part
+ * that genuinely belongs in the application — turning counts into the shape the
+ * dashboard renders. SQL should not be deciding percentages.
  */
 
 import type { CohortRow } from './user-analytics.types';
 
-// ---------------------------------------------------------------------------
-// Grouping helpers
-// ---------------------------------------------------------------------------
-
-export function groupByCohortWeek(
-  identities: { user_id: string; signup_cohort: string }[],
-): Map<string, Set<string>> {
-  const cohortMap = new Map<string, Set<string>>();
-  for (const identity of identities) {
-    const weekKey = toWeekKey(identity.signup_cohort);
-    if (!cohortMap.has(weekKey)) cohortMap.set(weekKey, new Set());
-    cohortMap.get(weekKey)!.add(identity.user_id);
-  }
-  return cohortMap;
+/** One element of the jsonb document `analytics_cohort_retention` returns. */
+export interface CohortRetentionRpcRow {
+  /** Session tier, or `__all__` when the RPC was not asked to split by tier. */
+  tier: string;
+  /** Monday of the signup week, `YYYY-MM-DD`. */
+  cohort_week: string;
+  cohort_size: number;
+  /** Distinct users active in week i after signup, index 0 = signup week. */
+  weekly_active: number[];
 }
 
-export function groupSessionsByUser(
-  sessions: { user_id: string; started_at: string }[],
-): Map<string, string[]> {
-  const map = new Map<string, string[]>();
-  for (const session of sessions) {
-    if (!session.user_id) continue;
-    if (!map.has(session.user_id)) map.set(session.user_id, []);
-    map.get(session.user_id)!.push(session.started_at);
-  }
-  return map;
-}
+/** Sentinel tier the RPC emits when p_by_tier is false. Never displayed. */
+export const UNSPLIT_TIER = '__all__';
 
 // ---------------------------------------------------------------------------
-// Cohort retention matrix
+// Counts -> the rendered matrix
 // ---------------------------------------------------------------------------
 
-export function computeCohortRetentionRows(
-  cohortMap: Map<string, Set<string>>,
-  sessionsByUser: Map<string, string[]>,
-): CohortRow[] {
-  return Array.from(cohortMap.entries())
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([cohortWeek, userIds]) => {
-      const cohortSize = userIds.size;
-      const cohortStartMs = new Date(cohortWeek).getTime();
-      const weekCounts: number[] = [];
-
-      for (let w = 0; w < 12; w++) {
-        const weekStart = cohortStartMs + w * 7 * 24 * 60 * 60 * 1000;
-        const weekEnd = weekStart + 7 * 24 * 60 * 60 * 1000;
-        let active = 0;
-        for (const uid of userIds) {
-          const userSessions = sessionsByUser.get(uid) ?? [];
-          const hadSession = userSessions.some((ts) => {
-            const t = new Date(ts).getTime();
-            return t >= weekStart && t < weekEnd;
-          });
-          if (hadSession) active++;
-        }
-        if (active === 0 && w > 0) break;
-        weekCounts.push(
-          w === 0 ? 100 : parseFloat(((active / cohortSize) * 100).toFixed(1)),
-        );
-      }
-
-      return { cohort: cohortWeek, cohortSize, weeks: weekCounts };
+export function toCohortRows(rows: CohortRetentionRpcRow[]): CohortRow[] {
+  return [...rows]
+    .sort((a, b) => a.cohort_week.localeCompare(b.cohort_week))
+    .map((row) => {
+      const cohortSize = Number(row.cohort_size ?? 0);
+      return {
+        cohort: row.cohort_week,
+        cohortSize,
+        weeks: toWeeklyRetentionPercentages(
+          row.weekly_active ?? [],
+          cohortSize,
+        ),
+      };
     });
+}
+
+/**
+ * Week 0 is pinned to 100 rather than computed: every member of a cohort is by
+ * definition present in their own signup week, and a user who signed up without
+ * a recorded session would otherwise render as a cohort that starts below 100%.
+ *
+ * The series stops at the first empty week instead of trailing zeros, so a
+ * young cohort shows a short row rather than a curve that appears to collapse.
+ */
+export function toWeeklyRetentionPercentages(
+  activeByWeek: number[],
+  cohortSize: number,
+): number[] {
+  const weeks: number[] = [];
+  for (let week = 0; week < activeByWeek.length; week++) {
+    const active = Number(activeByWeek[week] ?? 0);
+    if (active === 0 && week > 0) break;
+    if (week === 0) {
+      weeks.push(100);
+      continue;
+    }
+    weeks.push(
+      cohortSize > 0 ? parseFloat(((active / cohortSize) * 100).toFixed(1)) : 0,
+    );
+  }
+  return weeks;
 }
 
 // ---------------------------------------------------------------------------
 // Tier-curve aggregation
 // ---------------------------------------------------------------------------
 
+export function buildTierCurves(
+  rows: CohortRetentionRpcRow[],
+): { tier: string; curve: number[] }[] {
+  const byTier = new Map<string, CohortRetentionRpcRow[]>();
+  for (const row of rows) {
+    if (!row.tier || row.tier === UNSPLIT_TIER) continue;
+    if (!byTier.has(row.tier)) byTier.set(row.tier, []);
+    byTier.get(row.tier)!.push(row);
+  }
+
+  return Array.from(byTier.entries()).map(([tier, tierRows]) => ({
+    tier,
+    curve: averageWeeklyCurveAcrossCohorts(toCohortRows(tierRows)),
+  }));
+}
+
+/**
+ * Averages only the cohorts that reached a given week. A cohort three weeks old
+ * has no week-8 number, and counting its absence as 0% would drag the tail of
+ * every curve down purely because recent cohorts exist.
+ */
 export function averageWeeklyCurveAcrossCohorts(rows: CohortRow[]): number[] {
   const maxWeeks = rows.reduce((m, r) => Math.max(m, r.weeks.length), 0);
   const curve: number[] = [];
@@ -89,72 +113,4 @@ export function averageWeeklyCurveAcrossCohorts(rows: CohortRow[]): number[] {
     );
   }
   return curve;
-}
-
-// ---------------------------------------------------------------------------
-// Filter helpers
-// ---------------------------------------------------------------------------
-
-export function applyTierFilterToIdentities(
-  identities: { user_id: string; signup_cohort: string }[],
-  sessions: { user_id: string; user_tier: string }[],
-  tier?: string,
-): { user_id: string; signup_cohort: string }[] {
-  if (!tier) return identities;
-  const tierUserIds = new Set(
-    sessions.filter((s) => s.user_tier === tier).map((s) => s.user_id),
-  );
-  return identities.filter((i) => tierUserIds.has(i.user_id));
-}
-
-export function countUniqueVisitors(
-  sessions: { visitor_id: string; started_at: string }[],
-  since: string,
-): number {
-  return new Set(
-    sessions.filter((s) => s.started_at >= since).map((s) => s.visitor_id),
-  ).size;
-}
-
-// ---------------------------------------------------------------------------
-// Churn aggregation
-// ---------------------------------------------------------------------------
-
-export interface UserSessionStats {
-  lastActivityAt: string;
-  sessionCount: number;
-  tier: string;
-}
-
-export function aggregateUserSessionStats(
-  sessions: { user_id: string; user_tier: string; last_activity_at: string }[],
-): Record<string, UserSessionStats> {
-  const stats: Record<string, UserSessionStats> = {};
-  for (const s of sessions) {
-    if (!s.user_id) continue;
-    if (!stats[s.user_id]) {
-      stats[s.user_id] = {
-        lastActivityAt: s.last_activity_at,
-        sessionCount: 0,
-        tier: s.user_tier,
-      };
-    }
-    stats[s.user_id].sessionCount++;
-    if (s.last_activity_at > stats[s.user_id].lastActivityAt) {
-      stats[s.user_id].lastActivityAt = s.last_activity_at;
-    }
-  }
-  return stats;
-}
-
-// ---------------------------------------------------------------------------
-// Date helpers
-// ---------------------------------------------------------------------------
-
-export function toWeekKey(isoDate: string): string {
-  const d = new Date(isoDate);
-  const dayOfWeek = d.getUTCDay();
-  const monday = new Date(d);
-  monday.setUTCDate(d.getUTCDate() - ((dayOfWeek + 6) % 7));
-  return monday.toISOString().slice(0, 10);
 }

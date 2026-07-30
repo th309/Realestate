@@ -12,6 +12,13 @@ export interface NavigationFlow {
   fromPage: string;
   toPage: string;
   transitions: number;
+  /**
+   * Distinct visitors who made this transition. Optional because it is a
+   * second, independent dimension rather than a restatement of `transitions`:
+   * one visitor looping a page 26 times is 26 transitions and 1 visitor, and
+   * only the pair distinguishes a popular route from a single busy session.
+   */
+  visitors?: number;
 }
 
 export interface PathSequence {

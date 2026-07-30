@@ -1,316 +1,208 @@
 /**
- * ConversionAnalyticsService Unit Tests
+ * ConversionAnalyticsService — assembly + full-funnel contract.
  *
- * Tests conversion analytics including:
- * - Redis cache hit/miss behavior
- * - Full funnel step rate calculation (Visit -> Signup -> Active -> Trial -> Paid)
- * - Paywall effectiveness metrics grouped by resource
- * - Tier migration flow derivation from event properties
- * - Revenue metrics computation (MRR, ARPU, tier distribution)
+ * The panel builders (paywall, feature correlation, tier migration, revenue)
+ * moved to conversion-panel-queries.ts when this file passed the 300-line hard
+ * limit, so they are mocked here and the service is tested for what it now
+ * actually does: assemble the response and compute the funnel via SQL.
+ *
+ * Behaviour these tests pin, all of which was broken:
+ *  - The funnel's first stage was `sessionRows.length` from an unranged
+ *    `.select()`, i.e. the 1,000-row PostgREST cap rather than a visitor count.
+ *  - Stages `Trial` and `Paid` matched `trial_start` and `upgrade_complete`,
+ *    neither of which has ever been emitted, so both read 0 forever.
+ *  - `tierMigration` derived flows from `upgrade_complete` properties. With no
+ *    such event and no tier-change audit table, an empty array is the honest
+ *    answer rather than a bug to chase.
  */
 
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConversionAnalyticsService } from '../conversion-analytics.service';
 import { SupabaseService } from '../../supabase/supabase.service';
 import { RedisService } from '../../redis/redis.service';
-import type { ConversionData } from '../user-analytics.types';
 
-const MOCK_CONVERSION_DATA: ConversionData = {
-  fullFunnel: [
-    { name: 'Visit', count: 1000, rateFromPrevious: 1, rateFromFirst: 1 },
-    {
-      name: 'Signup',
-      count: 200,
-      rateFromPrevious: 0.2,
-      rateFromFirst: 0.2,
-    },
-  ],
-  customFunnels: [],
-  paywallEffectiveness: [],
-  featureCorrelation: [],
-  revenueMetrics: { mrr: 0, arpu: 0, tierDistribution: [] },
-  tierMigration: [],
-  annotations: [],
-};
+jest.mock('../conversion-panel-queries', () => ({
+  queryPaywallEffectiveness: jest.fn().mockResolvedValue([]),
+  queryFeatureCorrelation: jest.fn().mockResolvedValue([]),
+  queryTierMigration: jest.fn().mockReturnValue([]),
+  queryConversionAnnotations: jest.fn().mockResolvedValue([]),
+}));
 
 /**
- * Creates a deeply chainable Supabase mock where every method returns a
- * thenable proxy. The resolved { data, error } is controlled by calling
- * `setNextResult()` before the query chain is awaited.
- *
- * This avoids the fragile queue-index approach by letting us set up results
- * per `.from()` call via `onFrom` callback.
+ * Revenue moved to its own module at the 300-line limit, but this mock did not
+ * move with it: `queryRevenueMetrics` was still stubbed on
+ * '../conversion-panel-queries', which no longer exports it. The stub therefore
+ * bound to nothing, the REAL query ran against `mockClient`, and every test that
+ * reached it died on `.not is not a function` — the mock client has no `.not`.
+ * Seven of eight tests in this file were failing for that reason alone.
  */
-function createChainableMock() {
-  let pendingResult: { data: unknown; error?: unknown } = { data: [] };
+jest.mock('../conversion-revenue-queries', () => ({
+  queryRevenueMetrics: jest.fn().mockResolvedValue({
+    mrr: 240,
+    arpu: 120,
+    tierDistribution: [],
+    compedCount: 0,
+    dunningCount: 0,
+  }),
+}));
 
-  const handler: ProxyHandler<Record<string, unknown>> = {
-    get(_target, prop) {
-      // Make the chain awaitable: when JS awaits, it checks `.then`
-      if (prop === 'then') {
-        const result = pendingResult;
-        // Reset for next query
-        pendingResult = { data: [] };
-        return (resolve: (v: unknown) => void, reject?: (e: unknown) => void) =>
-          Promise.resolve(result).then(resolve, reject);
-      }
-      // Every other property call returns the proxy itself (chainable)
-      return (..._args: unknown[]) => proxy;
-    },
-  };
+const mockClient: any = {
+  rpc: jest.fn(),
+  from: jest.fn().mockReturnThis(),
+  select: jest.fn().mockReturnThis(),
+  in: jest.fn().mockReturnThis(),
+  eq: jest.fn(),
+};
 
-  const proxy = new Proxy({} as Record<string, unknown>, handler);
+const mockSupabase = { getClient: jest.fn(() => mockClient) };
+const mockRedis = {
+  getByKey: jest.fn().mockResolvedValue(null),
+  setByKey: jest.fn().mockResolvedValue(undefined),
+};
 
-  return {
-    proxy,
-    setNextResult(result: { data: unknown; error?: unknown }) {
-      pendingResult = result;
-    },
-  };
+/** Wire the three awaited calls inside buildFullFunnel. */
+function primeFunnel(opts: {
+  visitors?: number;
+  signups?: number;
+  proFeature?: number;
+  paidCount?: number;
+}) {
+  mockClient.rpc.mockImplementation((fn: string) => {
+    if (fn === 'analytics_overview_kpis') {
+      return Promise.resolve({
+        data: [{ unique_visitors: opts.visitors ?? 0 }],
+        error: null,
+      });
+    }
+    return Promise.resolve({
+      data: [
+        { event_action: 'signup_complete', visitors: opts.signups ?? 0 },
+        { event_action: 'pro_feature_used', visitors: opts.proFeature ?? 0 },
+      ],
+      error: null,
+    });
+  });
+  mockClient.eq.mockResolvedValue({ count: opts.paidCount ?? 0, error: null });
 }
 
 describe('ConversionAnalyticsService', () => {
   let service: ConversionAnalyticsService;
-  let mockRedis: { getByKey: jest.Mock; setByKey: jest.Mock };
-  let chainMock: ReturnType<typeof createChainableMock>;
-  let fromSpy: jest.SpyInstance;
 
   beforeEach(async () => {
-    mockRedis = {
-      getByKey: jest.fn().mockResolvedValue(null),
-      setByKey: jest.fn().mockResolvedValue(undefined),
-    };
+    jest.clearAllMocks();
+    mockRedis.getByKey.mockResolvedValue(null);
+    mockClient.from.mockReturnThis();
+    mockClient.select.mockReturnThis();
+    mockClient.in.mockReturnThis();
 
-    chainMock = createChainableMock();
-
-    // Wrap the proxy's from method to intercept table names for per-test setup
-    fromSpy = jest.fn((..._args: unknown[]) => chainMock.proxy);
-    const wrappedProxy = new Proxy(chainMock.proxy, {
-      get(target, prop) {
-        if (prop === 'from') return fromSpy;
-        return Reflect.get(target, prop);
-      },
-    });
-
-    const mockSupabaseService = {
-      getClient: jest.fn(() => wrappedProxy),
-    };
-
-    const module: TestingModule = await Test.createTestingModule({
+    const mod: TestingModule = await Test.createTestingModule({
       providers: [
         ConversionAnalyticsService,
-        { provide: SupabaseService, useValue: mockSupabaseService },
+        { provide: SupabaseService, useValue: mockSupabase },
         { provide: RedisService, useValue: mockRedis },
       ],
     }).compile();
-
-    service = module.get<ConversionAnalyticsService>(
-      ConversionAnalyticsService,
-    );
+    service = mod.get(ConversionAnalyticsService);
   });
 
-  // ---------------------------------------------------------------------------
-  // Cache behavior
-  // ---------------------------------------------------------------------------
-
-  describe('Redis cache integration', () => {
-    it('returns cached data on cache hit without querying Supabase', async () => {
-      mockRedis.getByKey.mockResolvedValue(MOCK_CONVERSION_DATA);
+  describe('full funnel', () => {
+    it('takes the first stage from the SQL aggregate, not a fetched array length', async () => {
+      primeFunnel({ visitors: 670, signups: 8, proFeature: 40, paidCount: 2 });
 
       const result = await service.getConversion(30, {});
 
-      expect(result).toEqual(MOCK_CONVERSION_DATA);
-      expect(fromSpy).not.toHaveBeenCalled();
-      expect(mockRedis.setByKey).not.toHaveBeenCalled();
+      expect(mockClient.rpc).toHaveBeenCalledWith(
+        'analytics_overview_kpis',
+        expect.objectContaining({ p_traffic: 'human' }),
+      );
+      expect(result.fullFunnel[0]).toMatchObject({
+        name: 'Visited',
+        count: 670,
+      });
     });
 
-    it('caches computed result with 600s TTL on cache miss', async () => {
-      // Default chainMock returns { data: [] } for everything
+    it('builds stages only from events that exist, ending in a real paid count', async () => {
+      primeFunnel({ visitors: 670, signups: 8, proFeature: 40, paidCount: 2 });
+
+      const { fullFunnel } = await service.getConversion(30, {});
+
+      expect(fullFunnel.map((s) => s.name)).toEqual([
+        'Visited',
+        'Signed up',
+        'Used a Pro feature',
+        'Paid',
+      ]);
+      expect(fullFunnel[1].count).toBe(8);
+      expect(fullFunnel[2].count).toBe(40);
+      // From user_profiles subscription state — there is no paid EVENT to read.
+      expect(fullFunnel[3].count).toBe(2);
+    });
+
+    it('computes rateFromPrevious and rateFromFirst per stage', async () => {
+      primeFunnel({
+        visitors: 1000,
+        signups: 200,
+        proFeature: 100,
+        paidCount: 50,
+      });
+
+      const { fullFunnel } = await service.getConversion(30, {});
+
+      expect(fullFunnel[0].rateFromPrevious).toBe(1);
+      expect(fullFunnel[1].rateFromPrevious).toBeCloseTo(0.2);
+      expect(fullFunnel[1].rateFromFirst).toBeCloseTo(0.2);
+      expect(fullFunnel[2].rateFromPrevious).toBeCloseTo(0.5);
+      expect(fullFunnel[3].rateFromFirst).toBeCloseTo(0.05);
+    });
+
+    it('returns an empty funnel when the aggregate fails, rather than a plausible zero', async () => {
+      mockClient.rpc.mockResolvedValue({
+        data: null,
+        error: { message: 'boom' },
+      });
+      mockClient.eq.mockResolvedValue({ count: 0, error: null });
+
+      const { fullFunnel } = await service.getConversion(30, {});
+      expect(fullFunnel).toEqual([]);
+    });
+  });
+
+  describe('assembly', () => {
+    it('reports no tier flows, because no tier-change event or audit exists', async () => {
+      primeFunnel({ visitors: 10 });
+      const result = await service.getConversion(30, {});
+      expect(result.tierMigration).toEqual([]);
+    });
+
+    it('passes through the genuinely-sourced revenue metrics', async () => {
+      primeFunnel({ visitors: 10 });
+      const result = await service.getConversion(30, {});
+      expect(result.revenueMetrics).toEqual({
+        mrr: 240,
+        arpu: 120,
+        tierDistribution: [],
+        compedCount: 0,
+        // Subscribers whose payment is failing. Passed through separately so
+        // uncollected MRR does not look identical to collected MRR.
+        dunningCount: 0,
+      });
+    });
+
+    it('separates cache entries per traffic segment', async () => {
+      primeFunnel({ visitors: 10 });
+
+      await service.getConversion(30, { traffic: 'human' });
+      await service.getConversion(30, { traffic: 'bot' });
+
+      const [humanKey] = mockRedis.setByKey.mock.calls[0];
+      const [botKey] = mockRedis.setByKey.mock.calls[1];
+      expect(humanKey).not.toEqual(botKey);
+    });
+
+    it('returns cached data without querying', async () => {
+      mockRedis.getByKey.mockResolvedValue({ fullFunnel: [] });
       await service.getConversion(30, {});
-
-      expect(mockRedis.setByKey).toHaveBeenCalledWith(
-        expect.stringContaining('analytics:conversion:'),
-        expect.any(Object),
-        600,
-      );
-    });
-  });
-
-  // ---------------------------------------------------------------------------
-  // Funnel step rate calculation
-  // ---------------------------------------------------------------------------
-
-  describe('funnel step rate calculation', () => {
-    it('calculates rateFromPrevious and rateFromFirst for each step', async () => {
-      // We configure fromSpy to return specific data based on the table
-      let sessionQueryCount = 0;
-      let eventQueryCount = 0;
-
-      fromSpy.mockImplementation((table: string) => {
-        if (table === 'user_sessions') {
-          sessionQueryCount++;
-          // buildFullFunnel sessions
-          chainMock.setNextResult({
-            data: [
-              { visitor_id: 'v1' },
-              { visitor_id: 'v2' },
-              { visitor_id: 'v3' },
-              { visitor_id: 'v4' },
-              { visitor_id: 'v1' }, // 2nd session for v1
-              { visitor_id: 'v2' }, // 2nd session for v2
-            ],
-          });
-        } else if (table === 'user_events') {
-          eventQueryCount++;
-          // Return different data based on call order for event queries
-          if (eventQueryCount === 1) {
-            // signup_complete
-            chainMock.setNextResult({
-              data: [{ visitor_id: 'v1' }, { visitor_id: 'v2' }],
-            });
-          } else if (eventQueryCount === 2) {
-            // trial_start
-            chainMock.setNextResult({ data: [{ visitor_id: 'v1' }] });
-          } else if (eventQueryCount === 3) {
-            // upgrade_complete
-            chainMock.setNextResult({ data: [{ visitor_id: 'v1' }] });
-          } else {
-            chainMock.setNextResult({ data: [] });
-          }
-        } else {
-          chainMock.setNextResult({ data: [] });
-        }
-        return chainMock.proxy;
-      });
-
-      const result = await service.getConversion(30, {});
-
-      expect(result.fullFunnel.length).toBe(5);
-
-      // Visit step should always have rateFromPrevious = 1
-      const visitStep = result.fullFunnel.find((s) => s.name === 'Visit');
-      expect(visitStep).toBeDefined();
-      expect(visitStep!.rateFromPrevious).toBe(1);
-      expect(visitStep!.rateFromFirst).toBe(1);
-
-      // Each subsequent step should have rates between 0 and 1
-      for (const step of result.fullFunnel) {
-        expect(step.rateFromFirst).toBeLessThanOrEqual(1);
-        expect(step.rateFromFirst).toBeGreaterThanOrEqual(0);
-      }
-    });
-  });
-
-  // ---------------------------------------------------------------------------
-  // Paywall effectiveness
-  // ---------------------------------------------------------------------------
-
-  describe('paywall effectiveness', () => {
-    it('groups paywall events by resource and computes CTR', async () => {
-      const paywallEvents = [
-        { event_action: 'paywall_view', event_label: 'scores' },
-        { event_action: 'paywall_view', event_label: 'scores' },
-        { event_action: 'upgrade_click', event_label: 'scores' },
-        { event_action: 'upgrade_complete', event_label: 'scores' },
-        { event_action: 'paywall_view', event_label: 'reports' },
-        { event_action: 'paywall_dismiss', event_label: 'reports' },
-      ];
-
-      let eventQueryCount = 0;
-      fromSpy.mockImplementation((table: string) => {
-        if (table === 'user_events') {
-          eventQueryCount++;
-          // The paywall query uses .in('event_action', [...]) which is
-          // distinguishable. We serve paywall data on a specific call.
-          // Since buildFullFunnel runs in parallel with buildPaywallEffectiveness,
-          // we can't predict exact order. Instead return paywallEvents for
-          // all event queries and let the service filter.
-          chainMock.setNextResult({ data: paywallEvents });
-        } else {
-          chainMock.setNextResult({ data: [] });
-        }
-        return chainMock.proxy;
-      });
-
-      const result = await service.getConversion(30, {});
-
-      // The paywall effectiveness should have at least the 'scores' resource
-      expect(result.paywallEffectiveness.length).toBeGreaterThanOrEqual(1);
-
-      const scoresMetric = result.paywallEffectiveness.find(
-        (p) => p.resource === 'scores',
-      );
-      expect(scoresMetric).toBeDefined();
-      expect(scoresMetric!.views).toBe(2);
-      expect(scoresMetric!.clicks).toBe(1);
-      expect(scoresMetric!.ctr).toBeCloseTo(0.5, 2);
-      expect(scoresMetric!.conversions).toBe(1);
-    });
-  });
-
-  // ---------------------------------------------------------------------------
-  // Tier migration
-  // ---------------------------------------------------------------------------
-
-  describe('tier migration flows', () => {
-    it('derives tier flows from upgrade_complete event properties', async () => {
-      const upgradeEvents = [
-        { properties: { previous_tier: 'free', current_tier: 'pro' } },
-        { properties: { previous_tier: 'free', current_tier: 'pro' } },
-        { properties: { previous_tier: 'pro', current_tier: 'enterprise' } },
-      ];
-
-      let eventQueryCount = 0;
-      fromSpy.mockImplementation((table: string) => {
-        if (table === 'user_events') {
-          eventQueryCount++;
-          // The tier migration query selects 'properties' and
-          // uses .eq('event_action', 'upgrade_complete').
-          // We return upgradeEvents for all event queries.
-          chainMock.setNextResult({ data: upgradeEvents });
-        } else {
-          chainMock.setNextResult({ data: [] });
-        }
-        return chainMock.proxy;
-      });
-
-      const result = await service.getConversion(30, {});
-
-      expect(result.tierMigration.length).toBeGreaterThanOrEqual(2);
-
-      const freeToProFlow = result.tierMigration.find(
-        (f) => f.fromTier === 'free' && f.toTier === 'pro',
-      );
-      expect(freeToProFlow).toBeDefined();
-      expect(freeToProFlow!.count).toBe(2);
-
-      const proToEntFlow = result.tierMigration.find(
-        (f) => f.fromTier === 'pro' && f.toTier === 'enterprise',
-      );
-      expect(proToEntFlow).toBeDefined();
-      expect(proToEntFlow!.count).toBe(1);
-    });
-  });
-
-  // ---------------------------------------------------------------------------
-  // Result structure
-  // ---------------------------------------------------------------------------
-
-  describe('result structure', () => {
-    it('returns ConversionData with all required keys', async () => {
-      const result = await service.getConversion(30, {});
-
-      expect(result).toHaveProperty('fullFunnel');
-      expect(result).toHaveProperty('customFunnels');
-      expect(result).toHaveProperty('paywallEffectiveness');
-      expect(result).toHaveProperty('featureCorrelation');
-      expect(result).toHaveProperty('revenueMetrics');
-      expect(result).toHaveProperty('tierMigration');
-      expect(result).toHaveProperty('annotations');
-      expect(Array.isArray(result.fullFunnel)).toBe(true);
-      expect(result.revenueMetrics).toHaveProperty('mrr');
-      expect(result.revenueMetrics).toHaveProperty('arpu');
-      expect(result.revenueMetrics).toHaveProperty('tierDistribution');
+      expect(mockClient.rpc).not.toHaveBeenCalled();
     });
   });
 });

@@ -36,14 +36,28 @@ function formatPercent(value: number): string {
   return `${pct.toFixed(1)}%`;
 }
 
+/**
+ * Bounce rate, time on page and conversion are not derivable from a pageview
+ * rollup. The backend used to hardcode them to 0, which rendered as a real
+ * "0.0%" on every row — a measurement that never existed. They are optional
+ * now, and an absent value shows a dash rather than a confident zero.
+ */
+function orDash(
+  value: number | undefined,
+  format: (n: number) => string,
+): string {
+  return value === undefined ? "—" : format(value);
+}
+
 function buildTableRows(pages: PageMetric[]): Record<string, unknown>[] {
   return pages.map((page) => ({
     pagePath: page.pagePath,
     pageGroup: page.pageGroup ?? "—",
     views: page.views,
-    bounceRateDisplay: formatPercent(page.bounceRate),
-    avgTimeDisplay: formatAvgTime(page.avgTimeSeconds),
-    conversionRateDisplay: formatPercent(page.conversionRate),
+    visitors: page.visitors,
+    bounceRateDisplay: orDash(page.bounceRate, formatPercent),
+    avgTimeDisplay: orDash(page.avgTimeSeconds, formatAvgTime),
+    conversionRateDisplay: orDash(page.conversionRate, formatPercent),
     // Keep the original for the row-click callback
     _original: page,
   }));

@@ -12,6 +12,7 @@ import {
   queryChannelTrend,
   queryAnnotations,
 } from './acquisition-session-queries';
+import { DEFAULT_TRAFFIC_SEGMENT } from './traffic-segment';
 
 const CACHE_TTL_SECONDS = 900;
 
@@ -28,7 +29,12 @@ export class AcquisitionAnalyticsService {
     days: number,
     filters: AnalyticsFilters,
   ): Promise<AcquisitionData> {
-    const cacheKey = `analytics:acquisition:${days}:${JSON.stringify(filters)}`;
+    // The traffic segment MUST be part of the key. It changes which population
+    // every number describes, so sharing an entry across segments would serve
+    // bot figures under a "human" label. `v2` retires entries written by the
+    // pre-RPC implementation, whose numbers came from a 1,000-row truncation.
+    const segment = filters.traffic ?? DEFAULT_TRAFFIC_SEGMENT;
+    const cacheKey = `analytics:acquisition:v2:${days}:${segment}:${JSON.stringify(filters)}`;
 
     const cached = await this.redis.getByKey(cacheKey);
     if (cached) {
@@ -48,10 +54,10 @@ export class AcquisitionAnalyticsService {
       channelTrend,
       annotations,
     ] = await Promise.all([
-      queryTrafficSources(client, startDate),
-      queryLandingPagePerformance(client, startDate),
+      queryTrafficSources(client, startDate, filters),
+      queryLandingPagePerformance(client, startDate, filters),
       this.querySourceToConversionAttribution(startDate),
-      queryChannelTrend(client, startDate),
+      queryChannelTrend(client, startDate, filters),
       queryAnnotations(client, startDate),
     ]);
 
@@ -72,6 +78,12 @@ export class AcquisitionAnalyticsService {
    * conversion events (signup / trial_start / paid_conversion) per source.
    * Kept in-class because it spans two tables via Supabase's nested select
    * and requires stateful Set-based visitor deduplication.
+   *
+   * KNOWN LIMITATION: this one is still a row fetch, so PostgREST's 1,000-row
+   * cap still applies to it — it counts identities first seen in the window
+   * (a much smaller population than sessions), but it is not immune. Moving it
+   * to a SQL aggregate needs its own function and is deliberately out of scope
+   * for the session-panel fix above.
    */
   private async querySourceToConversionAttribution(
     startDate: string,

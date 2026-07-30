@@ -1,9 +1,8 @@
 /**
  * ProgressiveFlow
  *
- * Table-based navigation flow visualization showing From → To page transitions
- * with session counts and share of total traffic. Rows are clickable for drill-down.
- * Includes a toggle for a future Sankey view (currently shows a placeholder).
+ * Navigation flows in two interchangeable readings of the same data: a Sankey
+ * diagram for the shape of the traffic, and a table for the exact numbers.
  */
 
 "use client";
@@ -11,6 +10,7 @@
 import { useState } from "react";
 import { ArrowRight, BarChart2, Network } from "lucide-react";
 import type { NavigationFlow } from "@/lib/data/fetchers/admin-analytics.types";
+import { NavigationSankey } from "./NavigationSankey";
 
 interface ProgressiveFlowProps {
   flows: NavigationFlow[];
@@ -99,21 +99,8 @@ function FlowTableView({
   );
 }
 
-function SankeyPlaceholder() {
-  return (
-    <div className="flex flex-col items-center justify-center py-16 gap-3 text-on-surface-variant">
-      <Network className="w-10 h-10 opacity-40" />
-      <p className="text-sm font-medium">Sankey diagram coming soon</p>
-      <p className="text-xs opacity-70">
-        This view will render an interactive flow diagram once d3-sankey is
-        integrated.
-      </p>
-    </div>
-  );
-}
-
 export function ProgressiveFlow({ flows, onDrillDown }: ProgressiveFlowProps) {
-  const [viewMode, setViewMode] = useState<ViewMode>("flow");
+  const [viewMode, setViewMode] = useState<ViewMode>("sankey");
 
   const sortedFlows = [...flows]
     .sort((a, b) => b.transitions - a.transitions)
@@ -130,7 +117,9 @@ export function ProgressiveFlow({ flows, onDrillDown }: ProgressiveFlowProps) {
             Navigation Flows
           </h3>
           <p className="text-xs text-on-surface-variant mt-0.5">
-            Top 20 page transitions by volume
+            {viewMode === "sankey"
+              ? "Left column is where visitors came from, right is where they went — a page can appear on both sides"
+              : "Top 20 page transitions by volume"}
           </p>
         </div>
 
@@ -139,6 +128,7 @@ export function ProgressiveFlow({ flows, onDrillDown }: ProgressiveFlowProps) {
           <button
             onClick={() => setViewMode("flow")}
             aria-label="Flow table view"
+            aria-pressed={viewMode === "flow"}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
               viewMode === "flow"
                 ? "bg-surface-container-high text-on-surface shadow-sm"
@@ -151,6 +141,7 @@ export function ProgressiveFlow({ flows, onDrillDown }: ProgressiveFlowProps) {
           <button
             onClick={() => setViewMode("sankey")}
             aria-label="Sankey diagram view"
+            aria-pressed={viewMode === "sankey"}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
               viewMode === "sankey"
                 ? "bg-surface-container-high text-on-surface shadow-sm"
@@ -164,20 +155,20 @@ export function ProgressiveFlow({ flows, onDrillDown }: ProgressiveFlowProps) {
       </div>
 
       {/* Content */}
-      {viewMode === "flow" ? (
-        sortedFlows.length > 0 ? (
-          <FlowTableView
-            flows={sortedFlows}
-            totalTransitions={totalTransitions}
-            onDrillDown={onDrillDown}
-          />
-        ) : (
-          <div className="py-12 text-center text-sm text-on-surface-variant">
-            No navigation flow data available for this period.
-          </div>
-        )
+      {viewMode === "sankey" ? (
+        <div className="px-4 py-5">
+          <NavigationSankey flows={sortedFlows} onDrillDown={onDrillDown} />
+        </div>
+      ) : sortedFlows.length > 0 ? (
+        <FlowTableView
+          flows={sortedFlows}
+          totalTransitions={totalTransitions}
+          onDrillDown={onDrillDown}
+        />
       ) : (
-        <SankeyPlaceholder />
+        <div className="py-12 text-center text-sm text-on-surface-variant">
+          No navigation flow data available for this period.
+        </div>
       )}
     </div>
   );
