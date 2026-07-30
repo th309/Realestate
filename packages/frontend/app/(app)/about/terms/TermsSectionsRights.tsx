@@ -87,6 +87,18 @@ export function RightsSections() {
           sources (such as public real estate records, census data, and economic
           indicators).
         </p>
+        <p>
+          Your activity on the Service may be tracked for marketing and site
+          improvement purposes. This includes the pages you visit, the features
+          you use, the searches you run, the markets you analyze, and the errors
+          or plan limits you encounter. Where you are signed in, this activity
+          is associated with your account. We may also record and replay your
+          on-screen interactions, such as navigation, clicks, and scrolling, to
+          diagnose problems and improve usability; such recordings exclude the
+          contents of form fields and mask payment and authentication screens.
+          See our Privacy Policy for the full description and for how to limit
+          this collection.
+        </p>
 
         <h3 className="text-base font-semibold text-on-surface mt-6 mb-2">
           10.2 Data Use
@@ -95,7 +107,11 @@ export function RightsSections() {
           Your data is used to provide and personalize the Service, to improve
           and train our AI models and algorithms, to communicate with you
           regarding your account and the Service, and to comply with legal
-          obligations.
+          obligations. We also use it to analyze how the Service is used, both
+          by you individually and across customers in aggregate, in order to
+          improve the product, decide what to build next, measure our marketing,
+          and shape the offers and communications you receive. We do not sell
+          your activity data, and we do not share it with advertising networks.
         </p>
 
         <h3 className="text-base font-semibold text-on-surface mt-6 mb-2">
