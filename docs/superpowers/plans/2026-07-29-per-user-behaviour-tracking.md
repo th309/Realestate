@@ -42,6 +42,35 @@
 
 ### Task 1: Honour Do Not Track and Global Privacy Control
 
+> ## ✅ ALREADY IMPLEMENTED — commit `62f41ae1`. Skip the steps below; read this box instead.
+>
+> This shipped ahead of the plan because the Privacy Policy went out in `8fdedae1` promising a
+> control that did not exist, and a live legal document making a false statement about product
+> behaviour is not something to leave sitting in a backlog. A code review caught it.
+>
+> **What was built, and how it differs from the steps below:**
+>
+> - The signal check lives in its own dependency-free module, `lib/analytics/privacy-signals.ts`,
+>   rather than inside `tracker.ts`. Reason: Sentry also needs it, and Sentry initialises before
+>   the app does, so importing a side-effecting module there would pull the app's module graph
+>   into the Sentry bundle and change boot order.
+> - `isTrackingExcluded()` now returns `trackingExcluded || hasOptedOutOfTracking()`, and
+>   `trackEvent` calls it instead of reading the bare flag. `heartbeat.ts:38` already consulted
+>   it, so events and keepalives are both covered with no change there.
+> - **`sentry.client.config.ts` is also gated**, which the original task missed entirely. Sentry
+>   Session Replay records the DOM, so it is session recording in the sense the policy uses, and
+>   it has been running at 1% sampling all along. The integration is omitted at init rather than
+>   started and stopped, because stopping later still captures the opening frames.
+> - Only the exact `doNotTrack` value `"1"` counts. Browsers report `"unspecified"` or `"0"` when
+>   the user has expressed nothing, and treating any non-null value as opt-out would have
+>   disabled analytics for nearly every visitor. There is a regression test for each case.
+> - 7 tests in `lib/analytics/__tests__/privacy-signals.test.ts`, all passing; full
+>   `lib/analytics` suite green at 48 tests.
+>
+> Error and performance monitoring deliberately stay on for opted-out visitors. That is
+> operational telemetry about our own software rather than behavioural tracking of a person, and
+> the policy does not offer to disable it.
+
 The policy says users can "enable Do Not Track or Global Privacy Control in your browser" to limit first-party analytics and session recording. `tracker.ts` already has a `trackingExcluded` flag gating `trackEvent` (line 122), and `heartbeat.ts` already checks `isTrackingExcluded()` (line 38) — so one flag covers events, heartbeats, and later replay.
 
 **Files:**
@@ -52,7 +81,7 @@ The policy says users can "enable Do Not Track or Global Privacy Control in your
 **Interfaces:**
 
 - Consumes: nothing from earlier tasks.
-- Produces: `hasOptedOutOfTracking(): boolean` exported from `lib/analytics/tracker.ts`. `isTrackingExcluded()` keeps its existing signature and now returns `true` when a privacy signal is set.
+- Produces: `hasOptedOutOfTracking(): boolean` exported from **`lib/analytics/privacy-signals.ts`** (not `tracker.ts` — see the box above). `isTrackingExcluded()` keeps its existing signature and now returns `true` when a privacy signal is set.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -1293,4 +1322,29 @@ above something affecting everyone."
 
 ---
 
-Phases 3-8 continue in this file below.
+# Remaining phases
+
+Phases 3-8 live in sibling files. They were split out because the full plan runs to several thousand lines of real test and implementation code, and one file that long is not reviewable — nor safely editable by an agent working task-by-task. Each file below is self-contained and assumes the **Global Constraints** at the top of this document.
+
+| Phase | File                                                                                                      | Tasks | Deliverable                                                |
+| ----- | --------------------------------------------------------------------------------------------------------- | ----- | ---------------------------------------------------------- |
+| 1-2   | _this file, above_                                                                                        | 1-8   | Integrity fixed, compliance controls live, RPCs reconciled |
+| 3     | [`...-phase3-backend-api.md`](2026-07-29-per-user-behaviour-tracking-phase3-backend-api.md)               | 9-11  | Validated admin API over the RPCs                          |
+| 4     | [`...-phase4-per-user-page.md`](2026-07-29-per-user-behaviour-tracking-phase4-per-user-page.md)           | 12-16 | **The per-user behaviour page — the primary goal**         |
+| 5     | [`...-phase5-list-signals.md`](2026-07-29-per-user-behaviour-tracking-phase5-list-signals.md)             | 17-20 | Behaviour columns on the list; the 1,325-line file split   |
+| 6-8   | [`...-phase6-8-narrative-replay.md`](2026-07-29-per-user-behaviour-tracking-phase6-8-narrative-replay.md) | 21-26 | AI narrative, behaviour tab, session replay                |
+
+**You have a working, useful feature at the end of Phase 5.** Phases 6-8 are additive and independently shippable, in that order. Phase 8 (replay) captures nothing retroactively, so it adds no value against the existing four months of history and is deliberately last.
+
+## Execution order and gates
+
+| Phase | Gate before moving on                                                                                                                                       |
+| ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1     | Orphan query returns 0. With GPC set in a browser, `/api/usage/events` receives nothing.                                                                    |
+| 2     | Every RPC reconciled against an independent direct-SQL recount. Zero-activity user returns a row, not nothing.                                              |
+| 3     | `npx tsc --noEmit` clean. A non-admin request gets 401. `/rollup` does not resolve to the `:userId` handler.                                                |
+| 4     | A **real** user's timeline renders from live data in a browser. HTTP 200 is not evidence of a rendered timeline.                                            |
+| 5     | Characterisation tests pass unchanged (bar the one documented activity-panel assertion). Every touched file inside its line limit.                          |
+| 6     | Cache hits on unchanged `latest_event_at`. Under 10 events, the model is never called.                                                                      |
+| 7     | Every panel shows its denominator inline.                                                                                                                   |
+| 8     | Privacy policy already updated (done, `8fdedae1`). Masking verified by inspecting a real recording, not by reading config. Flag on for internal users only. |

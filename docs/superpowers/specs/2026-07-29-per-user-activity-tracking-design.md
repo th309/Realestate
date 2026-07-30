@@ -315,46 +315,92 @@ this threshold exists to prevent.
 
 ## 11. §7 — Session replay (last, gated)
 
-- `rrweb` recorder, **dynamically imported**, mounted in `AnalyticsProvider` behind
-  `NEXT_PUBLIC_SESSION_REPLAY_ENABLED`. Never in the initial bundle.
-- `maskAllInputs: true`, plus `blockClass` on billing, auth, and account surfaces.
-- Chunks gzipped and `PUT` to Supabase Storage `session-replay/{session_id}/{seq}.json.gz`
-  via a backend-issued signed upload URL. Never through Postgres.
-- 30-day TTL purge alongside `analytics_purge_old_events`.
-- `rrweb-player` lazy-loaded into the timeline row.
+> **CORRECTED 2026-07-29 after code review. This section originally specified building an
+> `rrweb` recorder from scratch. That was wrong: session replay already exists in this
+> codebase and has been running the whole time.**
 
-**Blocking prerequisite — now satisfied.** The Privacy Policy and Terms were updated on
-2026-07-29 (Effective Date bumped on both) to disclose activity tracking for marketing and
-site improvement, account-linked activity history, and session recording. Even so, ship
-with the flag on for `is_internal` only, and widen deliberately.
+`packages/frontend/sentry.client.config.ts:12-21` configures Sentry Session Replay:
 
-**Honest limitation:** captures nothing retroactively. It adds zero value against the four
-months of history already collected, which is why it is sequenced last.
+```typescript
+  replaysSessionSampleRate: 0.01,   // 1% of ALL sessions
+  replaysOnErrorSampleRate: 1.0,    // 100% of sessions with an error
+  integrations: [
+    Sentry.replayIntegration({ maskAllText: true, blockAllMedia: true }),
+  ],
+```
+
+Sentry Session Replay **is** rrweb internally. Adding a second rrweb recorder would run two
+instances capturing the same DOM on every page: double CPU, double memory, double
+bandwidth, for one capability. So this phase **governs and targets the recorder that already
+exists** rather than introducing one.
+
+- Raise `replaysSessionSampleRate` deliberately, with the Sentry quota cost stated. At 1%, an
+  admin looking at one named user will essentially never have a replay to watch, which is
+  what makes the current configuration useless for this feature.
+- Call `Sentry.setUser({ id })` so a replay is attributable to a person at all. Verify
+  whether anything calls it today; if nothing does, that is why no replay can currently be
+  tied to a user.
+- Tag the replay with our `session_id` (from `getAnonymousSessionId()`) so a timeline row can
+  deep-link to the matching Sentry replay.
+- **Suppress replay for opted-out visitors.** Done — `sentry.client.config.ts` now omits the
+  integration entirely when `hasOptedOutOfTracking()` is true. Omitted rather than started
+  and stopped, because stopping later still captures the opening frames.
+- Verify masking by inspecting a real recording, not by reading the config.
+- **Do not add `rrweb` or `rrweb-player` as dependencies.** Sentry hosts, retains and plays
+  back the recordings, so the Supabase Storage upload path, the gzipped chunk scheme, the
+  signed URLs and the TTL purge originally specified here are all unnecessary.
+
+**Disclosure consequence, and the more serious finding.** Recording was already happening and
+was **undisclosed** until the Privacy Policy update in `8fdedae1`. The policy change is
+therefore a correction of an existing gap, not preparation for a future feature. The earlier
+claim in this section that replay "captures nothing retroactively" was true of a new recorder
+and is false here: recordings may already exist in Sentry.
 
 ### 11.1 Commitments the published policy now makes — these are requirements, not options
 
 The updated documents promise specific behaviour. Until the code below exists, the policy
 is inaccurate, which is a worse problem than a missing feature.
 
-| Promise in the policy                                                                                                | Required implementation                                                                                                                                                                                                       |
-| -------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| "enable Do Not Track or Global Privacy Control in your browser" to limit first-party analytics and session recording | `tracker.ts` returns early when `navigator.globalPrivacyControl === true` or `navigator.doNotTrack === '1'`. Suppresses event batches, heartbeats, and replay capture alike. Roughly three lines, and it must gate all three. |
-| "contact us … and we will exclude your account"                                                                      | A persisted per-account exclusion the ingest path honours, checked the same way `InternalUserRegistryService` already resolves internal ids. An admin toggle on the user detail page sets it.                                 |
-| Recordings "exclude the contents of form fields" and mask "payment, authentication, and account-security screens"    | `maskAllInputs: true` is not sufficient on its own — verify the block classes are actually applied to the billing, auth, and account routes, by inspecting a real recording rather than trusting config.                      |
-| "not sold, and … not shared with advertising networks"                                                               | No replay or per-user event payload may be forwarded to GA or any third party. GA continues to receive only `sign_up` / `trial_start` / `purchase`, as it does today.                                                         |
+| Promise in the policy                                                                                                | Status                | Implementation                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| -------------------------------------------------------------------------------------------------------------------- | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| "enable Do Not Track or Global Privacy Control in your browser" to limit first-party analytics and session recording | **DONE** — `62f41ae1` | `lib/analytics/privacy-signals.ts` exports `hasOptedOutOfTracking()`, consumed by `isTrackingExcluded()` (which `trackEvent` and the heartbeat both already called) and by `sentry.client.config.ts`, which omits the replay integration entirely for an opted-out visitor. Dependency-free on purpose: Sentry initialises before the app, so a side-effecting import there would drag the app module graph into the Sentry bundle. |
+| "contact us … and we will exclude your account"                                                                      | Phase 1, Task 4       | A persisted `analytics_excluded_users` table the ingest path honours, resolved the way `InternalUserRegistryService` resolves internal ids. Today's only mechanism is `EXCLUDED_EMAILS` in `AnalyticsProvider.tsx:10` — a hardcoded, empty, client-side `Set` needing a redeploy per request.                                                                                                                                       |
+| Recordings mask text and block media, and never capture form fields, passwords or card details                       | Verify in Phase 8     | Sentry is configured with `maskAllText: true, blockAllMedia: true`, which is broader than originally specified here. Confirm by inspecting a real recording rather than reading the config.                                                                                                                                                                                                                                         |
+| "not sold, and … not shared with advertising networks"                                                               | Holds today           | No replay or per-user event payload may be forwarded to GA or any third party.                                                                                                                                                                                                                                                                                                                                                      |
 
-**Sequencing consequence:** the DNT/GPC check and the exclusion flag move into Phase 1
-alongside the other data-integrity work. They are the cheapest items in the whole design
-and the only ones with a compliance cost attached to skipping them.
+**Correction to an earlier claim in this spec.** This table previously asserted that "GA
+continues to receive only `sign_up` / `trial_start` / `purchase`". That was wrong, and it came
+from over-reading the comment at `tracker.ts:99-108`, which describes what the _internal
+pipeline mirrors_ to GA rather than GA's total traffic. GA also receives an automatic
+`page_view` on every load, because `GoogleAnalytics.tsx:21` calls `gtag('config', …)` without
+`send_page_view: false`, plus five web-vitals measurements per visitor from
+`WebVitals.tsx:22-31`. The Privacy Policy was corrected accordingly in `5763eb8c`. The
+no-sale commitment is unaffected — GA receiving more telemetry than I described is not the
+same as selling data — but the description of scope was inaccurate and is now fixed.
 
-### 11.2 Pre-existing disclosure gap, fixed in passing
+**Sequencing consequence:** the exclusion flag stays in Phase 1 alongside the other
+data-integrity work. The DNT/GPC check is already done, ahead of the plan, because the
+published policy promised a control that did not exist and softening the wording would have
+been the worse of the two available fixes.
 
-Before this change, §5 of the Privacy Policy disclosed only Google Analytics. The primary
-pipeline is first-party — `tracker.ts` beacons to `/api/usage/events`, and GA receives just
-`sign_up` / `trial_start` / `purchase` (`tracker.ts:99-108`). The policy therefore
-under-described the actual collection independently of anything in this design. §5 now
-describes the first-party tracker, the browser identifier, and the retroactive association
-of pre-signup activity performed by `identity-stitching.service.ts`.
+### 11.2 Two pre-existing disclosure gaps, both fixed in passing
+
+Neither of these was caused by this design. Both were live before it started.
+
+**1. First-party collection was undisclosed.** §5 of the Privacy Policy named only Google
+Analytics, while the primary pipeline is first-party: `tracker.ts` beacons to
+`/api/usage/events`, and `identity-stitching.service.ts` retroactively associates pre-signup
+activity with the account. §5 now describes the first-party tracker, the browser identifier,
+and that retroactive association.
+
+**2. Session recording was undisclosed, which is the more serious of the two.** Sentry Session
+Replay has been recording 1% of all sessions and 100% of error sessions since Sentry was
+configured (`sentry.client.config.ts:12-21`), and neither document mentioned recording at all.
+This was found only because a code review of the policy change checked the masking claim
+against real config. It is now disclosed, and gated on the privacy signals in `62f41ae1`.
+
+The GA scope description in §5 was also corrected in `5763eb8c`; see the correction note in
+§11.1 for what I got wrong and why.
 
 ## 12. §8 — Cross-user behaviour
 
