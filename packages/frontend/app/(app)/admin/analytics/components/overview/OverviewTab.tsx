@@ -5,8 +5,7 @@
  * Fetches all overview data once and distributes to sub-components as props.
  */
 
-import { useQuery } from "@tanstack/react-query";
-import { fetchOverviewAnalytics } from "@/lib/data/fetchers/admin-analytics";
+import { useOverviewAnalytics } from "@/lib/data";
 import type {
   AnalyticsFilters,
   Annotation,
@@ -43,11 +42,10 @@ export function OverviewTab({
   onDrillDown,
   annotations: pageAnnotations = [],
 }: OverviewTabProps) {
-  const { data, isLoading, error } = useQuery({
-    queryKey: ["analytics", "overview", days, filters],
-    queryFn: () => fetchOverviewAnalytics(days, filters),
-    staleTime: 5 * 60 * 1000,
-  });
+  // Data layer per CLAUDE.md §5 — the hook owns the query key, so this and the
+  // page shell's scope disclosure share one cache entry instead of racing two
+  // identical requests with hand-written keys that could drift apart.
+  const { data, isLoading, error } = useOverviewAnalytics(days, filters);
 
   if (isLoading) {
     return <SkeletonLoader variant="card" count={6} />;

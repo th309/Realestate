@@ -30,21 +30,52 @@ export interface Annotation {
   description?: string;
 }
 
+export const TRAFFIC_SEGMENTS = [
+  "human",
+  "bot",
+  "unclassified",
+  "all",
+] as const;
+
+export type TrafficSegment = (typeof TRAFFIC_SEGMENTS)[number];
+
 export interface AnalyticsFilters {
   tier?: string;
   device?: string;
   source?: string;
   startDate?: string;
   endDate?: string;
+  /**
+   * Which population every number on the page describes. Defaults to `human`
+   * server-side. NOT the complement of `bot`: ~46,000 of 48,600 sessions in the
+   * trailing 30 days are unclassified — written before classification existed
+   * and unknowable after the fact — so they are their own bucket.
+   */
+  traffic?: TrafficSegment;
+}
+
+/** Session counts per classification for the current window. */
+export interface TrafficSegmentCounts {
+  human: number;
+  bot: number;
+  unclassified: number;
+  total: number;
 }
 
 export interface PageMetric {
   pagePath: string;
   pageGroup?: string;
   views: number;
-  bounceRate: number;
-  avgTimeSeconds: number;
-  conversionRate: number;
+  /** Distinct visitors who saw the page. */
+  visitors: number;
+  /**
+   * Optional — not derivable from a pageview rollup. These were previously
+   * hardcoded to 0 server-side, which rendered as a real "0%" on every row.
+   * Undefined means "not measured"; render a dash, never a zero.
+   */
+  bounceRate?: number;
+  avgTimeSeconds?: number;
+  conversionRate?: number;
 }
 
 export interface GrowthMilestone {
@@ -87,6 +118,8 @@ export interface OverviewData {
   quickFunnel: FunnelStep[];
   topPages: PageMetric[];
   activeUsersChart: AnalyticsTimeSeriesPoint[];
+  /** Counts per classification for the same window, whatever segment is shown. */
+  trafficSegments?: TrafficSegmentCounts;
   goalProgress: GrowthProgress[];
   annotations: Annotation[];
 }

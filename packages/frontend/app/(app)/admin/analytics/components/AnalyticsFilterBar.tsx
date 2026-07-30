@@ -83,7 +83,13 @@ export function AnalyticsFilterBar({
   filters,
   onChange,
 }: AnalyticsFilterBarProps) {
-  const handleFilterChange = (key: keyof AnalyticsFilters, value: string) => {
+  // Only the free-text chips are editable here. `traffic` is deliberately
+  // excluded — it is a typed union owned by TrafficSegmentControl, and letting
+  // an arbitrary string through this path could set a segment the backend does
+  // not recognise.
+  type ChipKey = "tier" | "device" | "source";
+
+  const handleFilterChange = (key: ChipKey, value: string) => {
     const updated = { ...filters };
     if (value === "") {
       delete updated[key];

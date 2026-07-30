@@ -25,6 +25,10 @@ function buildQueryString(days: number, filters?: AnalyticsFilters): string {
   if (filters?.source) params.set("source", filters.source);
   if (filters?.startDate) params.set("startDate", filters.startDate);
   if (filters?.endDate) params.set("endDate", filters.endDate);
+  // Always sent, so the request states its own scope rather than relying on a
+  // server default. The backend still fails closed to `human` on anything
+  // unrecognised — a broken chip must not widen the audience to include bots.
+  params.set("traffic", filters?.traffic ?? "human");
   return params.toString();
 }
 

@@ -5,6 +5,8 @@ import { useQuery } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 import { AnalyticsDateRange } from "./components/AnalyticsDateRange";
 import { AnalyticsFilterBar } from "./components/AnalyticsFilterBar";
+import { TrafficSegmentControl } from "./components/TrafficSegmentControl";
+import { useOverviewAnalytics } from "@/lib/data";
 import { AnalyticsTabNav } from "./components/AnalyticsTabNav";
 import { DrillDownChips } from "./components/DrillDownChips";
 import { ExportCsvButton } from "./components/ExportCsvButton";
@@ -90,6 +92,14 @@ export default function AnalyticsPage() {
     [days, customRange],
   );
 
+  // Shares OverviewTab's cache entry — the hook owns the key, so both resolve
+  // from a single request. Only the segment counts are read here; they are
+  // window-wide and identical whichever segment is displayed.
+  const { data: overviewForCounts } = useOverviewAnalytics(
+    days,
+    effectiveFilters,
+  );
+
   // Fetch annotations for the active date window
   const { data: annotations = [], refetch: refetchAnnotations } = useQuery<
     Annotation[]
@@ -161,6 +171,15 @@ export default function AnalyticsPage() {
           </div>
         </div>
       </div>
+
+      {/* Which population every number below describes. Kept separate from the
+          filter chips because it does not narrow a population — it chooses one,
+          and the same tile reads 790 or 48,643 depending on it. */}
+      <TrafficSegmentControl
+        value={filters.traffic ?? "human"}
+        counts={overviewForCounts?.trafficSegments}
+        onChange={(traffic) => setFilters({ ...filters, traffic })}
+      />
 
       {/* Filter bar */}
       <AnalyticsFilterBar filters={filters} onChange={setFilters} />

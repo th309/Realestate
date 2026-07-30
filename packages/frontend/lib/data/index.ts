@@ -275,6 +275,10 @@ export {
   // Score heatmap (Market Momentum Map widget)
   useScoreHeatmap,
   type UseScoreHeatmapResult,
+
+  // Admin analytics overview
+  useOverviewAnalytics,
+  overviewAnalyticsQueryKey,
 } from "./hooks";
 
 // ============================================================================
