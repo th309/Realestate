@@ -3,7 +3,7 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { SessionManagerService } from './session-manager.service';
 import { IdentityStitchingService } from './identity-stitching.service';
 import type { IngestableEvent, IngestionResult } from './user-analytics.types';
-import { hasBotUserAgent } from './bot-detection';
+import { classifySessionAtInsert } from './bot-detection';
 
 @Injectable()
 export class EventIngestionService {
@@ -42,7 +42,11 @@ export class EventIngestionService {
       // Classified once per batch and stamped on every row. Denormalised onto
       // user_events (like user_tier) because the event-sourced panels query
       // this table directly and cannot join to user_sessions through PostgREST.
-      const isBot = hasBotUserAgent(clientUserAgent);
+      // Three-state, matching the session: `true` for a self-identifying
+      // crawler, otherwise NULL. Never false — an event cannot prove its
+      // emitter human on arrival. session-manager promotes both the session
+      // and its events to false once the session earns it.
+      const isBot = classifySessionAtInsert(clientUserAgent);
       const rows = regular.map((e) => ({
         is_bot: isBot,
         client_event_id: e.client_event_id || null,

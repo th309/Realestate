@@ -1,7 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { IngestableEvent } from './user-analytics.types';
-import { classifyAsBot } from './bot-detection';
+import { classifySessionAtInsert } from './bot-detection';
+import {
+  buildSessionUpdatePlan,
+  type ExistingSessionRow,
+} from './session-update-payload';
 
 @Injectable()
 export class SessionManagerService {
@@ -20,7 +24,7 @@ export class SessionManagerService {
     const { data: existing, error: selectError } = await client
       .from('user_sessions')
       .select(
-        'session_id, page_count, feature_events_count, landing_page, entry_type, referrer, referrer_domain, utm_source, utm_medium, utm_campaign',
+        'session_id, page_count, feature_events_count, landing_page, entry_type, referrer, referrer_domain, utm_source, utm_medium, utm_campaign, is_bot',
       )
       .eq('session_id', sessionId)
       .maybeSingle();
@@ -72,12 +76,12 @@ export class SessionManagerService {
         is_bounce: pageviewCount <= 1,
         converted: !!conversionEvent,
         conversion_type: conversionEvent?.event_action ?? null,
-        // Classified once, at insert. The User-Agent is only available on the
-        // first batch, and a crawler does not become human later.
-        is_bot: classifyAsBot({
-          userAgent: clientUserAgent,
-          pageCount: pageviewCount,
-        }),
+        // `true` for a self-identifying crawler, otherwise NULL — never false.
+        // false means "human, on evidence", and nothing observable at insert
+        // supplies that: duration is 0 for everyone at creation. Writing false
+        // here is what re-contaminated the human segment within hours of the
+        // backfill. Promotion to false happens below, once the session earns it.
+        is_bot: classifySessionAtInsert(clientUserAgent),
         device_type: props['device_type'] ?? null,
         screen_width: props['screen_width']
           ? Number(props['screen_width'])
@@ -114,75 +118,13 @@ export class SessionManagerService {
       return;
     }
 
-    const previousPageCount = existing.page_count ?? 0;
-    const previousFeatureCount = existing.feature_events_count ?? 0;
-    const newFeatureCount = events.filter(
-      (e) => e.event_category === 'feature',
-    ).length;
-    const hasFrustration = events.some(
-      (e) => e.event_category === 'frustration',
-    );
-    const totalPageCount = previousPageCount + pageviewCount;
-
-    const updatePayload: Record<string, unknown> = {
-      last_activity_at: new Date().toISOString(),
-      exit_page: exitPage,
-      page_count: totalPageCount,
-      is_bounce: totalPageCount <= 1 ? undefined : false,
-      feature_events_count: previousFeatureCount + newFeatureCount,
-    };
-
-    if (hasFrustration) {
-      updatePayload['had_frustration_event'] = true;
-    }
-
-    // Only ever set converted true — never clear it. A later batch from the
-    // same session must not un-convert a signup that already happened.
-    if (conversionEvent) {
-      updatePayload['converted'] = true;
-      updatePayload['conversion_type'] = conversionEvent.event_action;
-    }
-
-    // Backfill acquisition fields the update path otherwise never writes.
-    // These are set only by whichever batch wins the insert, so if the loser
-    // was the session's chronologically first batch they would be discarded
-    // permanently — silently corrupting the attribution the acquisition
-    // dashboard reports on. Fill only where the existing row is null, so a
-    // winner's real value is never overwritten.
-    //
-    // ONLY session-invariant fields are eligible. Every value here comes from
-    // getSessionContext(), which computes once per browser session and caches
-    // in sessionStorage, so every batch of a given session carries an identical
-    // copy. Backfilling from an arbitrary batch therefore cannot pick a "wrong"
-    // value — there is only one.
-    //
-    // landing_page is deliberately EXCLUDED. It is derived from whichever
-    // pageview happens to be in the current batch, so it is order-dependent:
-    // if the row was created by a batch carrying no pageview, two later batches
-    // could race and whichever UPDATE commits first while the column is still
-    // null would win regardless of chronology. That would turn a merely missing
-    // landing page into a confidently wrong one, which is worse. A null
-    // landing_page is honest and is already excluded by the
-    // `.not('landing_page', 'is', null)` filters on the read side.
-    const backfill: Record<string, unknown> = {
-      entry_type: props['entry_type'],
-      referrer: props['referrer'],
-      referrer_domain: props['referrer_domain'],
-      utm_source: props['utm_source'],
-      utm_medium: props['utm_medium'],
-      utm_campaign: props['utm_campaign'],
-    };
-    for (const [column, value] of Object.entries(backfill)) {
-      const current = (existing as Record<string, unknown>)[column];
-      if ((current === null || current === undefined) && value != null) {
-        updatePayload[column] = value;
-      }
-    }
-
-    // Remove undefined fields so Supabase does not overwrite with null
-    const cleanPayload = Object.fromEntries(
-      Object.entries(updatePayload).filter(([, v]) => v !== undefined),
-    );
+    const { payload: cleanPayload, promotesToHuman } = buildSessionUpdatePlan({
+      existing: existing as unknown as ExistingSessionRow,
+      events,
+      pageviewCount,
+      exitPage,
+      props,
+    });
 
     const { error: updateError } = await client
       .from('user_sessions')
@@ -193,6 +135,25 @@ export class SessionManagerService {
       this.logger.error(
         `Failed to update session ${sessionId}: ${updateError.message}`,
       );
+    }
+
+    // Mirror the verdict onto the session's events. They carry a denormalised
+    // copy because the event panels query user_events directly and PostgREST
+    // cannot express the join; without this, a promoted human's events stay
+    // NULL and drop out of the human segment while their session appears in it.
+    // Fires once per session, on the promotion batch only.
+    if (promotesToHuman) {
+      const { error: mirrorError } = await client
+        .from('user_events')
+        .update({ is_bot: false })
+        .eq('session_id', sessionId)
+        .is('is_bot', null);
+
+      if (mirrorError) {
+        this.logger.error(
+          `Failed to mirror classification onto events for ${sessionId}: ${mirrorError.message}`,
+        );
+      }
     }
   }
 
@@ -212,16 +173,28 @@ export class SessionManagerService {
 
     const { data: existing } = await client
       .from('user_sessions')
-      .select('heartbeat_count')
+      .select('heartbeat_count, is_bot')
       .eq('session_id', sessionId)
       .maybeSingle();
 
+    const nextCount = (existing?.heartbeat_count ?? 0) + 1;
+
+    // A SECOND heartbeat is human evidence. The first fires at
+    // EARLY_HEARTBEAT_MS (5s), which crawlers reach too because they block on
+    // network-idle — 2,019 sessions sit at exactly 5s for that reason. Surviving
+    // to the 30s cadence is what a one-shot crawler never does.
+    // Promote only from NULL, so a UA-flagged crawler is never rewritten.
+    const payload: Record<string, unknown> = {
+      last_activity_at: new Date().toISOString(),
+      heartbeat_count: nextCount,
+    };
+    if (nextCount > 1 && existing?.is_bot === null) {
+      payload.is_bot = false;
+    }
+
     const { error } = await client
       .from('user_sessions')
-      .update({
-        last_activity_at: new Date().toISOString(),
-        heartbeat_count: (existing?.heartbeat_count ?? 0) + 1,
-      })
+      .update(payload)
       .eq('session_id', sessionId);
 
     if (error) {

@@ -108,3 +108,79 @@ export function hasBotUserAgent(userAgent: string): boolean {
 export function classifyAsBot(sig: BotSignals): boolean {
   return hasBotUserAgent(sig.userAgent);
 }
+
+/**
+ * Classification written at session INSERT: `true` or NULL, never `false`.
+ *
+ * `is_bot` is three-state — false means "human, on evidence". Nothing
+ * observable at insert supplies that evidence: duration is 0 for every session
+ * at creation, the visitor has no history, and page_count is 1. Writing `false`
+ * here is the bug that made ~48,000 crawler sessions read as visitors, and it
+ * reappeared within hours of the backfill because the write path still did it.
+ *
+ * NULL means unclassified. It is promoted to `false` later, when the session
+ * actually produces evidence — a heartbeat past the first ping, a second
+ * pageview, a deliberate interaction, a login, or a signup.
+ */
+export function classifySessionAtInsert(userAgent: string): true | null {
+  return hasBotUserAgent(userAgent) ? true : null;
+}
+
+/**
+ * Events that only a human produces.
+ *
+ * The distinction is auto-fired telemetry vs. deliberate interaction, NOT event
+ * category. Measured against the live inventory: 582 known-bot sessions emit
+ * `feature.score_view` and 550 emit `seo.conversion_bar_shown`, both of which
+ * render automatically — so any category-level rule (e.g. "a `feature` event
+ * means engagement") admits crawlers wholesale.
+ *
+ * Keep in sync with the allow-list in the backfill migration
+ * 20260729210500_backfill_traffic_classification.sql.
+ */
+const HUMAN_EVIDENCE_ACTIONS = new Set<string>([
+  // product interaction
+  'region_select',
+  'search',
+  'map_filter',
+  'report_export',
+  'screener_market_size',
+  'analyzer_grade',
+  'mcp_connected',
+  'pro_feature_used',
+  // signup funnel — deliberate steps only
+  'signup_start',
+  'signup_email_engaged',
+  'signup_oauth_click',
+  'signup_submit_blocked',
+  'signup_submit_error',
+  'signup_oauth_blocked',
+  'signup_oauth_error',
+  'signup_pending_confirmation',
+  'signup_otp_attempt',
+  'signup_otp_verified',
+  'signup_otp_failed',
+  'signup_otp_exhausted',
+  'signup_otp_resent',
+  'signup_otp_resend_failed',
+  'signup_complete',
+  // pricing + CTAs
+  'pricing_cta_click',
+  'pricing_tier_click',
+  'cta_click',
+  'click',
+  'conversion_bar_clicked',
+  'conversion_bar_dismissed',
+  'score_teaser_click',
+  'sticky_bar_dismissed',
+  'sticky_bar_email_submitted',
+  // onboarding + app install
+  'tab',
+  'quiz_start',
+  'installed',
+  'install_banner_dismissed',
+]);
+
+export function isHumanEvidenceAction(eventAction: string): boolean {
+  return HUMAN_EVIDENCE_ACTIONS.has(eventAction);
+}
