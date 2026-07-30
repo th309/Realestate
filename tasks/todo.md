@@ -602,6 +602,95 @@ path, independent of the form, and expected given autoconfirm is off in prod.
 - [ ] **P0.4 Only then redesign the form.** Wait for P0.1-P0.2 to produce ~2 weeks of split data;
       at 26 sessions/day, changing the form now means never learning which path was broken.
 
+## Phase 0 — The page is broken independently of bots (found 2026-07-29, live audit)
+
+> **RESOLVED in `1319e25c`.** Kept as the audit record: it is the evidence for why
+> each panel was rebuilt, and the checklist below is what was actually found on
+> the live page rather than a forward-looking plan. Every item was fixed, and the
+> investigation turned up more than this list — see the commit body.
+
+Troy: "none of this data is correct… I want them all fixed." Auditing the Overview tab against the
+live screenshot found **five defects that have nothing to do with crawlers**. Bot contamination sits
+on top of these; fixing bots alone would leave every one of them in place.
+
+- [ ] **0.1 KPI tiles are computed over a PostgREST row cap, not the real population.**
+      `fetchSessionRows` (`overview-data-fetcher.service.ts:23-52`) has no `.limit()` and no
+      `.range()`, so Supabase caps the result at 1,000 rows. `aggregateSessionRows` then derives
+      every KPI from `rows.length`. **The screenshot's "1,000 TOTAL SESSIONS" is literally the cap** —
+      the same window holds ~48,173 non-bot sessions, so the page is reporting 2% of the data as if
+      it were the whole. "997 unique visitors" is just the distinct count inside that arbitrary
+      slice. Fix: aggregate server-side (RPC/SQL `count`/`avg`), or Range-paginate. Never derive a
+      population statistic from an unpaginated PostgREST array.
+- [ ] **0.2 Average session duration silently uses a different population than the count beside it.**
+      `overview-session-aggregator.ts:22` filters to `duration_seconds > 0` before averaging, while
+      `totalSessions` counts every row. That is the 22s-vs-1,000 mismatch: the mean of the handful of
+      non-zero rows, displayed next to a count of everything. Decide one population and use it for
+      both, or label the tile as conditional.
+- [ ] **0.3 All six KPI sparklines are the same series.**
+      `overview-analytics.service.ts:133-142` computes `dailyCounts` once (daily unique visitors) and
+      assigns that identical array to `uniqueVisitors`, `totalSessions`, `avgSessionDuration`,
+      `bounceRate`, `pagesPerSession` and `conversionRate`. The sparkline under "Bounce Rate" is
+      visitor counts. Visible in the screenshot — all six have identical shape.
+- [ ] **0.4 Quick Funnel has never worked.** `FUNNEL_STAGES`
+      (`overview-data-fetcher.service.ts:10-15`) matches `event_action` values `signup`, `activation`
+      and `subscription_started`. **None of those has ever been emitted.** The only real actions are
+      `signup_start`, `signup_pending_confirmation`, `signup_otp_attempt`, `signup_otp_verified`,
+      `signup_complete`, `pricing_page_view`, `pricing_cta_click`, `pricing_tier_click`. Stages 2-4
+      are therefore permanently 0 — exactly the "Signed Up 0 · 100.0% drop-off" on screen. Not a data
+      problem; the stage names simply never matched reality.
+- [ ] **0.5 `goalProgress` is hardcoded `[]`** (`overview-analytics.service.ts:62`).
+
+- [ ] **0.6 Read queries with no bot filter.** `conversion-analytics.service.ts` 173, 221, 236, 287
+      and `funnel-engine.service.ts` 60 are genuinely unfiltered.
+      **Correction:** `retention-analytics.service.ts` 93, 159 and 199 also lack the filter but are
+      NOT contaminated — each carries `.not('user_id','is',null)`, and bots never have a `user_id`.
+      Adding the filter there is tidiness, not a fix.
+
+### 0.8 — THE SYSTEMIC BUG: the 1,000-row cap is everywhere
+
+`.select()` without `.range()` returns at most 1,000 rows (Supabase max-rows). It does not error or
+warn — it returns a well-formed array that every downstream calculation then computes correctly. This
+is why the numbers look plausible. Confirmed sites, all of which derive population statistics from a
+truncated array:
+
+| Site                                              | Feeds                                                    | Real population        |
+| ------------------------------------------------- | -------------------------------------------------------- | ---------------------- |
+| `overview-data-fetcher.ts:23` `fetchSessionRows`  | all 6 KPI tiles, sparklines, DAU chart, funnel "Visited" | ~48,173 sessions / 30d |
+| `funnel-engine.service.ts:59`                     | every saved funnel on Conversion                         | ~127k events           |
+| `retention-analytics.ts:117` `computeDauWauMau`   | DAU / WAU / MAU / stickiness                             | 48k sessions           |
+| `retention-analytics.ts:198` `detectChurnSignals` | Churn Risk table — **no date filter at all**             | all-time               |
+| `conversion-analytics.ts:172,220,235,286`         | paywall, feature correlation, tier migration             | ~127k events           |
+
+Note `journey-analytics.service.ts` uses `.limit(5000)` / `.limit(10000)`, which exceed max-rows and
+so are silently capped at 1,000 too — the author clearly believed those limits applied.
+
+### 0.9 — Panels that are structurally empty, and always have been
+
+Verified against the live event inventory (41 distinct `category.action` pairs in `user_events`).
+These panels match event names that have **never been emitted even once**:
+
+| Panel                           | Matches                                                                                 | Reality                                                                                                                                                                              |
+| ------------------------------- | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Quick Funnel stages 2-4         | `signup`, `activation`, `subscription_started`                                          | none exist                                                                                                                                                                           |
+| "Conversion Funnel" steps 2-3   | `conversion.trial_start`, `conversion.upgrade_complete`                                 | neither exists                                                                                                                                                                       |
+| "Activation Funnel" steps 5,6,8 | `onboarding.persona_selected`, `onboarding.spotlight_step_completed`, `trial.converted` | none exist; funnel dies at step 5 and intersection zeroes the rest                                                                                                                   |
+| PaywallEffectiveness            | `paywall_view`, `upgrade_click`, `paywall_dismiss`, `upgrade_complete`                  | the real event is category `paywall` / action **`view`** (n=45). The code matches on `event_action = 'paywall_view'`, which matches nothing                                          |
+| TierMigrationFlow               | `upgrade_complete`                                                                      | never emitted                                                                                                                                                                        |
+| FeatureCorrelationChart         | —                                                                                       | `conversion-analytics.ts:216` selects `id` from `user_sessions`; **that column does not exist** (PK is `session_id`). PostgREST 42703, error destructured away, returns `[]` forever |
+
+**The entire Conversion tab is non-functional**, and not because of bots.
+
+- [ ] **0.10 Rebuild the funnels against events that exist.** Real signup funnel:
+      `pageview.view → conversion.signup_start → conversion.signup_email_engaged | signup_oauth_click
+    → conversion.signup_pending_confirmation → conversion.signup_otp_verified →
+    conversion.signup_complete`. Real engagement signals available: `trial.pro_feature_used` (5,826),
+      `feature.region_select` (1,334), `feature.mcp_connected` (411), `feature.analyzer_grade` (234),
+      `feature.search` (168). No revenue event exists at all — revenue must come from Stripe or
+      `user_profiles`, not `user_events`.
+- [ ] **0.7 Overview is Redis-cached 300s** (`overview-analytics.service.ts:11,28`) keyed on
+      days+filters — any verification must account for staleness, and the traffic-segment selector
+      from Phase 7 must be part of the cache key or it will serve the wrong segment.
+
 ## Phase 1 — Three-state classification, centralized
 
 - [ ] **1.1 Migration: `is_bot` → nullable** on `user_sessions` and `user_events`.
