@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Shield } from "lucide-react";
 import { PageHeaderWithBreadcrumbs } from "@/components/navigation";
-import { Section, Callout, ContactCard } from "../terms/TermsComponents";
+import { Section, ContactCard } from "../terms/TermsComponents";
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
@@ -85,12 +85,13 @@ export default function PrivacyPolicyPage() {
             </p>
             <p>
               <strong className="text-on-surface">Session Recording.</strong> We
-              may record your interactions with the Service, including page
-              navigation, clicks, scrolling, and mouse movement, and replay
-              those recordings to diagnose problems and improve usability.
-              Recordings exclude the contents of form fields, and we mask
-              payment, authentication, and account-security screens. We do not
-              use recordings to capture passwords or payment card details.
+              record a small sample of sessions, and sessions in which an error
+              occurs, so that we can replay what happened and diagnose the
+              problem. A recording captures page navigation, clicks, scrolling,
+              and mouse movement. Text is masked and images and video are
+              blocked, so a recording shows the layout of a page and what you
+              interacted with rather than the words on it. We do not capture the
+              contents of form fields, passwords, or payment card details.
             </p>
             <p>
               <strong className="text-on-surface">
@@ -219,10 +220,12 @@ export default function PrivacyPolicyPage() {
               is not sold, and it is not shared with advertising networks.
             </p>
             <p>
-              We also use Google Analytics to understand how users interact with
-              the Service. Google Analytics collects anonymized usage data. You
-              may opt out by installing the Google Analytics opt-out browser
-              add-on.
+              We also use Google Analytics. It receives a page view for each
+              page you open, page-performance measurements such as load and
+              responsiveness timings, and a small number of account events such
+              as completing a sign-up or a purchase. Google Analytics does not
+              store your IP address. You may opt out by installing the Google
+              Analytics opt-out browser add-on.
             </p>
             <p>
               To limit first-party analytics and session recording, enable Do
