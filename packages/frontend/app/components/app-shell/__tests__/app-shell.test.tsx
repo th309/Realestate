@@ -3,6 +3,7 @@ import { render, screen } from "@testing-library/react";
 import { KpiTile } from "../KpiTile";
 import { ScorePill } from "../ScorePill";
 import { JumpBar } from "../JumpBar";
+import { DataTable } from "../DataTable";
 
 describe("KpiTile", () => {
   it("renders label, value, and caption", () => {
@@ -71,6 +72,61 @@ describe("JumpBar", () => {
     expect(screen.getByRole("link", { name: /Cash Flow/ })).toHaveAttribute(
       "aria-current",
       "true",
+    );
+  });
+});
+
+type Row = { market: string; score: number; value: string };
+
+const COLUMNS = [
+  { key: "market" as const, header: "Market", align: "left" as const },
+  { key: "score" as const, header: "Score", align: "right" as const },
+  { key: "value" as const, header: "Median value", align: "right" as const },
+];
+
+const ROWS: Row[] = [
+  { market: "Buffalo, NY", score: 98, value: "$248,700" },
+  { market: "Seattle, WA", score: 16, value: "$775,549" },
+];
+
+describe("DataTable", () => {
+  it("renders a header cell per column", () => {
+    render(<DataTable columns={COLUMNS} rows={ROWS} />);
+    expect(screen.getAllByRole("columnheader")).toHaveLength(3);
+  });
+
+  it("renders a row per datum", () => {
+    render(<DataTable columns={COLUMNS} rows={ROWS} />);
+    expect(screen.getAllByRole("row")).toHaveLength(3); // header + 2
+  });
+
+  it("right-aligns numeric columns in monospace", () => {
+    render(<DataTable columns={COLUMNS} rows={ROWS} />);
+    const cell = screen.getByText("$248,700");
+    expect(cell.className).toContain("text-right");
+    expect(cell.className).toContain("font-mono");
+    expect(cell.className).toContain("tabular-nums");
+  });
+
+  it("leaves the left column in the sans face", () => {
+    render(<DataTable columns={COLUMNS} rows={ROWS} />);
+    expect(screen.getByText("Buffalo, NY").className).not.toContain(
+      "font-mono",
+    );
+  });
+
+  it("marks the sorted column for assistive tech", () => {
+    render(
+      <DataTable
+        columns={COLUMNS}
+        rows={ROWS}
+        sortKey="score"
+        sortDir="desc"
+      />,
+    );
+    expect(screen.getByRole("columnheader", { name: /Score/ })).toHaveAttribute(
+      "aria-sort",
+      "descending",
     );
   });
 });
