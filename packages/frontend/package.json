@@ -93,6 +93,7 @@
     "eslint-config-next": "16.0.1",
     "imapflow": "^1.4.1",
     "jsdom": "^27.4.0",
+    "sharp": "^0.34.5",
     "supabase": "^2.58.5",
     "tailwindcss": "^4",
     "typescript": "^5",
