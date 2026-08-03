@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import type { ComponentProps, ReactNode } from "react";
 import { render } from "@testing-library/react";
 import { vi } from "vitest";
 
@@ -45,11 +46,17 @@ const mockRow = {
   created_at: "2026-07-01T00:00:00Z",
 };
 
+/** next/link stand-in: href is whatever the caller passed, not necessarily a string. */
+type LinkMockProps = Omit<ComponentProps<"a">, "href"> & {
+  href?: unknown;
+  children?: ReactNode;
+};
+
 vi.mock("@/lib/analyzer/useSavedAnalysis", () => ({
   useSavedAnalysis: () => ({ data: mockRow, isLoading: false }),
 }));
 vi.mock("next/link", () => ({
-  default: ({ href, children, ...rest }: any) => (
+  default: ({ href, children, ...rest }: LinkMockProps) => (
     <a href={typeof href === "string" ? href : ""} {...rest}>
       {children}
     </a>

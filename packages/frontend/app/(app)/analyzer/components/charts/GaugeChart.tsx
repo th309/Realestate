@@ -49,13 +49,13 @@ function radial(
     .innerRadius(radius * 0.65)
     .outerRadius(radius * 0.92)
     .startAngle(startAngle)
-    .endAngle(endAngle)({} as any) as string;
+    .endAngle(endAngle)({}) as string;
 
   const valueArc = d3arc<unknown>()
     .innerRadius(radius * 0.65)
     .outerRadius(radius * 0.92)
     .startAngle(startAngle)
-    .endAngle(valueAngle)({} as any) as string;
+    .endAngle(valueAngle)({}) as string;
 
   // pick color from thresholds (highest threshold <= t)
   const sorted = [...thresholds].sort((a, b) => a.at - b.at);
