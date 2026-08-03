@@ -23,6 +23,15 @@ import { useThresholds } from "@/lib/data";
 import { toEngineStrategy, useGradingResult } from "./lib/use-grading-result";
 import { useAnalyzerDefaultsPrefill } from "./lib/use-analyzer-defaults-prefill";
 import { StrategyKPI } from "./components/Hero/StrategyKPI";
+import { JumpBar, type JumpItem } from "@/app/components/app-shell";
+import {
+  Gauge,
+  ClipboardCheck,
+  TrendingUp,
+  Receipt,
+  Home,
+  MapPin,
+} from "lucide-react";
 import { PropertyHeader } from "./components/PropertyHeader";
 import { PropertyRecordCard } from "./components/PropertyRecordCard";
 import { SavedAnalysesPanel } from "./components/SavedAnalysesPanel";
@@ -37,6 +46,20 @@ import { useSectionAiInsights } from "./lib/use-section-ai-insights";
 import { buildCompsViewProps } from "./lib/comps-view-props";
 import type { Strategy } from "./lib/strategy-tile-mappers";
 import type { AnalysisMode } from "./components/InputPanel/StrategyControls";
+
+/**
+ * In-page navigation for the results column, which stacks a KPI row, a grading
+ * table with its verdict and improvement levers, a projection, a cash-flow
+ * waterfall, comps, and market context in one scroll.
+ */
+const JUMP_ITEMS: JumpItem[] = [
+  { id: "cashflow", label: "Cash Flow", icon: <Gauge className="size-3" />, accent: "bg-primary" },
+  { id: "grading", label: "Grading", icon: <ClipboardCheck className="size-3" />, accent: "bg-secondary" },
+  { id: "projection", label: "Projection", icon: <TrendingUp className="size-3" />, accent: "bg-tertiary" },
+  { id: "expenses", label: "Expenses", icon: <Receipt className="size-3" />, accent: "bg-warning" },
+  { id: "comps", label: "Comps", icon: <Home className="size-3" />, accent: "bg-primary" },
+  { id: "market", label: "Market", icon: <MapPin className="size-3" />, accent: "bg-tertiary" },
+];
 
 export default function AnalyzerClient({
   searchParamsPromise,
@@ -251,6 +274,9 @@ export default function AnalyzerClient({
           </div>
 
           <div className="space-y-6 min-w-0">
+            {hasGradableInput && (
+              <JumpBar items={JUMP_ITEMS} activeId="cashflow" />
+            )}
             <SavedAnalysesPanel />
             {!address.trim() && !rentcastData ? (
               <EmptyStateCta onClick={openInputs} />
@@ -277,6 +303,7 @@ export default function AnalyzerClient({
               />
             )}
 
+            <div id="grading" className="scroll-mt-20">
             {grading.data ? (
               <GradingResultPanel
                 result={grading.data}
@@ -303,7 +330,9 @@ export default function AnalyzerClient({
                 <div className="mt-2 h-4 w-64 rounded bg-surface-container-high" />
               </div>
             ) : null}
+            </div>
 
+            <div id="cashflow" className="scroll-mt-20">
             <StrategyKPI
               ctx={{
                 input: analyzer.input,
@@ -319,6 +348,7 @@ export default function AnalyzerClient({
               active={activeStrategy}
               isCompareWinner={analysisMode === "compare"}
             />
+            </div>
 
             <RentcastBanners
               lookupErrorMsg={lookupErrorMsg}

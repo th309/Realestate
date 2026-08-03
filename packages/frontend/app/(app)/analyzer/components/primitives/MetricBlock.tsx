@@ -36,7 +36,11 @@ const SIZE = {
   xl: { value: "text-[56px]", label: "text-sm" },
 } as const;
 
-function formatNumericValue(
+/**
+ * Exported so the shared KpiTile can render the exact same string MetricBlock
+ * would, rather than a second currency/percent implementation drifting beside it.
+ */
+export function formatNumericValue(
   raw: number,
   format: NonNullable<MetricBlockProps["format"]>,
   decimals: number,
@@ -45,10 +49,11 @@ function formatNumericValue(
   if (format === "raw") return String(raw);
 
   if (format === "currency") {
-    const abs = Math.abs(raw);
+    // Whole dollars at every magnitude. The old sub-$1,000 branch rendered
+    // cents, so one cash-flow figure read "−$386.00" here and "−$386" in the
+    // grading table -- two precisions for one quantity on one screen.
     const sign = raw < 0 ? "−" : "";
-    if (abs >= 1000) return `${sign}$${Math.round(abs).toLocaleString()}`;
-    return `${sign}$${abs.toFixed(2)}`;
+    return `${sign}$${Math.round(Math.abs(raw)).toLocaleString()}`;
   }
 
   if (format === "percent") return `${raw.toFixed(decimals)}%`;

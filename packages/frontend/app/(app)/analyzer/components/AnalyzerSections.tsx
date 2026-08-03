@@ -124,12 +124,15 @@ export function AnalyzerSections({
 }: AnalyzerSectionsProps) {
   return (
     <>
+      <div id="projection" className="scroll-mt-20">
       <ProjectionSection
         input={input}
         projection={projection}
         afterTax={afterTax}
         {...sectionAi.projection}
       />
+      </div>
+      <div id="expenses" className="scroll-mt-20">
       <ExpenseSection
         grossRentMonthly={grossRentMonthly}
         vacancyMonthly={vacancyMonthly}
@@ -137,6 +140,7 @@ export function AnalyzerSections({
         debtServiceMonthly={debtServiceMonthly}
         {...sectionAi.expense_waterfall}
       />
+      </div>
       <SensitivitySection
         input={input}
         rental={rental}
@@ -148,6 +152,7 @@ export function AnalyzerSections({
         salesComps={salesComps}
         {...sectionAi.sensitivity}
       />
+      <div id="comps" className="scroll-mt-20">
       <CompsSection
         subjectLat={subjectLat}
         subjectLon={subjectLon}
@@ -160,6 +165,8 @@ export function AnalyzerSections({
         mapboxToken={mapboxToken}
         {...sectionAi.comps}
       />
+      </div>
+      <div id="market" className="scroll-mt-20">
       <MarketContextSection
         chain={marketContext?.chain ?? null}
         initialGeoLevel={marketContext?.geo_level ?? null}
@@ -172,6 +179,7 @@ export function AnalyzerSections({
         aiPayloadBase={marketContextAi.aiPayloadBase}
         aiEnabled={marketContextAi.aiEnabled}
       />
+      </div>
       <AfterTaxSection
         afterTax={afterTax}
         marginalTaxRate={marginalTaxRate}

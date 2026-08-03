@@ -10,7 +10,10 @@ export const fmtPct = (v: number | null): string =>
 export const fmtUsd = (v: number | null): string => {
   if (v == null) return "—";
   const abs = Math.round(Math.abs(v)).toLocaleString();
-  return v < 0 ? `-$${abs}` : `$${abs}`;
+  // A true minus sign (U+2212), not an ASCII hyphen: MetricBlock already emits
+  // one, and the same cash-flow figure appearing as "−$386" in a KPI card and
+  // "-$386" in the grading table is a defect.
+  return v < 0 ? `−$${abs}` : `$${abs}`;
 };
 
 export const fmtRatio = (v: number | null): string =>
