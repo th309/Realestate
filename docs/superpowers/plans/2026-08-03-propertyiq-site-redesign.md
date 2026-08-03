@@ -10,13 +10,14 @@
 
 **Approved visual targets** — each phase implements its mockup:
 
-| Surface         | Mockup                                                               |
-| --------------- | -------------------------------------------------------------------- |
-| Homepage + blog | https://claude.ai/code/artifact/99e2d97d-df27-4d55-9f7b-83da181b3697 |
-| Analyzer        | https://claude.ai/code/artifact/3218c833-210f-4bc8-8e68-6351ea9533ca |
-| Reports         | https://claude.ai/code/artifact/bd22f957-f9c9-4d8d-b1f0-a7abef9b220d |
-| Screener        | https://claude.ai/code/artifact/f4d5ad0d-84ea-43ed-be9f-c9bb743a28e0 |
-| Market          | https://claude.ai/code/artifact/bf98674e-7cff-4a49-9253-5369e78dbf7a |
+| Surface           | Mockup                                                               |
+| ----------------- | -------------------------------------------------------------------- |
+| Homepage + blog   | https://claude.ai/code/artifact/99e2d97d-df27-4d55-9f7b-83da181b3697 |
+| Analyzer          | https://claude.ai/code/artifact/3218c833-210f-4bc8-8e68-6351ea9533ca |
+| Reports           | https://claude.ai/code/artifact/bd22f957-f9c9-4d8d-b1f0-a7abef9b220d |
+| Screener          | https://claude.ai/code/artifact/f4d5ad0d-84ea-43ed-be9f-c9bb743a28e0 |
+| Map (chrome only) | https://claude.ai/code/artifact/c2a2557f-0576-4a24-a720-20d0e0032f78 |
+| Market            | https://claude.ai/code/artifact/bf98674e-7cff-4a49-9253-5369e78dbf7a |
 
 ## Global Constraints
 
@@ -44,7 +45,7 @@ Every task's requirements implicitly include this section.
 | H1 scales                             | five                                                                                                                                                                                  |
 | Gutters                               | `px-4` in `(public)`, `px-6` in `(app)` — split by route group, not design                                                                                                            |
 | Homepage vertical rhythms             | twelve                                                                                                                                                                                |
-| Hex literals                          | 604 across 119 files — concentrated in `app/components/home` (95) and `components/account`. **The five app surfaces are already clean:** analyzer 0, screener 0, reports 0, market 0. |
+| Hex literals                          | 604 across 119 files — concentrated in `app/components/home` (95) and `components/account`. **The five app surfaces are already clean:** analyzer 0, screener 0, reports 0, market 0, map 2. |
 | Off-scale radii                       | ~1,418 of 3,554 (40%)                                                                                                                                                                 |
 | Elevation systems                     | two — 353 `shadow-*`, 77 `elevation-*`                                                                                                                                                |
 | `<Button>` / `<Card>` primitive usage | **0 import sites**; 961 raw `<button>` elements instead                                                                                                                               |
@@ -85,21 +86,22 @@ Every task's requirements implicitly include this section.
 
 ### Modified — by phase
 
-| Phase        | Primary targets                                                                                                                                                                                                                                         |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| B — Homepage | `app/components/home/landing-v2/*.tsx` (14 files, 1,012 lines), `app/(app)/home-v2/page.tsx`                                                                                                                                                            |
-| B — Blog     | `content/blog/*.mdx` frontmatter (77 files), `app/(app)/blog/components/PostCard.tsx`, `app/(app)/blog/BlogIndexContent.tsx`, `app/(app)/blog/[slug]/BlogPostContent.tsx`, `app/(app)/blog/layout.tsx`, `scripts/content/generate-post-images.ts` (new) |
-| C — Shell    | `app/components/AppShell.tsx`, `src/components/layout/Header.tsx` (354)                                                                                                                                                                                 |
-| C — Analyzer | `app/(app)/analyzer/AnalyzerClient.tsx` (388), `components/InputPanel/InputPanel.tsx` (389), `components/AnalyzerSections.tsx`, `components/MetricsExpander.tsx`                                                                                        |
-| C — Screener | `app/(app)/screener/ScreenerPageInner.tsx` (399), `components/ScreenerTable.tsx` (377), `components/FilterRail.tsx` (223), `components/PresetChips.tsx` (98)                                                                                            |
-| C — Reports  | `app/(app)/reports/page.tsx`, `app/(app)/reports/[id]/components/sections/core/*` (the existing report design system — 9 components)                                                                                                                    |
-| C — Market   | `app/(app)/market/explorer/MarketExplorer.tsx` (380), `components/KpiStrip.tsx` (235), `components/DetailRail.tsx` (311), `components/GeoTileMap.tsx` (267)                                                                                             |
-| D — Defects  | `app/(app)/about/page.tsx` (408), `app/(app)/pricing/layout.tsx`, `pricing/components/FeatureShowcaseInsights.tsx`, `pricing/components/FeatureShowcaseData.tsx`, analyzer geo resolution                                                               |
-| D — Retire   | `app/(app)/page.tsx`, `middleware.ts`, `lib/experiments/landing-variant.ts`, dead `app/components/home/*.tsx`                                                                                                                                           |
+| Phase                 | Primary targets                                                                                                                                                                                                                                         |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| B — Homepage          | `app/components/home/landing-v2/*.tsx` (14 files, 1,012 lines), `app/(app)/home-v2/page.tsx`                                                                                                                                                            |
+| B — Blog              | `content/blog/*.mdx` frontmatter (77 files), `app/(app)/blog/components/PostCard.tsx`, `app/(app)/blog/BlogIndexContent.tsx`, `app/(app)/blog/[slug]/BlogPostContent.tsx`, `app/(app)/blog/layout.tsx`, `scripts/content/generate-post-images.ts` (new) |
+| C — Shell             | `app/components/AppShell.tsx`, `src/components/layout/Header.tsx` (354)                                                                                                                                                                                 |
+| C — Analyzer          | `app/(app)/analyzer/AnalyzerClient.tsx` (388), `components/InputPanel/InputPanel.tsx` (389), `components/AnalyzerSections.tsx`, `components/MetricsExpander.tsx`                                                                                        |
+| C — Screener          | `app/(app)/screener/ScreenerPageInner.tsx` (399), `components/ScreenerTable.tsx` (377), `components/FilterRail.tsx` (223), `components/PresetChips.tsx` (98)                                                                                            |
+| C — Map (chrome only) | `app/(app)/map/MapPageInner.tsx` (389), `components/RightDetailPanel/RightDetailPanel.tsx` (381), `components/RightDetailPanel/CompactScoreCard.tsx` (394), `config/metric-categories.tsx` (334). **No Mapbox-touching file.**                          |
+| C — Reports           | `app/(app)/reports/page.tsx`, `app/(app)/reports/[id]/components/sections/core/*` (the existing report design system — 9 components)                                                                                                                    |
+| C — Market            | `app/(app)/market/explorer/MarketExplorer.tsx` (380), `components/KpiStrip.tsx` (235), `components/DetailRail.tsx` (311), `components/GeoTileMap.tsx` (267)                                                                                             |
+| D — Defects           | `app/(app)/about/page.tsx` (408), `app/(app)/pricing/layout.tsx`, `pricing/components/FeatureShowcaseInsights.tsx`, `pricing/components/FeatureShowcaseData.tsx`, analyzer geo resolution                                                               |
+| D — Retire            | `app/(app)/page.tsx`, `middleware.ts`, `lib/experiments/landing-variant.ts`, dead `app/components/home/*.tsx`                                                                                                                                           |
 
 **Reuse, do not rebuild:** `components/ui/Button.tsx` and `Card.tsx` already implement the needed variants and have zero import sites — the surfaces in this plan adopt them rather than adding new button/card primitives.
 
-**`/map` is explicitly excluded.** It keeps its current design. Do not touch `app/(app)/map/**` in any task; the map mockup produced during design is parked, not scheduled.
+**`/map` is chrome-only.** The Mapbox canvas keeps its current design — choropleth fills, colour scale, baked-on labels, zoom and pan, and the East Coast label stack all stay. Task 18 changes only what surrounds the canvas, and carries a guard step that fails if any Mapbox-touching file appears in the diff.
 
 ---
 
@@ -2181,9 +2183,126 @@ git commit -m "refactor(market): restyle onto KpiTile, ScorePill, and DataTable"
 
 ---
 
+### Task 18: Map — chrome only
+
+**Mockup:** https://claude.ai/code/artifact/c2a2557f-0576-4a24-a720-20d0e0032f78
+
+> **Hard boundary:** the Mapbox layer is not touched. The choropleth fills, the seven-colour violet-to-red scale, the baked-on state labels and values, and zoom/pan all stay exactly as they are — including the East Coast label stack, where nine states render as a text column in the Atlantic. That is Mapbox label placement and stays with the map. This task changes only what surrounds the canvas.
+
+**Files:**
+
+- Modify: `app/(app)/map/MapPageInner.tsx` (389) — page chrome only
+- Modify: `app/(app)/map/components/RightDetailPanel/RightDetailPanel.tsx` (381), `components/RightDetailPanel/CompactScoreCard.tsx` (394)
+- Modify: `app/(app)/map/config/metric-categories.tsx` (334) — presentation of the seven categories
+- **Do not modify:** any file that configures Mapbox sources, layers, paint properties, or label placement
+- Test: `app/(app)/map/__tests__/map-chrome.test.tsx`
+
+- [ ] **Step 1: Identify the Mapbox boundary before editing**
+
+```bash
+cd packages/frontend
+grep -rln "mapbox-gl\|useMap\|addLayer\|setPaintProperty\|GeoJSONSource" "app/(app)/map"
+```
+
+Every file this prints is off-limits. Record the list; the guard test in Step 2 asserts none of them changed.
+
+- [ ] **Step 2: Write the failing test**
+
+```tsx
+import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
+const INNER = readFileSync(join(__dirname, "..", "MapPageInner.tsx"), "utf8");
+
+describe("map chrome matches the other tools", () => {
+  it("renders the shared control bar", () => {
+    expect(INNER).toContain("ControlBar");
+  });
+
+  it("no longer renders a second navigation rail", () => {
+    expect(INNER).not.toMatch(/IconRail|LeftRail|NavRail/);
+  });
+
+  it("uses no arbitrary hex", () => {
+    expect(INNER).not.toMatch(/\[#[0-9A-Fa-f]{3,8}\]/);
+  });
+});
+```
+
+- [ ] **Step 3: Run test to verify it fails**
+
+Run: `npm run test:unit -- "app/(app)/map"`
+Expected: FAIL on the `ControlBar` assertion
+
+- [ ] **Step 4: Collapse two nav bars into one**
+
+`AppBar` from Task 8 already replaced the light top nav. Now fold the second row — breadcrumb, hamburger, search, and the National / State / Metro / County / City / ZIP pills — into a single `<ControlBar>`. Keep every geography level and the search behaviour.
+
+- [ ] **Step 5: Remove the left icon rail**
+
+The rail (Home / Maps / Analyzer / Markets / Graphs / Reports / About Us / Pricing) duplicates `AppBar`, leaving two navigation models on one screen. Delete it and return the ~64px. Confirm nothing else routes through it — some of its entries (Graphs, Markets, About Us, Pricing) are not in `AppBar`, so add any missing destinations to the `AppBar` overflow rather than dropping them.
+
+- [ ] **Step 6: Move the metric picker into the control bar**
+
+One button showing the active metric and its category, opening the full catalogue. All seven categories and their question subtitles survive in the sidebar: Affordability ("Can I afford to live here?"), Market Competition ("Should I act fast?"), Pricing & Deals ("Are prices going up or down?"), Area Profile ("Who lives here?"), Local Economy ("How strong is the job market?"), New Construction ("What new homes are being built?"), PropertyIQ Scores ("AI-powered market analysis").
+
+- [ ] **Step 7: Dock the legend**
+
+It currently floats over the Pacific with a "No data available" checkbox inside it. Move it into a map header strip: compact seven-swatch scale, min and max in monospace, the no-data key on the same line. Keep the as-of date.
+
+- [ ] **Step 8: Fix the score card's state-level message**
+
+`CompactScoreCard` shows a grey ring reading "Select a region to see scores". At the State geography level that is misleading — a user can click every state and never get a score, because **there is no state-level PropertyIQ Score**. The geography enum is metro, county, and ZIP; 50 is the calibration point against a state average, not a score a state holds (CLAUDE.md §9). At State level the card must say scores run at metro, county, and ZIP and offer those three levels. At Metro, County, and ZIP it behaves exactly as today.
+
+Add a test for this:
+
+```tsx
+it("does not imply a state-level score", () => {
+  const card = readFileSync(
+    join(__dirname, "..", "components/RightDetailPanel/CompactScoreCard.tsx"),
+    "utf8",
+  );
+  expect(card).toMatch(/metro, county, and ZIP|not scored at state level/i);
+});
+```
+
+- [ ] **Step 9: Dock the Table View control**
+
+It floats bottom-right as an orphan pill. Move it into the control bar as a Map/Table segmented control beside the geography levels.
+
+- [ ] **Step 10: Restyle the sidebar on the shared patterns**
+
+Pro nudge, Homebuyer/Investor toggle, score card, seven category rows, "Explore data points". Same content and order; shared card, chip, and icon-tile treatment. Category icons come from `lucide-react`.
+
+- [ ] **Step 11: Verify the map itself did not change**
+
+```bash
+git diff --stat -- "app/(app)/map"
+```
+
+Cross-check against the Step 1 list: **no Mapbox-touching file may appear in the diff.** If one does, revert that file and move the change into the chrome layer.
+
+Then:
+
+```bash
+npm run test:unit -- "app/(app)/map" && npx tsc --noEmit && npm run build && npx next start -p 3100
+```
+
+Load `/map` and confirm the choropleth renders identically to before — same colours, same labels, same zoom behaviour — with only the chrome changed.
+
+- [ ] **Step 12: Commit**
+
+```bash
+git add -- "packages/frontend/app/(app)/map"
+git commit -m "refactor(map): restyle the chrome, leaving the Mapbox canvas unchanged" -- "packages/frontend/app/(app)/map"
+```
+
+---
+
 # Phase D — Defects and retirement
 
-### Task 18: Analyzer market-adjustment geography bug
+### Task 19: Analyzer market-adjustment geography bug
 
 Not a design change — a live defect on the most differentiated feature.
 
@@ -2214,7 +2333,7 @@ Establish whether it queries by ZIP directly or routes through `MetricResolution
 
 ---
 
-### Task 19: About and pricing correctness fixes
+### Task 20: About and pricing correctness fixes
 
 **Files:**
 
@@ -2240,7 +2359,7 @@ git commit -m "fix(marketing): resolve founder contradiction, source claims, reo
 
 ---
 
-### Task 20: Collapse to a single homepage
+### Task 21: Collapse to a single homepage
 
 > **Gate:** this ends the running landing-page A/B experiment and deletes variant A. Get explicit sign-off. Everything before it ships without it.
 
@@ -2333,7 +2452,7 @@ Run after every phase, and in full before shipping.
 4. `npm run build && npx next start -p 3100` — production preview, never dev. Dev-mode rendering hides bundling and RSC problems.
 5. Walk every surface at 1440px and 390px, in light and dark:
    - `/` · `/blog` · a blog post · `/analyzer` with a real address · `/screener` with a real screen · `/reports` and a generated report · `/market` and a market detail page
-   - Also load `/map` — it is out of scope and must be visually **unchanged**, but Task 8 swaps its app bar, so confirm nothing else regressed.
+   - `/map` — chrome restyled, but the choropleth must render **identically** to before: same colours, same labels, same zoom behaviour. Compare against a screenshot taken before Task 18.
    - No horizontal page scroll at 390px.
    - Dark mode shows no white-on-white or invisible text — the failure mode hardcoded hex used to cause.
    - Every figure is monospace and columns align.
@@ -2357,6 +2476,6 @@ Run after every phase, and in full before shipping.
 
 ## Out of scope
 
-**`/map`** — keeping the current design for now. `app/(app)/map/**` is not touched by any task. The map mockup (https://claude.ai/code/artifact/c2a2557f-0576-4a24-a720-20d0e0032f78) is parked for a later decision; its findings stand if it is ever picked up — three stacked chrome bars, a floating legend with a control inside it, a dead "select a region" score card, an orphan Table View pill, and nine East Coast states rendered as a floating text column in the Atlantic.
+**The Mapbox layer.** Task 18 restyles the map's chrome but never the canvas. Two known map-layer issues stay unfixed and are not scheduled: nine East Coast states rendering as a floating text column in the Atlantic with leader lines, and permanent baked-on labels that sit at poor contrast over the darker choropleth fills. Both are Mapbox label-placement concerns and would need their own decision.
 
 Also deliberately not here: the `components/account/sections/*` hex cluster (a separate surface with its own `bg-white` + `border-indigo-200/50` pattern), the 961 raw `<button>` elements outside the files this plan touches, and adoption of `components/ui/Button.tsx` / `Card.tsx` beyond the surfaces listed above.
