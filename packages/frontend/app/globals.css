@@ -37,6 +37,11 @@
   --md-warning-container: #fff3e0;
   --md-on-warning-container: #663800;
 
+  /* Marketing hero wash — pale mint to pale lavender, the neutral ends of the
+     indigo range. Used only by the homepage hero band. */
+  --md-hero-from: #f4f8f8;
+  --md-hero-to: #efeefa;
+
   /* PropertyIQ Surfaces — Light Mode (indigo-tinted, visible on all screens) */
   --md-surface: #f3f4fc;
   --md-surface-dim: #e0e3f0;
@@ -115,6 +120,10 @@
     --md-warning-container: #663800;
     --md-on-warning-container: #fff3e0;
 
+    /* Hero wash — near-black navy/violet so the band reads as depth, not glare */
+    --md-hero-from: #101520;
+    --md-hero-to: #14131f;
+
     /* Surfaces — deep navy (brand spec §3.4) */
     --md-surface: #1a1a2e;
     --md-surface-dim: #1a1a2e;
@@ -169,6 +178,9 @@
   --color-on-warning: var(--md-on-warning);
   --color-warning-container: var(--md-warning-container);
   --color-on-warning-container: var(--md-on-warning-container);
+
+  --color-hero-from: var(--md-hero-from);
+  --color-hero-to: var(--md-hero-to);
 
   --color-surface: var(--md-surface);
   --color-surface-dim: var(--md-surface-dim);
