@@ -165,7 +165,7 @@ export function BeatHero({
             </div>
           </div>
         ) : (
-          <div className="max-w-2xl">
+          <div className="max-w-xl">
             <HeroCopy contrast={null} />
           </div>
         )}

@@ -1,3 +1,4 @@
+import { SectionHeading } from "@/app/components/marketing";
 import { BeatSection } from "./BeatSection";
 import { PersonaShowcase } from "./persona/PersonaShowcase";
 
@@ -12,19 +13,13 @@ import { PersonaShowcase } from "./persona/PersonaShowcase";
  */
 export function BeatPersona() {
   return (
-    <BeatSection
-      id="beat-persona"
-      eyebrow="What you can do with it"
-      tone="light"
-    >
-      <h2 className="font-serif text-3xl font-semibold tracking-tight md:text-5xl">
-        Pick your angle. See the real output.
-      </h2>
-      <p className="mt-4 max-w-2xl text-lg text-on-surface-variant">
-        Not a feature list — actual answers from the live platform. Investor,
-        agent, first-time buyer, or building on our API: here&apos;s what
-        PropertyIQ hands you for a real market.
-      </p>
+    <BeatSection id="beat-persona" surface="b">
+      <SectionHeading
+        eyebrow="What you can do with it"
+        title="Pick your angle. See the real output."
+        subhead="Not a feature list — actual answers from the live platform. Investor, agent, first-time buyer, or building on our API: here's what PropertyIQ hands you for a real market."
+        align="start"
+      />
       <PersonaShowcase />
     </BeatSection>
   );

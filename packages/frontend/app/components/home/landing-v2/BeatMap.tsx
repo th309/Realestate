@@ -13,10 +13,16 @@ import { MapShowcase } from "@/app/components/home/MapShowcase";
  * The richer scroll-triggered cinematic fly/spotlight is a separate, flag-gated
  * feature (NEXT_PUBLIC_CINEMATIC_ZOOM, docs/superpowers/specs/2026-06-20-map-
  * cinematic-geo-zoom-design.md); this beat opts into it once that ships.
+ *
+ * BAND: this is the one deliberately dark beat. MapShowcase is shared with the
+ * variant-A homepage and paints its own light-on-dark copy, so it needs a dark
+ * backdrop. It used to borrow that from the page-wide indigo gradient; now that
+ * every other beat owns an opaque light band, that gradient only showed through
+ * here as a bare slab, so the beat carries the dark surface itself.
  */
 export function BeatMap() {
   return (
-    <div id="beat-map">
+    <div id="beat-map" className="bg-inverse-surface">
       <MapShowcase />
     </div>
   );

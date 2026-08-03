@@ -32,7 +32,10 @@ export default async function HomeV2Page() {
   const contrast = await fetchHeroContrast();
 
   return (
-    <div className="text-on-surface font-sans bg-gradient-to-b from-[#1A237E] via-[#3949AB] via-30% to-[#E8EAF6]">
+    // Each beat now owns an opaque surface band, so the page-wide indigo
+    // gradient this wrapper used to carry (three hardcoded hex stops) is gone —
+    // it only survived as bare slabs behind the map and pricing beats.
+    <div className="bg-surface font-sans text-on-surface">
       <JsonLd />
       <VariantStamp variant="B" />
       <main id="landing-v2">

@@ -8,33 +8,25 @@ import { Section, type Surface } from "@/app/components/marketing";
  * contract — the homepage previously carried twelve distinct per-section
  * rhythms, its own `max-w-5xl` column, and a `px-5` gutter that matched
  * nothing else on the site.
+ *
+ * The old `tone` prop is gone. It flipped body copy to `text-on-primary`
+ * (white) for beats sitting on the dark top of a page-wide indigo gradient;
+ * now that every beat owns an opaque light band, each one carries light-band
+ * tokens directly and adjacent beats separate by alternating `surface`.
  */
 export function BeatSection({
   id,
   eyebrow,
-  tone = "light",
   surface = "a",
   className = "",
   children,
 }: {
   id?: string;
   eyebrow?: string;
-  /**
-   * @deprecated Vestigial, and deliberately inert.
-   *
-   * `tone="dark"` used to paint body copy `text-on-primary` (white) because the
-   * beat sat on the dark top of a page-wide indigo gradient. Now that each beat
-   * owns an opaque light surface band, honouring that would render the Tension
-   * and Foundation beats white-on-white. It is still accepted so the six
-   * existing callers keep compiling; Task 11 removes it from all of them.
-   */
-  tone?: "dark" | "light";
   surface?: Surface;
   className?: string;
   children: ReactNode;
 }) {
-  void tone;
-
   return (
     <Section id={id} surface={surface}>
       <div className={`text-on-surface ${className}`}>

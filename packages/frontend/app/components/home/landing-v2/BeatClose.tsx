@@ -1,3 +1,4 @@
+import { SectionHeading } from "@/app/components/marketing";
 import { BeatSection } from "./BeatSection";
 import { PrimaryCta } from "./PrimaryCta";
 import { Reveal } from "./Reveal";
@@ -8,35 +9,27 @@ import { Reveal } from "./Reveal";
  * The closer for the variant-B guided-narrative funnel. It makes a single,
  * confident point — stop guessing, start knowing — and offers one prominent,
  * centered conversion action. Reverse-trial reassurance (every account starts
- * on Pro, no card) lowers the cost of the click. Sits at the bottom of the
- * page's fixed indigo→light gradient, so it reads dark-on-light via
- * BeatSection's tone="light" (spec §4.0), with generous vertical space and
- * center alignment to let the moment land.
+ * on Pro, no card) lowers the cost of the click.
+ *
+ * The vertical space now comes from the shared section rhythm rather than a
+ * bespoke py-28/md:py-36, which stacked on top of the band's own padding.
  *
  * Server-rendered; the only client behavior is the scroll fade (Reveal) and the
  * already-client PrimaryCta (opens the email-first AnonCaptureModal).
  */
 export function BeatClose() {
   return (
-    <BeatSection
-      id="beat-close"
-      tone="light"
-      className="py-28 text-center md:py-36"
-    >
-      <Reveal className="mx-auto flex max-w-2xl flex-col items-center">
-        <h2 className="font-serif text-4xl font-semibold leading-[1.05] tracking-tight text-on-surface sm:text-5xl md:text-6xl">
-          Stop guessing which market. Start knowing.
-        </h2>
-
-        <p className="mt-6 max-w-md text-base leading-relaxed text-on-surface-variant sm:text-lg">
-          Every account starts on Pro. No credit card. Cancel anytime.
-        </p>
+    <BeatSection id="beat-close" surface="b" className="text-center">
+      <Reveal className="flex flex-col items-center">
+        <SectionHeading
+          title="Stop guessing which market. Start knowing."
+          subhead="Every account starts on Pro. No credit card. Cancel anytime."
+        />
 
         <PrimaryCta
           source="close"
           label="Start free — no credit card"
           subtext={null}
-          className="mt-10"
         />
       </Reveal>
     </BeatSection>

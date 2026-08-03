@@ -49,18 +49,21 @@ describe("BeatSection preserves its existing API", () => {
 });
 
 /**
- * `tone="dark"` painted body copy `text-on-primary` (white) because the beat
- * used to sit on the dark top of a page-wide indigo gradient. Now that each
- * section owns an opaque light surface, emitting white body text would render
- * those beats invisible — the exact hardcoded-colour-versus-token desync this
+ * The retired `tone="dark"` painted body copy `text-on-primary` (white) because
+ * the beat used to sit on the dark top of a page-wide indigo gradient. Now that
+ * each section owns an opaque light surface, white body text would render those
+ * beats invisible — the exact hardcoded-colour-versus-token desync this
  * redesign exists to remove.
  */
 describe("BeatSection never emits white body copy on a light band", () => {
-  it.each(["dark", "light"] as const)(
-    "keeps readable body text for tone=%s",
-    (tone) => {
-      const { container } = render(<BeatSection tone={tone}>x</BeatSection>);
+  it.each(["a", "b"] as const)(
+    "keeps readable body text on surface %s",
+    (surface) => {
+      const { container } = render(
+        <BeatSection surface={surface}>x</BeatSection>,
+      );
       expect(container.innerHTML).not.toContain("text-on-primary");
+      expect(container.innerHTML).toContain("text-on-surface");
     },
   );
 });
