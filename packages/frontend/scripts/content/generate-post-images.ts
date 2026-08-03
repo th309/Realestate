@@ -178,11 +178,11 @@ async function main(): Promise<void> {
 
   const renderer = new PuppeteerPostImageRenderer();
   const fontCss = fontFaceCss();
-  // NOT logoReversedDataUri(), despite its "for dark surfaces" doc comment:
-  // the two brand assets are swapped relative to their docs. `reversed` is the
-  // DARK indigo mark (invisible on this gradient); `normal` is the white mark.
-  // post-image-fragments.ts picks by the doc comment and so puts the invisible
-  // logo on every dark social card — reported separately, not changed here.
+  // The two assets are not light/dark variants of one lockup: `reversed` is a
+  // BARE dark-indigo mark and `normal` is a WHITE mark on an indigo tile. The
+  // social templates drop either into a white chip (markHtml), so both read
+  // there; this card sets the mark straight onto the gradient with no chip, so
+  // it needs the tile version.
   const logo = logoNormalDataUri();
 
   const posts = collectPosts(blogDir);

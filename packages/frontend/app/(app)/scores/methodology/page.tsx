@@ -1,4 +1,5 @@
 import { readMethodologyReport } from "@/lib/scores/methodology-report";
+import { formatMarketsScored } from "@/lib/data/validation-claims";
 import {
   DollarSign,
   Briefcase,
@@ -46,7 +47,7 @@ const STATS = [
   },
   {
     icon: Database,
-    value: "38,000+",
+    value: formatMarketsScored(),
     label: "Locations scored across metro, county, and ZIP",
   },
 ];
