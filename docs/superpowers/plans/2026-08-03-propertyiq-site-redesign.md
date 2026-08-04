@@ -2199,15 +2199,15 @@ git commit -m "refactor(reports): restyle the builder and report core components
 
 **Surface-specific work:**
 
-- [ ] **Step 1: Write the guard test** asserting `KpiStrip` renders `KpiTile`, score displays render `ScorePill`, and rankings render `DataTable`.
+- [x] **Step 1: Write the guard test** asserting `KpiStrip` renders `KpiTile`, score displays render `ScorePill`, and rankings render `DataTable`.
 
-- [ ] **Step 2: Replace `KpiStrip` internals with `<KpiTile>`**, adding the caption line each metric currently lacks.
+- [x] **Step 2: Replace `KpiStrip` internals with `<KpiTile>`**, adding the caption line each metric currently lacks.
 
-- [ ] **Step 3: Route every score through `<ScorePill>`** — momentum labels only, never quality words.
+- [x] **Step 3: Route every score through `<ScorePill>`** — momentum labels only, never quality words.
 
-- [ ] **Step 4: Replace ranking lists with `<DataTable>`** for aligned monospace columns.
+- [x] **Step 4: Replace ranking lists with `<DataTable>`** for aligned monospace columns.
 
-- [ ] **Step 5: Verify and commit.** Exercise the ranking and geography controls and open a market detail page.
+- [x] **Step 5: Verify and commit.** Exercise the ranking and geography controls and open a market detail page.
 
 ```bash
 git add -- "packages/frontend/app/(app)/market"
@@ -2215,6 +2215,18 @@ git commit -m "refactor(market): restyle onto KpiTile, ScorePill, and DataTable"
 ```
 
 ---
+
+**Outcome.** `KpiTile` and `DataTable` both grew to fit the surface rather than the surface shedding features:
+
+- `KpiTile` gained a series dot, a delta chip on the value baseline, a footer slot for the sparkline, and a `secondary` accent.
+- `DataTable` gained `rowRole`. Ranking rows **select in place** (button — Enter or Space); screener rows **navigate away** (link — Enter). Reusing link semantics would have silently dropped Space-to-select; the existing Leaderboard tests caught it.
+
+**A §9 exception retired rather than documented.** The ranking score pill was hand-rolled, with a comment declaring itself "a documented exception to CLAUDE.md §9's ScoreBadge requirement" because the ring would not fit a 76px column. `ScorePill` is exactly that compact form, so the exception is gone and `scoreBg`/`scoreColor` left the row builder with it.
+
+**Duplicate removed:** with the ranking metric set to score, the Value column and a `showLabel` pill both printed the momentum word — rows read "VERY STRONG … VERY STRONG". The mockup keeps a numeric badge and its own mono label column separate; so does this now.
+
+**Note for whoever touches routing:** `MarketExplorer` mounts at `/market`, not `/market/explorer` — that URL falls through to `[id]` and renders a market page for a market literally named "explorer".
+
 
 ### Task 18: Map — chrome only
 
