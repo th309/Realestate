@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import { DataTable, ScorePill, type Column } from "@/app/components/app-shell";
 import { Sparkline } from "./Sparkline";
 
 export interface LeaderboardRow {
@@ -10,8 +10,6 @@ export interface LeaderboardRow {
   valueLabel: string;
   valueColor: string;
   score: number;
-  scoreBg: string;
-  scoreColor: string;
   spark: (number | null)[];
   markerIndex: number;
 }
@@ -23,6 +21,17 @@ export interface LeaderboardProps {
   onSelect: (id: string) => void;
 }
 
+/**
+ * Market rankings.
+ *
+ * This was a div grid imitating a table, with a hand-rolled score pill
+ * carrying a comment calling itself "a documented exception to CLAUDE.md
+ * section 9's ScoreBadge requirement" because the ring would not fit a 76px
+ * column. `ScorePill` is exactly that compact form, so the exception is
+ * retired rather than documented — colour and momentum label now come from
+ * `getScoreColor`/`getScoreLabel` and cannot drift from the same market's
+ * score elsewhere.
+ */
 export function Leaderboard({
   title,
   monthLabel,
@@ -30,139 +39,88 @@ export function Leaderboard({
   selectedId,
   onSelect,
 }: LeaderboardProps) {
-  const handleRowKeyDown = (id: string, e: React.KeyboardEvent) => {
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      onSelect(id);
-    }
-  };
+  const columns: Column<LeaderboardRow>[] = [
+    {
+      key: "rank",
+      header: "#",
+      align: "right",
+      width: "w-11",
+      cellClassName: () => "text-[11.5px] text-on-surface-variant",
+      render: (row) => row.rank,
+    },
+    {
+      key: "name",
+      header: "Market",
+      align: "left",
+      render: (row) => (
+        <span className="block min-w-0">
+          <span className="block truncate text-[13px] font-semibold text-on-surface">
+            {row.name}
+          </span>
+          <span className="block font-mono text-[10.5px] text-on-surface-variant">
+            {row.sub}
+          </span>
+        </span>
+      ),
+    },
+    {
+      key: "spark",
+      header: "",
+      align: "right",
+      width: "w-[100px]",
+      render: (row) => (
+        <Sparkline
+          series={row.spark}
+          width={92}
+          height={26}
+          color={row.valueColor}
+          markerIndex={row.markerIndex}
+        />
+      ),
+    },
+    {
+      key: "valueLabel",
+      header: "Value",
+      align: "right",
+      render: (row) => (
+        <span className="font-semibold" style={{ color: row.valueColor }}>
+          {row.valueLabel}
+        </span>
+      ),
+    },
+    {
+      key: "score",
+      header: "Score",
+      align: "right",
+      // No `showLabel`: when the ranking metric IS the score, the Value column
+      // already carries the momentum word, and a pill repeating it printed
+      // "VERY STRONG" twice on the same row. The mockup keeps them separate
+      // too — a numeric badge plus its own mono label column.
+      render: (row) => <ScorePill score={row.score} />,
+    },
+  ];
 
   return (
-    <div
-      style={{
-        background: "var(--md-surface-container)",
-        border: "1px solid var(--md-outline-variant)",
-        borderRadius: 16,
-        overflow: "hidden",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "16px 20px",
-          borderBottom: "1px solid var(--md-outline-variant)",
-        }}
-      >
-        <div
-          style={{
-            fontSize: 14,
-            fontWeight: 600,
-            color: "var(--md-on-surface)",
-          }}
-        >
-          {title}
-        </div>
-        <div
-          style={{
-            fontSize: 11.5,
-            fontFamily: "var(--font-roboto-mono)",
-            color: "var(--md-on-surface-variant)",
-          }}
-        >
+    <div className="overflow-hidden rounded-xl border border-outline-variant bg-surface-container-lowest">
+      <div className="flex items-center justify-between border-b border-outline-variant px-4 py-3.5">
+        <h3 className="text-sm font-bold text-on-surface">{title}</h3>
+        <span className="font-mono text-[11.5px] text-on-surface-variant">
           {monthLabel}
-        </div>
+        </span>
       </div>
-      <div>
-        {rows.map((r) => (
-          <div
-            key={r.id}
-            role="button"
-            tabIndex={0}
-            onClick={() => onSelect(r.id)}
-            onKeyDown={(e) => handleRowKeyDown(r.id, e)}
-            style={{
-              display: "grid",
-              gridTemplateColumns: "40px minmax(0,1fr) 96px 92px 76px",
-              gap: 14,
-              alignItems: "center",
-              padding: "11px 20px",
-              cursor: "pointer",
-              borderBottom:
-                "1px solid color-mix(in srgb, var(--md-outline-variant) 55%, transparent)",
-              background:
-                selectedId === r.id
-                  ? "color-mix(in srgb, var(--md-primary) 8%, transparent)"
-                  : "transparent",
-            }}
-          >
-            <span
-              style={{
-                fontFamily: "var(--font-roboto-mono)",
-                fontSize: 13,
-                color: "var(--md-on-surface-variant)",
-              }}
-            >
-              {r.rank}
-            </span>
-            <div style={{ minWidth: 0 }}>
-              <div
-                style={{
-                  fontSize: 13.5,
-                  fontWeight: 500,
-                  color: "var(--md-on-surface)",
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                }}
-              >
-                {r.name}
-              </div>
-              <div
-                style={{ fontSize: 11, color: "var(--md-on-surface-variant)" }}
-              >
-                {r.sub}
-              </div>
-            </div>
-            <span>
-              <Sparkline
-                series={r.spark}
-                width={92}
-                height={26}
-                color={r.valueColor}
-                markerIndex={r.markerIndex}
-              />
-            </span>
-            <span
-              style={{
-                fontFamily: "var(--font-roboto-mono)",
-                fontSize: 13,
-                fontWeight: 600,
-                color: r.valueColor,
-                textAlign: "right",
-              }}
-            >
-              {r.valueLabel}
-            </span>
-            {/* Compact score pill — documented exception to CLAUDE.md §9's ScoreBadge requirement; ScoreBadge's ring doesn't fit this row's 76px column. */}
-            <span
-              style={{
-                justifySelf: "end",
-                fontFamily: "var(--font-roboto-mono)",
-                fontSize: 12,
-                fontWeight: 700,
-                padding: "3px 10px",
-                borderRadius: 999,
-                background: r.scoreBg,
-                color: r.scoreColor,
-              }}
-            >
-              {r.score}
-            </span>
-          </div>
-        ))}
-      </div>
+      <DataTable
+        ariaLabel={title}
+        columns={columns}
+        rows={rows}
+        rowKey={(row) => row.id}
+        // Selects a market in place rather than navigating, so these are
+        // buttons (Enter or Space), not links.
+        rowRole="button"
+        onRowClick={(row) => onSelect(row.id)}
+        rowClassName={(row) =>
+          row.id === selectedId ? "bg-primary-container/40" : ""
+        }
+      />
     </div>
   );
 }

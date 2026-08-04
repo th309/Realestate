@@ -1,10 +1,12 @@
 "use client";
-import React from "react";
 import { formatMetricValue } from "@/lib/data";
+import { KpiTile } from "@/app/components/app-shell";
 import { TREND_WINDOW_MONTHS } from "../lib/explorer-math";
 import { Sparkline } from "./Sparkline";
 
 type Series = (number | null)[];
+type Accent = "primary" | "secondary" | "tertiary" | "warning" | "error";
+
 export interface KpiStripProps {
   /** Raw per-month series for the CURRENT SCOPE — a scope-wide aggregate
    * (mean, or sum for inventory) across every region currently in view, e.g.
@@ -35,6 +37,15 @@ const fmtBig = (v: number) =>
       ? `${Math.round(v / 1e3)}K`
       : String(Math.round(v));
 
+/** Series colour for the sparkline, keyed to the tile's accent stripe. */
+const ACCENT_VAR: Record<Accent, string> = {
+  primary: "var(--md-primary)",
+  secondary: "var(--md-secondary)",
+  tertiary: "var(--md-tertiary)",
+  warning: "var(--md-warning)",
+  error: "var(--md-error)",
+};
+
 export function KpiStrip({
   kpiSeries,
   monthIndex,
@@ -47,9 +58,11 @@ export function KpiStrip({
   // indicator should always compare like-for-like windows regardless of how
   // far back the user happens to have the main timeline zoomed.
   const windowStart = Math.max(0, monthIndex - TREND_WINDOW_MONTHS);
+
   const card = (
     label: string,
-    dot: string,
+    caption: string,
+    accent: Accent,
     series: Series,
     fmt: (v: number) => string,
     isPts: boolean,
@@ -71,111 +84,54 @@ export function KpiStrip({
     // good?" inversion — up is always green with an up-triangle, down is
     // always red with a down-triangle, full stop.
     const up = d >= 0;
-    const col =
-      Math.abs(d) < 0.05
-        ? "var(--md-on-surface-variant)"
-        : up
-          ? "var(--md-tertiary)"
-          : "var(--md-error)";
+    const flat = Math.abs(d) < 0.05;
+    const deltaClass = flat
+      ? "bg-surface-container text-on-surface-variant"
+      : up
+        ? "bg-tertiary-container text-tertiary"
+        : "bg-error-container text-error";
+
     return (
-      <div
+      <KpiTile
         key={label}
-        style={{
-          background: "var(--md-surface-container)",
-          border: "1px solid var(--md-outline-variant)",
-          borderRadius: 12,
-          padding: "14px 16px 10px",
-          display: "flex",
-          flexDirection: "column",
-          gap: 6,
-          minWidth: 0,
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 7,
-            fontSize: 11,
-            fontWeight: 500,
-            textTransform: "uppercase",
-            color: "var(--md-on-surface-variant)",
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-          }}
-        >
-          <span
-            style={{
-              width: 8,
-              height: 8,
-              borderRadius: 3,
-              background: dot,
-              flex: "none",
-            }}
-          />
-          {label}
-        </div>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "baseline",
-            gap: 8,
-            flexWrap: "wrap",
-          }}
-        >
-          <span
-            style={{
-              fontFamily: "var(--font-roboto-mono)",
-              fontSize: 22,
-              fontWeight: 700,
-              color: "var(--md-on-surface)",
-              lineHeight: 1,
-            }}
-          >
-            {cur == null ? "—" : fmt(cur)}
-          </span>
-          {hasBothValues && (
+        label={label}
+        caption={caption}
+        accent={accent}
+        showDot
+        value={cur == null ? "—" : fmt(cur)}
+        delta={
+          hasBothValues ? (
             <span
-              style={{
-                fontFamily: "var(--font-roboto-mono)",
-                fontSize: 11.5,
-                fontWeight: 600,
-                padding: "2px 7px",
-                borderRadius: 999,
-                background: `color-mix(in srgb, ${col} 12%, transparent)`,
-                color: col,
-              }}
+              data-kpi-delta
+              data-direction={flat ? "flat" : up ? "up" : "down"}
+              className={`inline-flex items-center gap-1 rounded-full px-[7px] py-0.5 font-mono text-[11px] font-semibold tabular-nums ${deltaClass}`}
             >
               {(up ? "▲ " : "▼ ") +
                 Math.abs(d).toFixed(1) +
                 (isPts ? " pt" : "%")}
             </span>
-          )}
-        </div>
-        <div style={{ marginTop: 2 }}>
+          ) : null
+        }
+        footer={
           <Sparkline
             series={series.slice(windowStart, monthIndex + 1)}
             width={120}
             height={22}
             markerIndex={Math.max(0, monthIndex - windowStart)}
-            color={dot}
+            color={ACCENT_VAR[accent]}
           />
-        </div>
-      </div>
+        }
+      />
     );
   };
 
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fit,minmax(170px,1fr))",
-        gap: 12,
-      }}
-    >
+    // Five-up, dropping to two then one — the mockup's `.kpis` breakpoints.
+    <div className="grid grid-cols-1 gap-3.5 min-[621px]:grid-cols-2 min-[1181px]:grid-cols-5">
       {card(
         "Median value",
-        "var(--md-primary)",
+        "Typical home value in scope",
+        "primary",
         kpiSeries.price,
         (v) => formatMetricValue(v, "currency"),
         false,
@@ -183,7 +139,8 @@ export function KpiStrip({
       {isStateScope
         ? card(
             "Home value YoY",
-            "var(--md-secondary)",
+            "Change over the last 12 months",
+            "secondary",
             kpiSeries.homeValueYoy,
             (v) => `${v >= 0 ? "+" : ""}${v.toFixed(1)}%`,
             // homeValueYoy is ALREADY a percentage — a percent-CHANGE-of-a-
@@ -194,21 +151,24 @@ export function KpiStrip({
           )
         : card(
             "Median rent",
-            "var(--md-secondary)",
+            "Typical asking rent per month",
+            "secondary",
             kpiSeries.rent,
             (v) => `$${fmtBig(v)}`,
             false,
           )}
       {card(
         "Active listings",
-        "var(--md-warning)",
+        "Homes on the market now",
+        "warning",
         kpiSeries.inventory,
         (v) => fmtBig(v),
         false,
       )}
       {card(
         "Days on mkt",
-        "var(--md-error)",
+        "Median time to go under contract",
+        "error",
         kpiSeries.dom,
         (v) => `${Math.round(v)} d`,
         false,
@@ -216,7 +176,8 @@ export function KpiStrip({
       {isStateScope
         ? card(
             "Unemployment rate",
-            "var(--md-tertiary)",
+            "Share of the labour force out of work",
+            "tertiary",
             kpiSeries.unemployment,
             (v) => `${v.toFixed(1)}%`,
             // Same reasoning as Home Value YoY above — this value is already
@@ -225,7 +186,8 @@ export function KpiStrip({
           )
         : card(
             "PIQ score",
-            "var(--md-tertiary)",
+            "1–99, where 50 is this market's state average",
+            "tertiary",
             kpiSeries.score,
             (v) => String(Math.round(v)),
             true,

@@ -77,11 +77,10 @@ describe("Leaderboard", () => {
       />,
     );
     const rowButtons = container.querySelectorAll('[role="button"]');
-    const selectedRow = rowButtons[0];
-    const background = window
-      .getComputedStyle(selectedRow)
-      .getPropertyValue("background");
-    expect(background).toContain("color-mix");
+    // The highlight is a semantic token class, not an inline colour — assert
+    // the selected row is distinguished from its siblings, not how.
+    expect(rowButtons[0].className).toContain("primary-container");
+    expect(rowButtons[1].className).not.toContain("primary-container");
   });
 
   it("calls onSelect with row id on click", () => {

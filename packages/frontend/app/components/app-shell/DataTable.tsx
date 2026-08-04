@@ -39,6 +39,7 @@ export function DataTable<T>({
   ariaLabel,
   empty,
   scroll = true,
+  rowRole = "link",
 }: {
   columns: Column<T>[];
   rows: T[];
@@ -59,6 +60,12 @@ export function DataTable<T>({
    * axis means the outer one never scrolls and its affordances never fire.
    */
   scroll?: boolean;
+  /**
+   * What an interactive row *does*. "link" navigates away (screener → market
+   * page) and takes Enter; "button" selects in place (rankings → highlight)
+   * and takes Enter or Space, per the ARIA button pattern.
+   */
+  rowRole?: "link" | "button";
 }) {
   if (rows.length === 0 && empty) return <>{empty}</>;
 
@@ -111,12 +118,18 @@ export function DataTable<T>({
           <tr
             key={rowKey ? rowKey(row, i) : i}
             onClick={onRowClick ? () => onRowClick(row) : undefined}
-            role={onRowClick ? "link" : undefined}
+            role={onRowClick ? rowRole : undefined}
             tabIndex={onRowClick ? 0 : undefined}
             onKeyDown={
               onRowClick
                 ? (e) => {
-                    if (e.key === "Enter") onRowClick(row);
+                    if (
+                      e.key === "Enter" ||
+                      (rowRole === "button" && e.key === " ")
+                    ) {
+                      e.preventDefault();
+                      onRowClick(row);
+                    }
                   }
                 : undefined
             }
