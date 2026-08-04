@@ -2120,22 +2120,30 @@ git commit -m "refactor(analyzer): restyle onto the shared app-shell primitives"
 
 **Surface-specific work:**
 
-- [ ] **Step 1: Write the guard test** asserting `ScreenerTable` renders through `DataTable`, score cells render `ScorePill`, and `PresetChips` renders `Chip`.
+- [x] **Step 1: Write the guard test** asserting `ScreenerTable` renders through `DataTable`, score cells render `ScorePill`, and `PresetChips` renders `Chip`.
 
-- [ ] **Step 2: Replace the results table** with `<DataTable>`. This is the surface's centrepiece: sticky header, monospace right-aligned numerics, sortable headers with `aria-sort`.
+- [x] **Step 2: Replace the results table** with `<DataTable>`. This is the surface's centrepiece: sticky header, monospace right-aligned numerics, sortable headers with `aria-sort`.
 
-- [ ] **Step 3: Render the score column as `<ScorePill>`** so colour and momentum label come from `getScoreColor()` / `getScoreLabel()` and can never disagree with the score shown elsewhere.
+- [x] **Step 3: Render the score column as `<ScorePill>`** so colour and momentum label come from `getScoreColor()` / `getScoreLabel()` and can never disagree with the score shown elsewhere.
 
-- [ ] **Step 4: Replace `PresetChips` internals with `<Chip>`**, keeping every preset.
+- [x] **Step 4: Replace `PresetChips` internals with `<Chip>`**, keeping every preset.
 
-- [ ] **Step 5: Make the filter rail read as one panel** rather than a stack of unrelated inputs — group by category with consistent field styling.
+- [x] **Step 5: Make the filter rail read as one panel** rather than a stack of unrelated inputs — group by category with consistent field styling.
 
-- [ ] **Step 6: Verify and commit.** Run a real screen and confirm results, sorting, presets, row menu, and alert creation all still work.
+- [x] **Step 6: Verify and commit.** Run a real screen and confirm results, sorting, presets, row menu, and alert creation all still work.
 
 ```bash
 git add -- "packages/frontend/app/(app)/screener"
 git commit -m "refactor(screener): restyle onto DataTable, ScorePill, and Chip" -- "packages/frontend/app/(app)/screener"
 ```
+
+**Outcome — deviation from this task as written:**
+
+Step 5 says "make the filter rail read as one panel". **The mockup has no rail.** Filters are a full-width card above the results with a six-up grid (`.fgrid`, stepping to three at 1240px and two at 720px), the quick-screen presets living inside the card above it. `FilterRail.tsx` is retired for `ScreenerFilters.tsx` — the old name described a layout the design no longer has (§1.4). The collapse toggle is gone too: every field stays visible, because a filter you cannot see is a filter you forget is applied.
+
+**`DataTable` grew rather than the screener shrinking to fit it.** Step 2 as written would have dropped row navigation, the row-actions menu, the empty state, stable row keys, and the staggered row animation. Instead the primitive gained: `rowKey`, `onRowClick` (with Enter support), `rowClassName`/`rowStyle`, per-column `width`/`cellClassName`, `ReactNode` headers so sort icons render, an `empty` slot, and `scroll={false}`. That last one matters — `ScrollShadowContainer` is itself the scroller, and nesting `DataTable`'s own `overflow-x-auto` inside it would have silently killed its edge affordances, the same nested-scroller trap as Task 14's input panel.
+
+**Two bugs fixed in the primitive while there:** its generic was `T extends Record<string, unknown>`, which rejects plain interfaces like `ScreenerRow` (no index signature); and `aria-sort` was tied to `onSort`, so a server-sorted table with no click handler reported no sort state at all.
 
 ---
 
