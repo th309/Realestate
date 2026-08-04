@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
 import { ArrowUp, ArrowDown, ChevronsUpDown, MoreVertical } from "lucide-react";
 import type { ScreenerRow, ScreenerQuery, MoverWindow } from "@/lib/data";
 import { formatMetricValue, formatGeoDisplayName } from "@/lib/data";
 import { useRouter } from "next/navigation";
-import { getScoreColor } from "@/app/components/scoring/ScoreDisplay";
+import { DataTable, ScorePill, type Column } from "@/app/components/app-shell";
 import {
   WINDOW_TO_COLUMN,
   WINDOW_META,
@@ -16,12 +16,6 @@ import { ScrollShadowContainer } from "./ScrollShadowContainer";
 import { ScreenerRowMenu } from "./ScreenerRowMenu";
 
 type SortableCol = NonNullable<ScreenerQuery["sortBy"]>;
-
-interface ColumnDef {
-  key: SortableCol | null;
-  label: string;
-  align: "left" | "right";
-}
 
 interface ScreenerTableProps {
   rows: ScreenerRow[];
@@ -39,46 +33,48 @@ interface ScreenerTableProps {
   onClearFilters?: () => void;
 }
 
-function ScoreCell({ score }: { score: number | null }) {
-  if (score === null) {
-    return (
-      <span className="font-[family-name:var(--font-roboto-mono)] text-on-surface-variant">
-        —
-      </span>
-    );
-  }
+const DASH = "—";
 
-  const color = getScoreColor(score);
-
-  // No percentile letter-grade badge here: the PropertyIQ Score is a momentum
-  // signal, so a harsh "F"-style grade undercuts the reframe. Show the number
-  // only. (This is NOT the data-quality confidence badge, which is unrelated.)
-  return (
-    <span
-      className="font-[family-name:var(--font-roboto-mono)] font-semibold text-sm"
-      style={{ color }}
-    >
-      {score}
-    </span>
+function SortIcon({
+  active,
+  order,
+}: {
+  active: boolean;
+  order: "asc" | "desc";
+}) {
+  if (!active) return <ChevronsUpDown className="size-3 opacity-30" />;
+  return order === "asc" ? (
+    <ArrowUp className="size-3 text-primary" />
+  ) : (
+    <ArrowDown className="size-3 text-primary" />
   );
 }
 
-function SortIcon({
+/** Header label plus its sort affordance, per the mockup's `.sh` span. */
+function SortableHeader({
+  label,
   col,
   sortBy,
   sortOrder,
+  align,
 }: {
+  label: string;
   col: SortableCol;
   sortBy: SortableCol;
   sortOrder: "asc" | "desc";
+  align: "left" | "right";
 }) {
-  if (sortBy !== col) {
-    return <ChevronsUpDown className="w-3.5 h-3.5 opacity-30" />;
-  }
-  return sortOrder === "asc" ? (
-    <ArrowUp className="w-3.5 h-3.5 text-primary" />
-  ) : (
-    <ArrowDown className="w-3.5 h-3.5 text-primary" />
+  const icon = <SortIcon active={sortBy === col} order={sortOrder} />;
+  return (
+    <span
+      className={`inline-flex items-center gap-1 ${
+        align === "right" ? "justify-end" : ""
+      }`}
+    >
+      {align === "right" ? icon : null}
+      {label}
+      {align === "left" ? icon : null}
+    </span>
   );
 }
 
@@ -107,7 +103,7 @@ function ScreenerEmptyState({
               {activeFilters.map((label) => (
                 <span
                   key={label}
-                  className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-surface-container text-on-surface-variant border border-outline-variant font-[family-name:var(--font-roboto-mono)]"
+                  className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-surface-container text-on-surface-variant border border-outline-variant font-mono"
                 >
                   {label}
                 </span>
@@ -163,21 +159,139 @@ export function ScreenerTable({
   };
 
   const changeCol = WINDOW_TO_COLUMN[changeWindow];
-  const columns: ColumnDef[] = [
-    { key: null, label: "#", align: "right" },
-    { key: "region_name", label: "Market", align: "left" },
-    { key: "score", label: "Score", align: "right" },
+
+  const sortHeader = (
+    label: string,
+    col: SortableCol,
+    align: "left" | "right",
+  ) => (
+    <SortableHeader
+      label={label}
+      col={col}
+      sortBy={sortBy}
+      sortOrder={sortOrder}
+      align={align}
+    />
+  );
+
+  const columns: Column<ScreenerRow>[] = [
+    {
+      key: "rank",
+      header: "#",
+      align: "right",
+      sortable: false,
+      width: "w-11",
+      cellClassName: () => "text-[11px] text-on-surface-variant",
+      render: (_row, i) => baseRank + i,
+    },
+    {
+      key: "region_name",
+      header: sortHeader("Market", "region_name", "left"),
+      align: "left",
+      // Market name already carries ", ST"; the separate state_code is
+      // redundant, so fall back to it only when the name is missing.
+      cellClassName: () => "min-w-[180px] font-semibold text-primary",
+      render: (row) => formatGeoDisplayName(row.region_name) || row.state_code,
+    },
+    {
+      key: "score",
+      header: sortHeader("Score", "score", "right"),
+      align: "right",
+      render: (row) =>
+        row.score === null ? DASH : <ScorePill score={row.score} />,
+    },
     {
       key: changeCol,
-      label: `Δ ${WINDOW_META[changeWindow].label}`,
+      header: sortHeader(
+        `Δ ${WINDOW_META[changeWindow].label}`,
+        changeCol,
+        "right",
+      ),
       align: "right",
+      cellClassName: (row) =>
+        getScoreChangeColor(row[changeCol] as number | null),
+      render: (row) => {
+        const d = row[changeCol] as number | null;
+        if (d === null) return DASH;
+        const arrow = d > 0 ? "▲ " : d < 0 ? "▼ " : "";
+        return `${arrow}${formatScoreChange(d)}`;
+      },
     },
-    { key: "median_price", label: "Median Price", align: "right" },
-    { key: null, label: "Rent", align: "right" },
-    { key: "cap_rate", label: "Cap Rate", align: "right" },
-    { key: "months_of_supply", label: "MoS", align: "right" },
-    { key: "overvalued_pct", label: "Overvalued %", align: "right" },
-    { key: null, label: "", align: "right" },
+    {
+      key: "median_price",
+      header: sortHeader("Median Price", "median_price", "right"),
+      align: "right",
+      render: (row) =>
+        row.median_price !== null
+          ? formatMetricValue(row.median_price, "currency")
+          : DASH,
+    },
+    {
+      key: "rent",
+      header: "Rent",
+      align: "right",
+      sortable: false,
+      cellClassName: () => "text-on-surface-variant",
+      // Exact monthly $, not the $K currency bucket.
+      render: (row) =>
+        row.rent !== null
+          ? `$${formatMetricValue(Math.round(row.rent), "number")}`
+          : DASH,
+    },
+    {
+      key: "cap_rate",
+      header: sortHeader("Cap Rate", "cap_rate", "right"),
+      align: "right",
+      render: (row) =>
+        row.cap_rate !== null
+          ? formatMetricValue(row.cap_rate, "percent_abs")
+          : DASH,
+    },
+    {
+      key: "months_of_supply",
+      header: sortHeader("MoS", "months_of_supply", "right"),
+      align: "right",
+      render: (row) =>
+        row.months_of_supply !== null ? row.months_of_supply.toFixed(1) : DASH,
+    },
+    {
+      key: "overvalued_pct",
+      header: sortHeader("Overvalued %", "overvalued_pct", "right"),
+      align: "right",
+      cellClassName: (row) =>
+        row.overvalued_pct === null
+          ? ""
+          : row.overvalued_pct > 0
+            ? "text-error"
+            : "text-tertiary",
+      render: (row) =>
+        row.overvalued_pct !== null
+          ? `${row.overvalued_pct > 0 ? "+" : ""}${row.overvalued_pct.toFixed(1)}%`
+          : DASH,
+    },
+    {
+      key: "actions",
+      header: "",
+      align: "right",
+      sortable: false,
+      width: "w-10",
+      render: (row) => (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            const rect = (
+              e.currentTarget as HTMLElement
+            ).getBoundingClientRect();
+            setMenu({ row, x: rect.right, y: rect.bottom });
+          }}
+          aria-label="Row actions"
+          className="rounded-full p-1.5 text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-on-surface"
+        >
+          <MoreVertical className="size-4" />
+        </button>
+      ),
+    },
   ];
 
   return (
@@ -188,182 +302,29 @@ export function ScreenerTable({
         ${isFetching ? "opacity-60" : "opacity-100"}
       `}
     >
-      {rows.length === 0 ? (
-        <ScreenerEmptyState
-          activeFilters={activeFilters}
-          onClearFilters={onClearFilters}
+      <ScrollShadowContainer ariaLabel="Scroll horizontally for more columns">
+        <DataTable
+          scroll={false}
+          ariaLabel="Market screener results"
+          columns={columns}
+          rows={rows}
+          sortKey={sortBy}
+          sortDir={sortOrder}
+          onSort={(key) => onSort(key as SortableCol)}
+          rowKey={(row) => `${row.geo_level}-${row.region_id}`}
+          onRowClick={handleRowClick}
+          rowClassName={() => "animate-screener-row"}
+          rowStyle={(_row, i) => ({
+            animationDelay: `${Math.min(i * 20, 300)}ms`,
+          })}
+          empty={
+            <ScreenerEmptyState
+              activeFilters={activeFilters}
+              onClearFilters={onClearFilters}
+            />
+          }
         />
-      ) : (
-        <ScrollShadowContainer ariaLabel="Scroll horizontally for more columns">
-          <table
-            className="w-full text-sm"
-            aria-label="Market screener results"
-          >
-            <thead>
-              <tr className="bg-surface-container border-b border-outline-variant">
-                {columns.map((col) => (
-                  <th
-                    key={col.label}
-                    scope="col"
-                    className={`
-                    px-3 sm:px-4 py-3 text-xs font-semibold uppercase tracking-wide text-on-surface-variant
-                    whitespace-nowrap select-none
-                    ${col.align === "right" ? "text-right" : "text-left"}
-                    ${col.key ? "cursor-pointer hover:text-primary hover:bg-primary-container/20 transition-colors" : ""}
-                  `}
-                    onClick={() => col.key && onSort(col.key)}
-                    aria-sort={
-                      col.key && sortBy === col.key
-                        ? sortOrder === "asc"
-                          ? "ascending"
-                          : "descending"
-                        : col.key
-                          ? "none"
-                          : undefined
-                    }
-                  >
-                    <span className="inline-flex items-center gap-1 justify-end">
-                      {col.align === "right" && col.key && (
-                        <SortIcon
-                          col={col.key}
-                          sortBy={sortBy}
-                          sortOrder={sortOrder}
-                        />
-                      )}
-                      {col.label}
-                      {col.align === "left" && col.key && (
-                        <SortIcon
-                          col={col.key}
-                          sortBy={sortBy}
-                          sortOrder={sortOrder}
-                        />
-                      )}
-                    </span>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row, i) => (
-                <tr
-                  key={`${row.geo_level}-${row.region_id}`}
-                  onClick={() => handleRowClick(row)}
-                  role="link"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleRowClick(row);
-                  }}
-                  className="
-                    animate-screener-row cursor-pointer
-                    border-b border-outline-variant/40 last:border-0
-                    hover:bg-primary-container/10 transition-colors duration-100
-                  "
-                  style={{
-                    animationDelay: `${Math.min(i * 20, 300)}ms`,
-                  }}
-                >
-                  {/* Rank */}
-                  <td className="px-3 sm:px-4 py-3 text-right font-[family-name:var(--font-roboto-mono)] text-xs text-on-surface-variant w-12">
-                    {baseRank + i}
-                  </td>
-
-                  {/* Market name — region_name already carries ", ST"; the
-                      separate state_code is redundant, so fall back to it only
-                      when the name is missing. */}
-                  <td className="px-3 sm:px-4 py-3 text-left min-w-[140px] sm:min-w-[180px]">
-                    <span className="font-medium text-on-surface">
-                      {formatGeoDisplayName(row.region_name) || row.state_code}
-                    </span>
-                  </td>
-
-                  {/* Score */}
-                  <td className="px-3 sm:px-4 py-3 text-right">
-                    <ScoreCell score={row.score} />
-                  </td>
-
-                  {/* Δ Score (active window) */}
-                  <td
-                    className={`px-3 sm:px-4 py-3 text-right whitespace-nowrap font-[family-name:var(--font-roboto-mono)] ${getScoreChangeColor(
-                      row[changeCol] as number | null,
-                    )}`}
-                  >
-                    {(() => {
-                      const d = row[changeCol] as number | null;
-                      if (d === null) return "—";
-                      const arrow = d > 0 ? "▲ " : d < 0 ? "▼ " : "";
-                      return `${arrow}${formatScoreChange(d)}`;
-                    })()}
-                  </td>
-
-                  {/* Median Price */}
-                  <td className="px-3 sm:px-4 py-3 text-right font-[family-name:var(--font-roboto-mono)] text-on-surface">
-                    {row.median_price !== null
-                      ? formatMetricValue(row.median_price, "currency")
-                      : "—"}
-                  </td>
-
-                  {/* Rent (ZORI) — exact monthly $, not the $K currency bucket */}
-                  <td className="px-3 sm:px-4 py-3 text-right font-[family-name:var(--font-roboto-mono)] text-on-surface-variant">
-                    {row.rent !== null
-                      ? `$${formatMetricValue(Math.round(row.rent), "number")}`
-                      : "—"}
-                  </td>
-
-                  {/* Cap Rate */}
-                  <td className="px-3 sm:px-4 py-3 text-right font-[family-name:var(--font-roboto-mono)] text-on-surface">
-                    {row.cap_rate !== null
-                      ? formatMetricValue(row.cap_rate, "percent_abs")
-                      : "—"}
-                  </td>
-
-                  {/* Months of Supply */}
-                  <td className="px-3 sm:px-4 py-3 text-right font-[family-name:var(--font-roboto-mono)] text-on-surface">
-                    {row.months_of_supply !== null
-                      ? row.months_of_supply.toFixed(1)
-                      : "—"}
-                  </td>
-
-                  {/* Overvalued % */}
-                  <td
-                    className={`
-                      px-3 sm:px-4 py-3 text-right font-[family-name:var(--font-roboto-mono)]
-                      ${
-                        row.overvalued_pct !== null
-                          ? row.overvalued_pct > 0
-                            ? "text-error"
-                            : "text-tertiary"
-                          : "text-on-surface"
-                      }
-                    `}
-                  >
-                    {row.overvalued_pct !== null
-                      ? `${row.overvalued_pct > 0 ? "+" : ""}${row.overvalued_pct.toFixed(1)}%`
-                      : "—"}
-                  </td>
-
-                  {/* Row actions */}
-                  <td className="px-2 py-3 text-right">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const rect = (
-                          e.currentTarget as HTMLElement
-                        ).getBoundingClientRect();
-                        setMenu({ row, x: rect.right, y: rect.bottom });
-                      }}
-                      aria-label="Row actions"
-                      className="rounded-full p-1.5 text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-on-surface"
-                    >
-                      <MoreVertical className="h-4 w-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </ScrollShadowContainer>
-      )}
+      </ScrollShadowContainer>
       {menu && (
         <ScreenerRowMenu
           row={menu.row}
