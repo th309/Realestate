@@ -11,7 +11,13 @@ vi.mock("@/app/components/seo/FaqSection", () => ({
   FaqSection: () => <section />,
 }));
 vi.mock("next/link", () => ({
-  default: ({ href, children, ...rest }: any) => (
+  default: ({
+    href,
+    children,
+    ...rest
+  }: Omit<React.ComponentPropsWithoutRef<"a">, "href"> & {
+    href: unknown;
+  }) => (
     <a href={typeof href === "string" ? href : ""} {...rest}>
       {children}
     </a>
