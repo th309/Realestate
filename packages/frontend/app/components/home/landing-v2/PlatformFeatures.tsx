@@ -57,7 +57,7 @@ export function PlatformFeatures() {
   };
 
   return (
-    <Section id="platform-features" surface="b">
+    <Section id="platform-features" surface="none">
       <SectionHeading
         eyebrow="Platform"
         title="Everything you need to judge a market like an allocator"

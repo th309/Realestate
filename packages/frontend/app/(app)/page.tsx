@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { fetchHeroContrast } from "@/lib/data";
 import { JsonLd } from "@/app/components/home/JsonLd";
 import { BeatHero } from "@/app/components/home/landing-v2/BeatHero";
+import { Constellation } from "@/app/components/home/landing-v2/Constellation";
 import { BeatPersona } from "@/app/components/home/landing-v2/BeatPersona";
 import { StepsSection } from "@/app/components/home/landing-v2/StepsSection";
 import { PlatformFeatures } from "@/app/components/home/landing-v2/PlatformFeatures";
@@ -34,10 +35,15 @@ export const metadata: Metadata = landingMetadata;
  * the homepage and blog. Pricing sits before the close because the close is
  * the ask; the FAQ renders last because it carries the FAQPage JSON-LD.
  *
- * Bands strictly alternate b/a so no two adjacent sections share a surface;
- * inserting a section here means re-checking the whole run, not just its
- * neighbours. Only the hero takes the pale wash — everything below it stays on
- * the faded-indigo surfaces the rest of the site uses.
+ * Everything below the hero sits inside ONE continuous indigo fade, brand
+ * indigo at the top running to pale indigo at the foot of the page. That means
+ * those sections take `surface="none"`: an opaque band would chop the fade
+ * into stripes. Separation comes from their cards, which are opaque, and from
+ * the shared rhythm.
+ *
+ * The top of the fade is dark enough that copy sitting directly on it must be
+ * light — see PAGE_FADE_TOP_SECTIONS below. Anything sitting on a card is
+ * unaffected, since the card supplies its own surface.
  *
  * The page-level `<main>` lives in AppShell, so this wrapper is a plain div —
  * a nested `<main>` would be invalid.
@@ -51,19 +57,32 @@ export default async function HomePage() {
     <div className="bg-surface font-sans text-on-surface">
       <JsonLd />
       <BeatHero contrast={contrast} />
-      <BeatPersona />
-      <StepsSection />
-      <PlatformFeatures />
-      <BeatProof />
-      <Testimonials />
-      <PricingSection />
-      <BeatClose />
-      <BlogPreview />
-      {/* FaqSection is a shared SEO component with no surface of its own, so
-          the band is applied here rather than by giving every consumer of it a
-          prop it does not need. */}
-      <div className="bg-surface-container-low pt-12">
-        <FaqSection faqs={HOME_FAQS} />
+      {/*
+        The fade. Its shoulder is early (see --md-page-fade-mid): only
+        BeatPersona sits on the saturated part, which is why it is the one
+        section toned `onDark`. Everything below it is pale enough for the
+        normal on-surface tokens. If a section is added or reordered here,
+        re-run the contrast sweep — which section straddles the dark part
+        depends on the heights above it, not on its position alone.
+
+        `relative` and `overflow-hidden` are for the Constellation, which is
+        absolutely positioned to this band.
+      */}
+      <div className="relative overflow-hidden bg-[linear-gradient(to_bottom,var(--color-page-fade-from)_0%,var(--color-page-fade-mid)_14%,var(--color-page-fade-to)_100%)]">
+        <Constellation />
+        <div className="relative">
+          <BeatPersona />
+          <StepsSection />
+          <PlatformFeatures />
+          <BeatProof />
+          <Testimonials />
+          <PricingSection />
+          <BeatClose />
+          <BlogPreview />
+          <div className="pt-12">
+            <FaqSection faqs={HOME_FAQS} />
+          </div>
+        </div>
       </div>
     </div>
   );

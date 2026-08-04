@@ -48,7 +48,7 @@ const STEPS: Step[] = [
 
 export function StepsSection() {
   return (
-    <Section surface="a">
+    <Section surface="none">
       <SectionHeading
         eyebrow="How it works"
         title="Three steps to a defensible market call"

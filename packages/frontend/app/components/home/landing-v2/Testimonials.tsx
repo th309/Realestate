@@ -52,7 +52,7 @@ const TESTIMONIALS: Testimonial[] = [
 
 export function Testimonials() {
   return (
-    <Section surface="b">
+    <Section surface="none">
       <SectionHeading title="What investors and agents are saying" />
 
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2">

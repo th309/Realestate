@@ -183,7 +183,7 @@ export function PricingSection() {
     // On the shared contract rather than its own `max-w-6xl px-6` column and
     // its own rhythm — it sat between two `surface a` bands with no fill of its
     // own, so three sections ran together as one block.
-    <Section id="pricing" surface="a">
+    <Section id="pricing" surface="none">
       {/* Header */}
       <div className="text-center max-w-xl mx-auto mb-10">
         <span className="text-sm font-semibold text-primary uppercase tracking-widest">

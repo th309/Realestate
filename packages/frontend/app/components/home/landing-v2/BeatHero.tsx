@@ -4,7 +4,7 @@ import type { HeroContrast } from "@/lib/data";
 import { PrimaryCta } from "./PrimaryCta";
 import { HeroMonitor } from "./HeroMonitor";
 import { HeroCapabilities } from "./HeroCapabilities";
-import { HeroConstellation } from "./HeroConstellation";
+import { Constellation } from "./Constellation";
 
 /**
  * The homepage hero.
@@ -115,7 +115,7 @@ export function BeatHero({
       id="beat-hero"
       className={`relative overflow-hidden ${SURFACE.hero}`}
     >
-      <HeroConstellation />
+      <Constellation />
       <div className={`relative ${CONTAINER} pb-10 pt-14`}>
         <div className="grid items-center gap-12 lg:grid-cols-[42fr_58fr] lg:gap-14">
           <HeroCopy contrast={contrast} />

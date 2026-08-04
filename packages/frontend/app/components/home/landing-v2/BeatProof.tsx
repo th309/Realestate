@@ -167,7 +167,7 @@ function ScoreBandVisual() {
 
 export function BeatProof() {
   return (
-    <BeatSection id="beat-proof" surface="a">
+    <BeatSection id="beat-proof" surface="none">
       <SectionHeading
         eyebrow="The proof"
         title="We backtested it. Here's what held up."

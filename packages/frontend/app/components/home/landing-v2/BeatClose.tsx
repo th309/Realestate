@@ -22,7 +22,7 @@ import { Reveal } from "./Reveal";
  */
 export function BeatClose() {
   return (
-    <Section id="beat-close" surface="b">
+    <Section id="beat-close" surface="none">
       <div className="text-center">
         <Reveal className="flex flex-col items-center">
           <h2

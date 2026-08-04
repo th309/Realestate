@@ -15,8 +15,9 @@ import { PersonaBand } from "./persona/PersonaBand";
  */
 export function BeatPersona() {
   return (
-    <BeatSection id="beat-persona" surface="b">
+    <BeatSection id="beat-persona" surface="none">
       <SectionHeading
+        tone="onDark"
         title="The edge that shows up before the headlines do"
         subhead="Whether you're deploying your own capital or advising clients, PropertyIQ replaces market intuition with a number you can defend."
       />

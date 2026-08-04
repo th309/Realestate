@@ -20,16 +20,19 @@ describe("layout contract is singular", () => {
   });
 
   /**
-   * Two alternating bands plus one bracket. `hero` is not a third option in
-   * the rotation — it is reserved for the homepage's first and last bands, so
-   * the page visibly ends where it began. The count is asserted because the
-   * whole point of this contract is that surfaces do not proliferate.
+   * Two alternating bands, plus the hero wash, plus an opt-out. Neither of the
+   * last two is a third option in the rotation: `hero` is the homepage's top
+   * band, and `none` exists only for sections stacked inside a parent that
+   * paints the background itself (the homepage's indigo fade), where an opaque
+   * surface would chop that fade into stripes. The count is asserted because
+   * the whole point of this contract is that surfaces do not proliferate.
    */
-  it("offers exactly two alternating surface bands plus the hero bracket", () => {
-    expect(Object.keys(SURFACE)).toEqual(["a", "b", "hero"]);
+  it("offers exactly two alternating bands, the hero wash, and an opt-out", () => {
+    expect(Object.keys(SURFACE)).toEqual(["a", "b", "hero", "none"]);
     expect(SURFACE.a).toBe("bg-surface");
     expect(SURFACE.b).toBe("bg-surface-container-low");
     expect(SURFACE.hero).toBe("bg-gradient-to-b from-hero-from to-hero-to");
+    expect(SURFACE.none).toBe("");
   });
 
   it("offers exactly four heading scales", () => {

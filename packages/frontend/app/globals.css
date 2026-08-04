@@ -29,8 +29,12 @@
   /* The same accent, darkened until it is legible as TEXT on a pale surface.
      The brand green is tuned for fills and bars; as body copy or a kicker on
      `surface` it lands at 2.04:1. Use `text-tertiary` on fills and dark bands,
-     `text-tertiary-text` for green words on a light band. */
-  --md-tertiary-text: #007a35;
+     `text-tertiary-text` for green words on a light band.
+
+     Deep enough to clear 4.5:1 against the MIDDLE of the homepage fade, not
+     just against `surface`. The section eyebrows sit there, and a green tuned
+     only for near-white dropped to 2.88:1 once the fade went in. */
+  --md-tertiary-text: #00571f;
 
   /* PropertyIQ Error — matches brand spec §3.2 */
   --md-error: #b3261e;
@@ -48,6 +52,20 @@
      indigo range. Used only by the homepage hero band. */
   --md-hero-from: #f4f8f8;
   --md-hero-to: #efeefa;
+
+  /* The homepage's long indigo fade, running from the bottom of the hero to
+     the foot of the page as ONE continuous wash. Sections below it carry no
+     fill of their own so it reads uninterrupted; their cards supply the
+     separation instead.
+
+     Three stops, not two, and the shoulder sits early on purpose. A straight
+     run from saturated indigo to pale leaves a wide middle where NEITHER white
+     nor the navy on-surface token clears 4.5:1 — around a fifth of the page
+     would have had no legible text colour. Reaching `mid` quickly keeps that
+     dead zone inside the first section, where an opaque card covers it. */
+  --md-page-fade-from: #3949ab;
+  --md-page-fade-mid: #c5cae9;
+  --md-page-fade-to: #e8eaf6;
 
   /* Decorative accents. The homepage tints each icon tile a different hue so a
      six-card grid reads as six things rather than one striped block. Indigo,
@@ -149,6 +167,14 @@
     --md-hero-from: #101520;
     --md-hero-to: #14131f;
 
+    /* The page fade, deepened. It still runs indigo to the page surface, so
+       the top stays dark enough for the same light copy the light theme uses
+       there — the band is dark in BOTH schemes, which is why that copy is a
+       fixed white rather than an inverting token. */
+    --md-page-fade-from: #242c5e;
+    --md-page-fade-mid: #1e2140;
+    --md-page-fade-to: #1a1a2e;
+
     /* Decorative accents — lightened hue, darkened container, same as every
        other pair here. Without these the tiles keep their light-mode fills and
        glare out of a dark band (the bug that made the analyzer chips 1.05:1). */
@@ -237,6 +263,9 @@
 
   --color-hero-from: var(--md-hero-from);
   --color-hero-to: var(--md-hero-to);
+  --color-page-fade-from: var(--md-page-fade-from);
+  --color-page-fade-mid: var(--md-page-fade-mid);
+  --color-page-fade-to: var(--md-page-fade-to);
 
   --color-accent-violet: var(--md-accent-violet);
   --color-accent-violet-container: var(--md-accent-violet-container);

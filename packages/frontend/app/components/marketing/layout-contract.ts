@@ -27,12 +27,19 @@ export const SURFACE = {
   a: "bg-surface",
   b: "bg-surface-container-low",
   /**
-   * The pale wash. Reserved for the two bands that bracket the homepage — the
-   * hero and the closing ask — so the page visibly ends where it began. It is
-   * a `SURFACE` rather than a one-off gradient class on those two components
-   * so they still get the shared container and rhythm.
+   * The pale wash. Reserved for the homepage hero, which is the one band that
+   * sits above the page fade. It is a `SURFACE` rather than a one-off gradient
+   * class on that component so it still gets the shared container and rhythm.
    */
   hero: "bg-gradient-to-b from-hero-from to-hero-to",
+  /**
+   * No fill. For sections stacked inside a band that owns the background
+   * itself — the homepage's long indigo fade. An opaque surface there would
+   * chop the fade into stripes, which is the whole thing it is meant not to
+   * be. Only legal inside such a band: a section on the bare page still needs
+   * `a` or `b`.
+   */
+  none: "",
 } as const;
 export type Surface = keyof typeof SURFACE;
 
