@@ -20,12 +20,13 @@ import { usePiqByGeo } from "./use-piq-by-geo";
 import {
   buildProvenanceFromBundle,
   mergeRentcastIntoInput,
-  extractZip,
   type AnalyzerStateOptions,
   type FieldProvenance,
   type ProvenanceMap,
   isDivergent,
 } from "./use-analyzer-state.provenance";
+import { resolveMarketZip } from "./resolve-market-zip";
+import { getScoreLabel } from "@/app/components/scoring/score-labels";
 
 export type { FieldProvenance, ProvenanceMap };
 export { isDivergent };
@@ -59,6 +60,16 @@ export function useAnalyzerState({
   });
 
   const [address, setAddress] = useState(initialAddress);
+  // Postcode of the suggestion the user picked from autocomplete. Mapbox hands
+  // it to us as structured data, so it beats parsing the display string — and
+  // it is the only market signal free-tier users get, since they never receive
+  // a RentCast lookup. Cleared the moment the user edits the field by hand,
+  // otherwise the previous property's ZIP would linger.
+  const [selectedZip, setSelectedZip] = useState<string | null>(null);
+  const changeAddress = (next: string) => {
+    setAddress(next);
+    setSelectedZip(null);
+  };
   const [arvLocal, setArvLocal] = useState<number>(0);
   const [rehabBudget, setRehabBudget] = useState<number>(45_000);
   const [propertyType, setPropertyType] = useState<"sfh" | "mf">("sfh");
@@ -162,17 +173,15 @@ export function useAnalyzerState({
   const { projection, sensitivity, afterTax, breakEven, brrrrTimeline } =
     useDerivedAnalytics(analyzer.input, assumptions, arvLocal, rehabBudget);
 
-  // Market context geography priority:
-  //   1. ?zip= URL param (explicit, deep-link)
-  //   2. ZIP extracted from RentCast's resolved_address (canonical)
-  //   3. ZIP extracted from the user-typed address (works without RentCast,
-  //      so free-tier users still get market data)
+  // Market context geography — see resolveMarketZip for the priority order.
   // Server-side, MetricResolutionService handles county/state fallback if
   // a ZIP has no metric coverage.
-  const zip =
-    (paramZip && /^\d{5}$/.test(paramZip) ? paramZip : null) ??
-    extractZip(rentcastData?.resolved_address) ??
-    extractZip(address);
+  const zip = resolveMarketZip({
+    paramZip,
+    selectedZip,
+    resolvedAddress: rentcastData?.resolved_address,
+    typedAddress: address,
+  });
   const marketContextQuery = useMarketContext({
     zip: zip ?? undefined,
     enabled: Boolean(zip),
@@ -185,10 +194,13 @@ export function useAnalyzerState({
       input: analyzer.input,
       result: analyzer.rental,
       rentcast: rentcastData ?? {},
+      // Momentum word, not the backend's legacy quality grade — handing the
+      // model an "F" for a 43 makes it write the score up as a bad market
+      // rather than a cooling one. CLAUDE.md §9.
       piq: marketContext?.piq_score
         ? {
             score: marketContext.piq_score.value,
-            label: marketContext.piq_score.label,
+            label: getScoreLabel(marketContext.piq_score.value),
             marketHeat: marketContext.market_heat?.value,
           }
         : {},
@@ -202,7 +214,7 @@ export function useAnalyzerState({
   return {
     analyzer,
     address,
-    setAddress,
+    setAddress: changeAddress,
     arvLocal,
     setArvLocal,
     rehabBudget,
@@ -232,6 +244,7 @@ export function useAnalyzerState({
     prefill,
     handleAddressSelect: async (s: AddressSuggestion) => {
       setAddress(s.full);
+      setSelectedZip(s.postalCode ?? null);
       const bundle = await prefill.mutateAsync({
         zip: s.postalCode ?? undefined,
         address: isPro ? s.full : undefined,

@@ -156,4 +156,42 @@ describe("MarketContextSection", () => {
     // Home Value (currency)
     expect(container.textContent).toContain("$425,000");
   });
+
+  // CLAUDE.md §9: the PIQ tile's sublabel is a momentum word derived from the
+  // score. The backend still sends a legacy quality grade on `piq_score.label`
+  // ("F" for a 43), which reads as a verdict on the market and collides with
+  // the separate A/B/C/F confidence scale.
+  it("labels the PIQ tile with the score's momentum word, not a letter grade", () => {
+    const { container } = render(
+      <MarketContextSection
+        chain={null}
+        initialGeoLevel={null}
+        fallbackPiq={43}
+        fallbackHomeValue={null}
+        fallbackRentIndex={null}
+        fallbackMarketHeat={null}
+        fallbackNetMigration={null}
+      />,
+    );
+    const piqBlock = container.querySelector("[data-metric-block]");
+    expect(piqBlock?.textContent).toContain("EASING");
+    expect(piqBlock?.textContent).not.toMatch(/\b[A-F][+-]?\b(?!ASING)/);
+  });
+
+  it("shows no momentum label when the score is absent", () => {
+    const { container } = render(
+      <MarketContextSection
+        chain={null}
+        initialGeoLevel={null}
+        fallbackPiq={null}
+        fallbackHomeValue={null}
+        fallbackRentIndex={null}
+        fallbackMarketHeat={null}
+        fallbackNetMigration={null}
+      />,
+    );
+    const piqBlock = container.querySelector("[data-metric-block]");
+    expect(piqBlock?.textContent).not.toContain("EASING");
+    expect(piqBlock?.textContent).not.toContain("STEADY");
+  });
 });

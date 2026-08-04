@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { SectionWrapper } from "./SectionWrapper";
 import { MetricBlock } from "../primitives/MetricBlock";
 import type { MarketContextChain } from "@/lib/data";
+import { getScoreLabel } from "@/app/components/scoring/score-labels";
 import { useMarketContextByGeo } from "../../lib/use-market-context-by-geo";
 
 type PillLevel = "zip" | "county" | "metro";
@@ -142,7 +143,11 @@ export function MarketContextSection({
   const marketHeat = data?.market_heat?.value ?? fallbackMarketHeat ?? null;
   const netMigration =
     data?.net_migration?.value ?? fallbackNetMigration ?? null;
-  const piqLabel = data?.piq_score?.label ?? null;
+  // The score's own momentum word, never the backend's `label` — that field
+  // still carries a legacy quality grade ("F" for a 43), which reads as a
+  // verdict on the market and collides with the A/B/C/F confidence scale.
+  // CLAUDE.md §9.
+  const piqLabel = piqScore == null ? null : getScoreLabel(piqScore);
 
   const url = buildMarketUrl(effectivePill, activeId);
   const toNum = (v: number | null) => (v == null ? Number.NaN : v);

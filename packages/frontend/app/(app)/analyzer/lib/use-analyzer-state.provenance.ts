@@ -14,13 +14,22 @@ import type { DealInput } from "@propertyiq/analyzer-core";
 const INSURANCE_RATE_ANNUAL = 0.0055;
 
 /**
- * Pull the trailing 5-digit ZIP from a RentCast resolved_address or user-typed
+ * Pull the 5-digit ZIP out of a RentCast resolved_address or a user-typed
  * address. Returns null when absent so market-context queries stay disabled.
+ *
+ * Not anchored to the end of the string: Mapbox's `place_name` — the value the
+ * address autocomplete writes into the field — puts the country last, as in
+ * "200 Orlando Avenue, Normal, Illinois 61761, United States". An end-anchored
+ * match found nothing there, which silently dropped the whole market context.
+ *
+ * Takes the LAST candidate and skips one at index 0, so a five-digit house
+ * number ("12345 Main St") is never mistaken for a ZIP.
  */
 export function extractZip(resolvedAddress: string | undefined): string | null {
   if (!resolvedAddress) return null;
-  const match = resolvedAddress.match(/\b(\d{5})(?:-\d{4})?\b\s*$/);
-  return match ? match[1] : null;
+  const candidates = [...resolvedAddress.matchAll(/\b(\d{5})(?:-\d{4})?\b/g)];
+  const zips = candidates.filter((m) => m.index !== 0);
+  return zips.length > 0 ? zips[zips.length - 1][1] : null;
 }
 
 export interface AnalyzerStateOptions {
