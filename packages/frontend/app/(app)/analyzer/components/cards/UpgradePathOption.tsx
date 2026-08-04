@@ -27,13 +27,18 @@ const LEVER_ICON: Record<UpgradeLever, LucideIcon> = {
   interestRate: Percent,
 };
 
+/**
+ * Semantic tokens, not literals — these were #00C853 / #FFB300 / #FB8C00 with
+ * rgba() tints, which stayed fixed in dark mode. Mirrors the mockup's `.diff`
+ * scheme: green for the easy lever, red for the hard one.
+ */
 const FEASIBILITY_STYLE: Record<
   UpgradePathOptionType["feasibility"],
-  { fg: string; bg: string; label: string }
+  { fg: string; label: string }
 > = {
-  easy: { fg: "#00C853", bg: "rgba(0,200,83,0.08)", label: "Easy" },
-  moderate: { fg: "#FFB300", bg: "rgba(255,179,0,0.08)", label: "Moderate" },
-  hard: { fg: "#FB8C00", bg: "rgba(251,140,0,0.08)", label: "Hard" },
+  easy: { fg: "var(--md-tertiary)", label: "Easy" },
+  moderate: { fg: "var(--md-warning)", label: "Moderate" },
+  hard: { fg: "var(--md-error)", label: "Hard" },
 };
 
 /** Whole-dollar / percent formatter for the "from X to Y" line. Lever-aware. */
@@ -63,31 +68,39 @@ export function UpgradePathOption({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05, duration: 0.3 }}
-      className="rounded-xl border border-outline-variant bg-surface p-4 flex items-center gap-4 shadow-sm"
+      // Mockup `.lvbox`: a two-column grid — icon tile, then text — with the
+      // apply button spanning the full width beneath. Keeping the button on
+      // the same row squeezed the text to ~150px at half width, wrapping
+      // titles to three lines and making this column tower over the grading
+      // table it now sits beside.
+      className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-2.5 rounded-xl border border-outline-variant bg-surface-container-low p-3 shadow-sm"
     >
       <div
         aria-hidden
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
-        style={{ background: unlocksColor.bg, color: unlocksColor.fg }}
+        className="flex size-8 shrink-0 items-center justify-center rounded-[10px]"
+        style={{
+          background: `color-mix(in srgb, ${unlocksColor.fg} 12%, transparent)`,
+          color: unlocksColor.fg,
+        }}
       >
-        <Icon size={20} strokeWidth={2} />
+        <Icon size={16} strokeWidth={2} />
       </div>
 
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2 flex-wrap">
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-2">
           <h4
             data-upgrade-option-label
-            className="text-base font-semibold text-on-surface leading-tight"
+            className="text-[13px] font-bold leading-tight text-on-surface"
           >
             {option.label}
           </h4>
           <span
             data-upgrade-option-feasibility
             aria-label={`Feasibility: ${option.feasibility}`}
-            className="rounded-full px-2 py-0.5 text-[11px] font-medium tabular-nums"
+            className="rounded-full px-[7px] py-0.5 text-[9px] font-extrabold uppercase tracking-[0.06em]"
             style={{
               color: feasibility.fg,
-              background: feasibility.bg,
+              background: `color-mix(in srgb, ${feasibility.fg} 12%, transparent)`,
             }}
           >
             {feasibility.label}
@@ -95,8 +108,7 @@ export function UpgradePathOption({
         </div>
         <p
           data-upgrade-option-body
-          className="mt-1 text-sm text-on-surface-variant tabular-nums"
-          style={{ fontFamily: "var(--font-roboto-mono)" }}
+          className="mt-0.5 font-mono text-xs tabular-nums text-on-surface-variant"
         >
           From {formatLeverValue(option.lever, option.currentValue)} to{" "}
           {formatLeverValue(option.lever, option.targetValue)}{" "}
@@ -114,7 +126,7 @@ export function UpgradePathOption({
         type="button"
         data-upgrade-apply
         onClick={onApply}
-        className="shrink-0 rounded-full border border-outline px-4 py-2 text-sm font-medium text-primary hover:bg-primary-container/40 transition-colors duration-200"
+        className="col-span-2 rounded-[9px] border border-primary bg-surface px-3 py-2 text-xs font-bold text-primary transition-colors duration-200 hover:bg-primary-container/40"
       >
         Apply to inputs
       </button>

@@ -168,7 +168,17 @@ export function GradingResultPanel({
       </div>
       {leverPanel ? (
         <div className="grid grid-cols-1 items-start gap-4 min-[1240px]:grid-cols-2">
-          <div id="grading" className="min-w-0 scroll-mt-20">
+          {/*
+            The mockup pairs these at similar heights, but the real engine
+            emits one lever per failing metric — measured 399px of table
+            against 1136px of levers, which left ~740px of dead column. The
+            table sticks instead, so the grade breakdown stays on screen while
+            you read the levers that move it.
+          */}
+          <div
+            id="grading"
+            className="min-w-0 scroll-mt-20 min-[1240px]:sticky min-[1240px]:top-6"
+          >
             {scoreTable}
           </div>
           <div id="improve" className="min-w-0 scroll-mt-20">
