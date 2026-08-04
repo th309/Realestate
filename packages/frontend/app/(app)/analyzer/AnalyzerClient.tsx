@@ -12,6 +12,7 @@ import { useAnalyzerState } from "./lib/use-analyzer-state";
 import { buildStrategyCompareProps } from "./lib/strategy-compare-builders";
 import { deriveVerdict } from "./lib/format-helpers";
 import { GradingBlock } from "./components/cards/GradingBlock";
+import { AdvisoriesStrip } from "./components/cards/AdvisoriesStrip";
 import { AnalyzerSections } from "./components/AnalyzerSections";
 import { CustomizeThresholdsDrawer } from "./components/CustomizeThresholdsDrawer/CustomizeThresholdsDrawer";
 import type { ThresholdsTabId } from "./components/CustomizeThresholdsDrawer/useDrawerState";
@@ -269,13 +270,8 @@ export default function AnalyzerClient({
               address={address}
             />
 
-            {/*
-              Before there is enough input to underwrite, the results column
-              used to render four em-dash KPI tiles and a $0 projection chart.
-              One explanatory panel replaces those dead instruments and
-              absorbs the start CTA, so mobile — where the input panel is
-              behind a sheet — still has its entry point.
-            */}
+            {/* Replaces the em-dash KPI row and $0 chart that used to render
+                pre-input; absorbs the start CTA for the sheet. */}
             {!hasGradableInput && <AnalyzerEmptyState onStart={openInputs} />}
 
             {hasGradableInput && analysisMode === "compare" && (
@@ -310,6 +306,13 @@ export default function AnalyzerClient({
               presetLabel={presetLabel}
               aiProps={sectionAi.recommendation_analysis}
             />
+
+            {/* Mockup order: verdict → rules → KPIs. These read as a
+                pre-flight check on the KPI row beneath them, so they sit
+                here rather than buried at the foot of the grading panel. */}
+            {grading.data && (
+              <AdvisoriesStrip advisories={grading.data.advisories} />
+            )}
 
             {hasGradableInput && (
               <div id="cashflow" className="scroll-mt-20">

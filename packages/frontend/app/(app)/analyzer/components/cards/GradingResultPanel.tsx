@@ -15,7 +15,6 @@ import type {
   UpgradePathBrrrrRequest,
   UpgradePathFlipRequest,
 } from "@/lib/data";
-import { AdvisoriesStrip } from "./AdvisoriesStrip";
 import { AutoKillBanner } from "./AutoKillBanner";
 import { BrrrrUpgradePathPanel } from "./BrrrrUpgradePathPanel";
 import { FlipUpgradePathPanel } from "./FlipUpgradePathPanel";
@@ -181,7 +180,6 @@ export function GradingResultPanel({
           {scoreTable}
         </div>
       )}
-      <AdvisoriesStrip advisories={result.advisories} />
     </div>
   );
 }
