@@ -92,7 +92,14 @@ export function AppBar() {
           </span>
         </Link>
 
-        <nav className="flex gap-1" aria-label="Tools">
+        {/*
+          Hidden below sm: the pills need ~502px (logo 110 + nav 312 + menu 40
+          + gutters) and a 390px viewport gives 375, which pushed the page
+          139px wide. Below this width MobileMenu already carries the full NAV,
+          so the pills were redundant there anyway — the actions row beside
+          them is likewise `hidden lg:flex` with a `lg:hidden` menu button.
+        */}
+        <nav className="hidden gap-1 sm:flex" aria-label="Tools">
           {TOOLS.map(({ href, label, Icon, accent }) => {
             const active =
               pathname === href || pathname?.startsWith(`${href}/`);

@@ -13,6 +13,7 @@
  */
 export const piq = {
   indigo: "var(--piq-indigo)",
+  onIndigo: "var(--piq-on-indigo)",
   indigoDark: "var(--piq-indigo-dark)",
   green: "var(--piq-green)",
   red: "var(--piq-red)",

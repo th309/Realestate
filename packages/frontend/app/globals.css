@@ -73,6 +73,9 @@
      Slate-text + sharp accent palette for headline metrics and charts.
      ========================================================================= */
   --piq-indigo: #3949ab;
+  /* Foreground for anything FILLED with --piq-indigo. Indigo flips from deep
+     to pale in dark mode, so white text on it drops to a 2.66:1 ratio. */
+  --piq-on-indigo: #ffffff;
   --piq-indigo-dark: #1a237e;
   --piq-green: #00c853;
   --piq-red: #e53935;
@@ -144,6 +147,28 @@
     --md-inverse-surface: #e8eaf6;
     --md-inverse-on-surface: #1a237e;
     --md-inverse-primary: #3949ab;
+
+    /* PropertyIQ analyzer palette — dark values.
+       These were defined ONLY in :root, so in dark mode --piq-text-primary
+       stayed #0f172a (near-black slate) and --piq-surface stayed #ffffff.
+       Every analyzer primitive built on this palette rendered dark text on a
+       dark surface: the inactive strategy chips ("Fix & Flip", "BRRRR")
+       measured a 1.05 contrast ratio, i.e. invisible. Values follow the same
+       dark treatment as the M3 tokens above. */
+    --piq-indigo: #8c9ae8;
+    --piq-on-indigo: #12141d;
+    --piq-indigo-dark: #5c6bc0;
+    --piq-green: #3dd87a;
+    --piq-red: #f2b8b5;
+    --piq-amber: #ffb74d;
+    --piq-teal: #4dd0e1;
+    --piq-orange: #ffa726;
+    --piq-surface: #1a1d29;
+    --piq-surface-dark: #0f1119;
+    --piq-canvas: #0f1119;
+    --piq-text-primary: #edeff7;
+    --piq-text-muted: #a5abc2;
+    --piq-border: #2a2f42;
 
     /* Legacy mappings */
     --background: var(--md-surface);
