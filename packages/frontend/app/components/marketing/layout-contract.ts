@@ -26,12 +26,19 @@ export type Rhythm = keyof typeof RHYTHM;
 export const SURFACE = {
   a: "bg-surface",
   b: "bg-surface-container-low",
+  /**
+   * The pale wash. Reserved for the two bands that bracket the homepage — the
+   * hero and the closing ask — so the page visibly ends where it began. It is
+   * a `SURFACE` rather than a one-off gradient class on those two components
+   * so they still get the shared container and rhythm.
+   */
+  hero: "bg-gradient-to-b from-hero-from to-hero-to",
 } as const;
 export type Surface = keyof typeof SURFACE;
 
 export const HEADING = {
-  /** Landing heroes only. */
-  hero: "text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.05]",
+  /** Landing heroes only. Scale is the approved homepage mockup's. */
+  hero: "text-[clamp(2.6rem,5.1vw,4.35rem)] font-extrabold tracking-[-0.03em] leading-none",
   /** Every non-hero page title. */
   page: "text-3xl md:text-4xl font-bold tracking-tight",
   section: "text-2xl md:text-3xl font-bold tracking-tight",

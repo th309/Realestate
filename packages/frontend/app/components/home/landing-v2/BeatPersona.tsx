@@ -15,10 +15,8 @@ export function BeatPersona() {
   return (
     <BeatSection id="beat-persona" surface="b">
       <SectionHeading
-        eyebrow="What you can do with it"
-        title="Pick your angle. See the real output."
-        subhead="Not a feature list — actual answers from the live platform. Investor, agent, first-time buyer, or building on our API: here's what PropertyIQ hands you for a real market."
-        align="start"
+        title="The edge that shows up before the headlines do"
+        subhead="Whether you're deploying your own capital or advising clients, PropertyIQ replaces market intuition with a number you can defend. Every panel below is real output from the live platform, not a feature list."
       />
       <PersonaShowcase />
     </BeatSection>

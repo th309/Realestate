@@ -56,7 +56,11 @@ export const PERSONA_SNAPSHOTS: Record<
       { label: "Net cash flow", value: "−$2,224/mo", tone: "neg" },
       { label: "Cap rate", value: "1.61%", tone: "neg" },
       { label: "Overvalued vs. fundamentals", value: "+115.7%", tone: "neg" },
-      { label: "PropertyIQ Score", value: "7 · F", tone: "neg" },
+      // Score and confidence are independent (CLAUDE.md section 9). Printed as
+      // "7 · F" they read as one graded verdict — an F-rated market — which is
+      // exactly the conflation the letter badge is not allowed to imply. The
+      // confidence belongs on its own labelled row or nowhere.
+      { label: "PropertyIQ Score", value: "7", tone: "neg" },
     ],
     caption: `Real output from the PropertyIQ Deal Analyzer · ${AS_OF}`,
   },

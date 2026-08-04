@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { HEADING } from "@/app/components/marketing";
 import { BeatHero } from "../BeatHero";
 
 describe("BeatHero", () => {
@@ -8,11 +9,17 @@ describe("BeatHero", () => {
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
   });
 
+  /**
+   * Assert against the contract itself, not a copy of its current value — the
+   * point of the rule is "the hero does not pick its own scale", and pasting
+   * the scale here just meant retuning it broke the test that guards it.
+   */
   it("renders the h1 at the hero scale from the contract", () => {
     render(<BeatHero />);
-    expect(screen.getByRole("heading", { level: 1 }).className).toContain(
-      "text-4xl md:text-5xl lg:text-6xl",
-    );
+    const className = screen.getByRole("heading", { level: 1 }).className;
+    for (const utility of HEADING.hero.split(" ")) {
+      expect(className).toContain(utility);
+    }
   });
 
   it("renders score numerals in monospace", () => {

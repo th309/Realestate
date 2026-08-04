@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
+import { Section } from "@/app/components/marketing";
 import { useInView } from "./hooks/useInView";
 import { usePricingTiers } from "@/lib/data";
 import { FALLBACK_BULLETS } from "@/app/pricing/components/build-feature-bullets";
@@ -47,8 +48,8 @@ function PricingTier({
         relative flex-1 max-w-sm rounded-3xl p-8 transition-all duration-300
         ${
           highlighted
-            ? "bg-white border-2 border-[#3949AB] shadow-lg"
-            : "bg-white/80 border border-[#C5CAE9]"
+            ? "bg-surface border-2 border-primary shadow-lg"
+            : "bg-surface/80 border border-outline-variant"
         }
         ${hovered ? "elevation-3 -translate-y-1" : "elevation-1"}
       `}
@@ -68,22 +69,25 @@ function PricingTier({
         </div>
       )}
 
-      <h3 className="text-lg font-semibold text-[#3949AB] mb-2">{name}</h3>
+      <h3 className="text-lg font-semibold text-primary mb-2">{name}</h3>
 
       <div className="mb-6">
         {priceLoading ? (
-          <span className="inline-block h-10 w-20 rounded-lg bg-[#3949AB]/10 animate-pulse" />
+          <span className="inline-block h-10 w-20 rounded-lg bg-primary/10 animate-pulse" />
         ) : (
           <>
-            <span className="text-4xl font-bold text-[#1A237E]">{price}</span>
-            {period && <span className="text-[#3949AB] ml-1">/{period}</span>}
+            <span className="text-4xl font-bold text-on-surface">{price}</span>
+            {period && <span className="text-primary ml-1">/{period}</span>}
           </>
         )}
       </div>
 
       <ul className="space-y-3 mb-8">
         {features.map((feature, i) => (
-          <li key={i} className="flex items-start gap-3 text-sm text-[#3949AB]">
+          <li
+            key={i}
+            className="flex items-start gap-3 text-sm text-on-surface-variant"
+          >
             <svg
               width="18"
               height="18"
@@ -112,7 +116,7 @@ function PricingTier({
           ${
             highlighted
               ? "bg-primary text-on-primary hover:bg-primary/90"
-              : "border border-[#3949AB] text-[#1A237E] hover:bg-[#3949AB]/10"
+              : "border border-primary text-primary hover:bg-primary/10"
           }
         `}
       >
@@ -176,19 +180,19 @@ export function PricingSection() {
   }, [tiers, isLoading]);
 
   return (
-    <section
-      className="pt-5 pb-10 lg:pt-7 lg:pb-14 px-6 max-w-6xl mx-auto"
-      id="pricing"
-    >
+    // On the shared contract rather than its own `max-w-6xl px-6` column and
+    // its own rhythm — it sat between two `surface a` bands with no fill of its
+    // own, so three sections ran together as one block.
+    <Section id="pricing" surface="b">
       {/* Header */}
       <div className="text-center max-w-xl mx-auto mb-10">
-        <span className="text-sm font-semibold text-[#1A237E] uppercase tracking-widest">
+        <span className="text-sm font-semibold text-primary uppercase tracking-widest">
           Pricing
         </span>
-        <h2 className="text-2xl md:text-3xl font-bold text-[#1A237E] mt-3 mb-4 tracking-tight">
+        <h2 className="text-2xl md:text-3xl font-bold text-on-surface mt-3 mb-4 tracking-tight">
           Start free, upgrade when you&apos;re ready
         </h2>
-        <p className="text-[#3949AB]">
+        <p className="text-on-surface-variant">
           No credit card required. Cancel anytime.
         </p>
       </div>
@@ -199,6 +203,6 @@ export function PricingSection() {
           <PricingTier key={tier.name} {...tier} delay={i * 100} />
         ))}
       </div>
-    </section>
+    </Section>
   );
 }

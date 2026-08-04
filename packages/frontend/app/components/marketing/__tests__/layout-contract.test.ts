@@ -19,10 +19,17 @@ describe("layout contract is singular", () => {
     expect(Object.keys(RHYTHM)).toEqual(["standard", "tight"]);
   });
 
-  it("offers exactly two surface bands", () => {
-    expect(Object.keys(SURFACE)).toEqual(["a", "b"]);
+  /**
+   * Two alternating bands plus one bracket. `hero` is not a third option in
+   * the rotation — it is reserved for the homepage's first and last bands, so
+   * the page visibly ends where it began. The count is asserted because the
+   * whole point of this contract is that surfaces do not proliferate.
+   */
+  it("offers exactly two alternating surface bands plus the hero bracket", () => {
+    expect(Object.keys(SURFACE)).toEqual(["a", "b", "hero"]);
     expect(SURFACE.a).toBe("bg-surface");
     expect(SURFACE.b).toBe("bg-surface-container-low");
+    expect(SURFACE.hero).toBe("bg-gradient-to-b from-hero-from to-hero-to");
   });
 
   it("offers exactly four heading scales", () => {
