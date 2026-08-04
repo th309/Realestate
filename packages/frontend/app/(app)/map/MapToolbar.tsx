@@ -30,6 +30,9 @@ interface MapToolbarProps {
   quizCompleted: boolean;
   scoreViewMode: ScoreViewMode;
   onScoreViewModeChange: (mode: ScoreViewMode) => void;
+  /** Map/Table view switch — the Table View FAB used to float over the canvas. */
+  showTableView: boolean;
+  onShowTableView: (open: boolean) => void;
 }
 
 /**
@@ -55,6 +58,8 @@ export function MapToolbar({
   quizCompleted,
   scoreViewMode,
   onScoreViewModeChange,
+  showTableView,
+  onShowTableView,
 }: MapToolbarProps) {
   return (
     <ControlBar>
@@ -85,6 +90,33 @@ export function MapToolbar({
           onSelectResult={onSelectSearchResult}
           onFocus={() => searchResults.length > 0 && onShowSearchResults(true)}
         />
+      </div>
+
+      {/* Map / Table — was a floating FAB bottom-right of the canvas, an
+          orphan pill unrelated to anything around it. */}
+      <div
+        role="group"
+        aria-label="View"
+        className="flex flex-shrink-0 items-center gap-0.5 rounded-[10px] border border-outline-variant bg-surface-container p-0.5"
+      >
+        {[
+          { label: "Map", active: !showTableView, open: false },
+          { label: "Table", active: showTableView, open: true },
+        ].map(({ label, active, open }) => (
+          <button
+            key={label}
+            type="button"
+            onClick={() => onShowTableView(open)}
+            aria-pressed={active}
+            className={`rounded-lg px-3 py-1 text-[12.5px] font-semibold transition-colors ${
+              active
+                ? "bg-surface text-primary shadow-sm"
+                : "text-on-surface-variant hover:text-on-surface"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
       {/* Desktop Geo Pills + Match Toggle — wrap={false} pins the original

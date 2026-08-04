@@ -286,6 +286,8 @@ export default function MapPageInner() {
         quizCompleted={quizCompleted}
         scoreViewMode={scoreViewMode}
         onScoreViewModeChange={setScoreViewMode}
+        showTableView={showTableView}
+        onShowTableView={setShowTableView}
       />
 
       <div className="flex-1 flex h-0 overflow-hidden relative">
