@@ -2,6 +2,7 @@
 export * from "./Icons";
 export * from "./SearchWidget";
 export * from "./GeoLevelPills";
+export * from "./MetricPickerButton";
 export * from "./Legend";
 export * from "./Sidebar";
 export * from "./BenchmarkPanel";

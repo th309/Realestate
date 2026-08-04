@@ -1,11 +1,12 @@
 "use client";
 
-import type { GeoLevel, SearchResult } from "./types";
+import type { GeoLevel, MetricCategory, SearchResult } from "./types";
 import {
   MenuIcon,
   SearchWidget,
   GeoLevelPills,
   ScoreTypeToggle,
+  MetricPickerButton,
   type ScoreViewMode,
 } from "./components";
 import { Breadcrumbs } from "@/components/navigation";
@@ -33,6 +34,9 @@ interface MapToolbarProps {
   /** Map/Table view switch — the Table View FAB used to float over the canvas. */
   showTableView: boolean;
   onShowTableView: (open: boolean) => void;
+  /** Metric catalogue, for naming the active metric and reopening the sidebar. */
+  metricCategories: MetricCategory[];
+  onOpenMetricPicker: () => void;
 }
 
 /**
@@ -60,6 +64,8 @@ export function MapToolbar({
   onScoreViewModeChange,
   showTableView,
   onShowTableView,
+  metricCategories,
+  onOpenMetricPicker,
 }: MapToolbarProps) {
   return (
     <ControlBar>
@@ -91,6 +97,14 @@ export function MapToolbar({
           onFocus={() => searchResults.length > 0 && onShowSearchResults(true)}
         />
       </div>
+
+      {/* States what the map is painting, and reopens the catalogue. */}
+      <MetricPickerButton
+        metricCategories={metricCategories}
+        selectedMetric={selectedMetric}
+        geoLevel={geoLevel}
+        onOpen={onOpenMetricPicker}
+      />
 
       {/* Map / Table — was a floating FAB bottom-right of the canvas, an
           orphan pill unrelated to anything around it. */}

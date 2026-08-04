@@ -288,6 +288,14 @@ export default function MapPageInner() {
         onScoreViewModeChange={setScoreViewMode}
         showTableView={showTableView}
         onShowTableView={setShowTableView}
+        metricCategories={metricCategories}
+        // The catalogue lives in the sidebar, which can be hidden two
+        // different ways: collapsed on desktop, or behind the sheet on
+        // mobile. Open whichever applies, so the button always reveals it.
+        onOpenMetricPicker={() => {
+          if (sidebarCollapsed) handleToggleSidebarCollapsed();
+          setMobileMenuOpen(true);
+        }}
       />
 
       <div className="flex-1 flex h-0 overflow-hidden relative">
