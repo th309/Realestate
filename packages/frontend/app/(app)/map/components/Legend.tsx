@@ -21,9 +21,22 @@ interface LegendProps {
   overrideTitle?: string;
 }
 
+/**
+ * Docked scale strip for the map.
+ *
+ * Two things changed here. It used to float over the Pacific as an absolutely
+ * positioned card, covering the very geography it described, with the "No data
+ * available" key stacked inside it. It is now a header strip above the canvas,
+ * laid out on one line: title, seven-swatch scale, min and max in monospace,
+ * the no-data key, and the as-of date.
+ *
+ * It also had SEVEN branches — percent, percent_abs, index, number, days and
+ * currency were byte-identical, differing only in the comment above them. They
+ * collapse to one; only the single-value case (one swatch, no range) is
+ * genuinely different.
+ */
 export function Legend({
   selectedMetric,
-  forecastHorizon,
   geoLevel,
   mapData,
   overrideTitle,
@@ -48,7 +61,7 @@ export function Legend({
     geoLevel,
   );
 
-  // Use shared formatValue for labels - ensures consistency with map (no "100+" for PropertyIQ 0–100 scores)
+  // Use shared formatValue for labels - ensures consistency with map
   const minLabel = formatValue(min, metricFormat, "min", selectedMetric);
   const maxLabel =
     formatValue(max, metricFormat, "max", selectedMetric) +
@@ -59,212 +72,66 @@ export function Legend({
     geoLevel,
   );
 
-  // Check if single value (e.g., national level with only 1 data point)
+  // National level can yield a single data point, which has no range to show.
   const isSingleValue = min === max || Math.abs(max - min) < 0.001;
 
-  // Single value legend - show one color with the value
-  if (isSingleValue) {
-    const singleValueLabel = formatValue(
-      min,
-      metricFormat,
-      "min",
-      selectedMetric,
-    );
-    return (
-      <div className="absolute bottom-8 left-3 md:bottom-10 md:left-6 bg-surface-container-low rounded-xl elevation-1 p-2.5 md:p-4 z-10 max-w-[calc(100%-70px)] md:max-w-none">
-        <div className="text-xs md:text-sm font-medium text-on-surface mb-1.5 md:mb-2">
-          {titleElement}
-        </div>
-        <div className="flex items-center gap-2">
-          <div
-            className="w-6 md:w-8 h-4 md:h-5 rounded"
+  return (
+    <div
+      data-map-legend
+      className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-outline-variant bg-surface-container-low px-4 py-2"
+    >
+      <span className="text-[11px] font-bold text-on-surface">
+        {titleElement}
+      </span>
+
+      {isSingleValue ? (
+        <span className="flex items-center gap-2">
+          <span
+            className="h-3 w-6 rounded-sm"
             style={{ backgroundColor: COLOR_SCALE[3] }}
           />
-          <span className="text-xs md:text-sm text-on-surface-variant">
-            {singleValueLabel}
+          <span className="font-mono text-[11px] tabular-nums text-on-surface-variant">
+            {minLabel}
           </span>
-        </div>
-        <NoDataIndicator dataDate={dataDate} coverageNote={coverageNote} />
-      </div>
-    );
-  }
+        </span>
+      ) : (
+        <span className="flex items-center gap-2">
+          <span className="font-mono text-[11px] tabular-nums text-on-surface-variant">
+            {minLabel}
+          </span>
+          <span className="flex items-center gap-px">
+            {COLOR_SCALE.map((color, i) => (
+              <span
+                key={i}
+                className="h-3 w-5 first:rounded-l-sm last:rounded-r-sm"
+                style={{ backgroundColor: color }}
+              />
+            ))}
+          </span>
+          <span className="font-mono text-[11px] tabular-nums text-on-surface-variant">
+            {maxLabel}
+          </span>
+        </span>
+      )}
 
-  // Percent legend (forecasts, growth rates)
-  if (metricFormat === "percent") {
-    return (
-      <div className="absolute bottom-8 left-3 md:bottom-10 md:left-6 bg-surface-container-low rounded-xl elevation-1 p-2.5 md:p-4 z-10 max-w-[calc(100%-70px)] md:max-w-none">
-        <div className="text-xs md:text-sm font-medium text-on-surface mb-1.5 md:mb-2">
-          {titleElement}
-        </div>
-        <div className="flex items-center gap-0.5 md:gap-1">
-          {COLOR_SCALE.map((color, i) => (
-            <div
-              key={i}
-              className="w-4 md:w-6 h-3 md:h-4 rounded"
-              style={{ backgroundColor: color }}
-            />
-          ))}
-        </div>
-        <div className="flex justify-between text-[10px] md:text-xs text-on-surface-variant mt-1">
-          <span>{minLabel}</span>
-          <span>{maxLabel}</span>
-        </div>
-        <NoDataIndicator dataDate={dataDate} coverageNote={coverageNote} />
-      </div>
-    );
-  }
-
-  // Absolute percent legend (affordability, rates - 0-100%)
-  if (metricFormat === "percent_abs") {
-    return (
-      <div className="absolute bottom-8 left-3 md:bottom-10 md:left-6 bg-surface-container-low rounded-xl elevation-1 p-2.5 md:p-4 z-10 max-w-[calc(100%-70px)] md:max-w-none">
-        <div className="text-xs md:text-sm font-medium text-on-surface mb-1.5 md:mb-2">
-          {titleElement}
-        </div>
-        <div className="flex items-center gap-0.5 md:gap-1">
-          {COLOR_SCALE.map((color, i) => (
-            <div
-              key={i}
-              className="w-4 md:w-6 h-3 md:h-4 rounded"
-              style={{ backgroundColor: color }}
-            />
-          ))}
-        </div>
-        <div className="flex justify-between text-[10px] md:text-xs text-on-surface-variant mt-1">
-          <span>{minLabel}</span>
-          <span>{maxLabel}</span>
-        </div>
-        <NoDataIndicator dataDate={dataDate} coverageNote={coverageNote} />
-      </div>
-    );
-  }
-
-  // Index legend (renter demand, cost of living)
-  if (metricFormat === "index") {
-    return (
-      <div className="absolute bottom-8 left-3 md:bottom-10 md:left-6 bg-surface-container-low rounded-xl elevation-1 p-2.5 md:p-4 z-10 max-w-[calc(100%-70px)] md:max-w-none">
-        <div className="text-xs md:text-sm font-medium text-on-surface mb-1.5 md:mb-2">
-          {titleElement}
-        </div>
-        <div className="flex items-center gap-0.5 md:gap-1">
-          {COLOR_SCALE.map((color, i) => (
-            <div
-              key={i}
-              className="w-4 md:w-6 h-3 md:h-4 rounded"
-              style={{ backgroundColor: color }}
-            />
-          ))}
-        </div>
-        <div className="flex justify-between text-[10px] md:text-xs text-on-surface-variant mt-1">
-          <span>{minLabel}</span>
-          <span>{maxLabel}</span>
-        </div>
-        <NoDataIndicator dataDate={dataDate} coverageNote={coverageNote} />
-      </div>
-    );
-  }
-
-  // Number legend (inventory, listings, population)
-  if (metricFormat === "number") {
-    return (
-      <div className="absolute bottom-8 left-3 md:bottom-10 md:left-6 bg-surface-container-low rounded-xl elevation-1 p-2.5 md:p-4 z-10 max-w-[calc(100%-70px)] md:max-w-none">
-        <div className="text-xs md:text-sm font-medium text-on-surface mb-1.5 md:mb-2">
-          {titleElement}
-        </div>
-        <div className="flex items-center gap-0.5 md:gap-1">
-          {COLOR_SCALE.map((color, i) => (
-            <div
-              key={i}
-              className="w-4 md:w-6 h-3 md:h-4 rounded"
-              style={{ backgroundColor: color }}
-            />
-          ))}
-        </div>
-        <div className="flex justify-between text-[10px] md:text-xs text-on-surface-variant mt-1">
-          <span>{minLabel}</span>
-          <span>{maxLabel}</span>
-        </div>
-        <NoDataIndicator dataDate={dataDate} coverageNote={coverageNote} />
-      </div>
-    );
-  }
-
-  // Days legend (days on market, days to close)
-  if (metricFormat === "days") {
-    return (
-      <div className="absolute bottom-8 left-3 md:bottom-10 md:left-6 bg-surface-container-low rounded-xl elevation-1 p-2.5 md:p-4 z-10 max-w-[calc(100%-70px)] md:max-w-none">
-        <div className="text-xs md:text-sm font-medium text-on-surface mb-1.5 md:mb-2">
-          {titleElement}
-        </div>
-        <div className="flex items-center gap-0.5 md:gap-1">
-          {COLOR_SCALE.map((color, i) => (
-            <div
-              key={i}
-              className="w-4 md:w-6 h-3 md:h-4 rounded"
-              style={{ backgroundColor: color }}
-            />
-          ))}
-        </div>
-        <div className="flex justify-between text-[10px] md:text-xs text-on-surface-variant mt-1">
-          <span>{minLabel}</span>
-          <span>{maxLabel}</span>
-        </div>
-        <NoDataIndicator dataDate={dataDate} coverageNote={coverageNote} />
-      </div>
-    );
-  }
-
-  // Currency legend (home values, prices, rent, income) - default
-
-  return (
-    <div className="absolute bottom-8 left-3 md:bottom-10 md:left-6 bg-surface-container-low rounded-xl elevation-1 p-2.5 md:p-4 z-10 max-w-[calc(100%-70px)] md:max-w-none">
-      <div className="text-xs md:text-sm font-medium text-on-surface mb-1.5 md:mb-2">
-        {titleElement}
-      </div>
-      <div className="flex items-center gap-0.5 md:gap-1">
-        {COLOR_SCALE.map((color, i) => (
-          <div
-            key={i}
-            className="w-4 md:w-6 h-3 md:h-4 rounded"
-            style={{ backgroundColor: color }}
-          />
-        ))}
-      </div>
-      <div className="flex justify-between text-[10px] md:text-xs text-on-surface-variant mt-1">
-        <span>{minLabel}</span>
-        <span>{maxLabel}</span>
-      </div>
-      <NoDataIndicator dataDate={dataDate} />
-    </div>
-  );
-}
-
-function NoDataIndicator({
-  dataDate,
-  coverageNote,
-}: {
-  dataDate: string;
-  coverageNote?: string;
-}) {
-  return (
-    <div className="mt-2 md:mt-3 pt-2 md:pt-3 border-t border-outline-variant">
-      <div className="flex items-center gap-1.5 md:gap-2">
-        <div
-          className="w-4 md:w-6 h-3 md:h-4 rounded border border-outline"
+      {/* No-data key, on the same line rather than stacked inside a card. */}
+      <span className="flex items-center gap-1.5">
+        <span
+          className="h-3 w-5 rounded-sm border border-outline"
           style={{ backgroundColor: NO_DATA_COLOR }}
         />
-        <span className="text-[10px] md:text-xs text-on-surface-variant">
-          No data available
-        </span>
-      </div>
+        <span className="text-[11px] text-on-surface-variant">No data</span>
+      </span>
+
       {coverageNote ? (
-        <p className="text-[9px] md:text-[10px] leading-snug text-on-surface-variant mt-1.5 max-w-[180px] md:max-w-[220px]">
+        <span className="max-w-[280px] text-[10px] leading-snug text-on-surface-variant">
           {coverageNote}
-        </p>
+        </span>
       ) : null}
-      <div className="text-[9px] md:text-[10px] text-outline mt-1.5">
+
+      <span className="ml-auto font-mono text-[10px] text-outline">
         {dataDate ? `as of ${dataDate}` : "as of —"}
-      </div>
+      </span>
     </div>
   );
 }
