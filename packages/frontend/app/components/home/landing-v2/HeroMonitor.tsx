@@ -61,17 +61,17 @@ function Kpi({ label, value }: { label: string; value: string }) {
 
 function LeaderRow({ market }: { market: HeroMarket }) {
   return (
-    <li className="flex items-center gap-2 text-[11px]">
-      <span className="w-[88px] shrink-0 truncate text-on-surface-variant">
+    <li className="flex items-center gap-3 text-[12px]">
+      <span className="w-[112px] shrink-0 truncate text-on-surface-variant">
         {market.name}
       </span>
-      <span className="h-[5px] flex-1 rounded-full bg-outline-variant">
+      <span className="h-[6px] flex-1 rounded-full bg-outline-variant">
         <span
           className={`block h-full rounded-full ${barTone(market.score)}`}
           style={{ width: `${market.score}%` }}
         />
       </span>
-      <span className="w-5 text-right font-mono text-[11px] font-semibold tabular-nums text-on-surface">
+      <span className="w-6 text-right font-mono text-[12px] font-semibold tabular-nums text-on-surface">
         {market.score}
       </span>
     </li>
@@ -89,17 +89,25 @@ export function HeroMonitor({
   const momentum = `${getScoreLabel(market.score)} ${getScoreMomentumArrow(market.score)}`;
 
   return (
-    <figure className="m-0 flex flex-col items-center">
+    // `w-full`, not content width. Inside the hero's `items-center` column an
+    // auto-width figure shrank to whatever its tab strip needed and left the
+    // rest of the column empty.
+    <figure className="m-0 flex w-full flex-col items-center">
       <div className="w-full rounded-2xl border border-outline-variant bg-surface p-2.5 shadow-lg">
-        <div className="relative overflow-hidden rounded-lg border border-outline-variant bg-surface">
+        {/* Height comes from the content, not a fixed ratio. Pinning 16:9 at
+            this width makes the panel SHORTER than its rows need, which is the
+            opposite of the problem — the empty space was around the monitor,
+            so the fix is a monitor that fills its column and a leaderboard
+            long enough to earn the height. */}
+        <div className="relative flex flex-col overflow-hidden rounded-lg border border-outline-variant bg-surface">
           <div
             aria-hidden
-            className="flex flex-wrap gap-1 border-b border-outline-variant bg-primary-container px-2.5 py-2"
+            className="flex shrink-0 flex-wrap gap-1 border-b border-outline-variant bg-primary-container px-3 py-2"
           >
             {SURFACE_TABS.map((tab, i) => (
               <span
                 key={tab}
-                className={`rounded px-1.5 py-0.5 text-[8.5px] font-semibold ${
+                className={`rounded px-2 py-0.5 text-[9.5px] font-semibold ${
                   i === 0
                     ? "bg-surface text-primary shadow-sm"
                     : "text-on-surface-variant"
@@ -110,19 +118,19 @@ export function HeroMonitor({
             ))}
           </div>
 
-          <div className="flex flex-col gap-3 p-3.5 pb-12">
-            <div className="flex items-center gap-3.5 rounded-lg bg-primary-container px-3.5 py-3">
-              <span className="font-mono text-[38px] font-bold leading-none tabular-nums text-tertiary-text">
+          <div className="flex min-h-0 flex-1 flex-col gap-3 p-4 pb-11">
+            <div className="flex shrink-0 items-center gap-4 rounded-lg bg-primary-container px-4 py-3">
+              <span className="font-mono text-[44px] font-bold leading-none tabular-nums text-tertiary-text">
                 {market.score}
               </span>
               <span className="min-w-0">
-                <span className="block text-[9px] font-bold uppercase tracking-[0.12em] text-on-surface-variant">
+                <span className="block text-[9.5px] font-bold uppercase tracking-[0.12em] text-on-surface-variant">
                   Strongest outlook
                 </span>
-                <span className="block text-[15px] font-bold text-on-surface">
+                <span className="block text-[17px] font-bold text-on-surface">
                   {market.name}
                 </span>
-                <span className="block text-[11px] text-on-surface-variant">
+                <span className="block text-[12px] text-on-surface-variant">
                   {momentum} · Confidence {market.confidenceLevel}
                   {state ? ` · vs ${state}` : ""}
                 </span>
@@ -154,7 +162,7 @@ export function HeroMonitor({
               />
             </div>
 
-            <ul className="flex list-none flex-col gap-1.5 p-0">
+            <ul className="flex list-none flex-col gap-2 p-0">
               {leaderboard.map((m) => (
                 <LeaderRow key={m.cbsa} market={m} />
               ))}

@@ -91,10 +91,13 @@ export function BeatHero({
 }: {
   contrast?: HeroContrast | null;
 }) {
-  // Four leaders plus the cooler, so the strip shows the spread rather than a
-  // wall of green — the contrast is the whole argument of the hero. Both the
+  // Leaders plus the cooler, so the strip shows the spread rather than a wall
+  // of green — the contrast is the whole argument of the hero. Both the
   // featured market and the cooler are excluded from the slice: the featured
   // one is already the headline above, and the cooler is pinned to the bottom.
+  // Seven leaders rather than four because the panel now fills its column, and
+  // a short list left the frame half empty. The pool carries 39 metros, so
+  // these are real rows, not filler.
   const leaderboard = contrast
     ? [
         ...contrast.ranked
@@ -102,7 +105,7 @@ export function BeatHero({
             (m) =>
               m.cbsa !== contrast.cooler.cbsa && m.cbsa !== contrast.riser.cbsa,
           )
-          .slice(0, 4),
+          .slice(0, 7),
         contrast.cooler,
       ]
     : [];
