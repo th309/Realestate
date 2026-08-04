@@ -2242,7 +2242,7 @@ git commit -m "refactor(market): restyle onto KpiTile, ScorePill, and DataTable"
 - **Do not modify:** any file that configures Mapbox sources, layers, paint properties, or label placement
 - Test: `app/(app)/map/__tests__/map-chrome.test.tsx`
 
-- [ ] **Step 1: Identify the Mapbox boundary before editing**
+- [x] **Step 1: Identify the Mapbox boundary before editing**
 
 ```bash
 cd packages/frontend
@@ -2251,7 +2251,7 @@ grep -rln "mapbox-gl\|useMap\|addLayer\|setPaintProperty\|GeoJSONSource" "app/(a
 
 Every file this prints is off-limits. Record the list; the guard test in Step 2 asserts none of them changed.
 
-- [ ] **Step 2: Write the failing test**
+- [x] **Step 2: Write the failing test**
 
 ```tsx
 import { describe, it, expect } from "vitest";
@@ -2275,7 +2275,7 @@ describe("map chrome matches the other tools", () => {
 });
 ```
 
-- [ ] **Step 3: Run test to verify it fails**
+- [x] **Step 3: Run test to verify it fails**
 
 Run: `npm run test:unit -- "app/(app)/map"`
 Expected: FAIL on the `ControlBar` assertion
@@ -2296,7 +2296,7 @@ One button showing the active metric and its category, opening the full catalogu
 
 It currently floats over the Pacific with a "No data available" checkbox inside it. Move it into a map header strip: compact seven-swatch scale, min and max in monospace, the no-data key on the same line. Keep the as-of date.
 
-- [ ] **Step 8: Fix the score card's state-level message**
+- [x] **Step 8: Fix the score card's state-level message**
 
 `CompactScoreCard` shows a grey ring reading "Select a region to see scores". At the State geography level that is misleading — a user can click every state and never get a score, because **there is no state-level PropertyIQ Score**. The geography enum is metro, county, and ZIP; 50 is the calibration point against a state average, not a score a state holds (CLAUDE.md §9). At State level the card must say scores run at metro, county, and ZIP and offer those three levels. At Metro, County, and ZIP it behaves exactly as today.
 
@@ -2320,7 +2320,7 @@ It floats bottom-right as an orphan pill. Move it into the control bar as a Map/
 
 Pro nudge, Homebuyer/Investor toggle, score card, seven category rows, "Explore data points". Same content and order; shared card, chip, and icon-tile treatment. Category icons come from `lucide-react`.
 
-- [ ] **Step 11: Verify the map itself did not change**
+- [x] **Step 11: Verify the map itself did not change**
 
 ```bash
 git diff --stat -- "app/(app)/map"
@@ -2344,6 +2344,13 @@ git commit -m "refactor(map): restyle the chrome, leaving the Mapbox canvas unch
 ```
 
 ---
+
+**Status: PARTIAL.** Steps 1-3, 8 and 11 are done and committed. Steps 4-7, 9, 10 (the chrome restructure) are NOT done.
+
+**The plan contradicts itself at step 1.** Its grep flags `MapPageInner.tsx` as off-limits, but steps 4, 6 and 9 all require editing that file. Resolved in favour of the prose ("any file that **configures** Mapbox sources, layers, paint properties, or label placement"), which is the real rule. The grep returns **26 files, three of them false positives**: `MapPageInner.tsx` matches because it *imports* mapbox-gl and the hooks; `page.tsx` and `MapToolbar.tsx` match only inside *comments*. None configures a source, layer, paint property, or label. **The true off-limits set is 23 files.** Step 11 verified against that set — the diff touches `Sidebar.tsx` and `SidebarScoreCard.tsx` only, and `MapPageInner.tsx` is not modified at all.
+
+**Blocker recorded for step 5.** Deleting the left rail would strand four destinations: the rail links to `/`, `/about`, `/analyzer`, `/graphs`, `/map`, `/market`, `/pricing`, `/reports`, while `AppBar` carries only `/dashboard`, `/map`, `/analyzer`, `/screener`, `/reports`. So **`/market`, `/about`, `/graphs` and `/pricing` exist in no other chrome** — `/market` most notably, a first-class tool absent from the app bar entirely. Step 5's own instruction covers this ("add any missing destinations to the `AppBar` overflow rather than dropping them"), but that means building an overflow menu on the shared `AppBar`, which changes every app surface and wants verifying across all of them. Do that before removing the rail, not after.
+
 
 # Phase D — Defects and retirement
 
