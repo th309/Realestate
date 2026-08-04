@@ -1,12 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import type {
   GeoLevel,
   ForecastHorizon,
   RentIndexType,
   RenterDemandType,
-  NavItem,
   MetricCategory,
   ViewMode,
   SelectedGeography,
@@ -35,8 +33,6 @@ interface ScoreData {
 }
 
 interface SidebarProps {
-  pathname: string;
-  navItems: NavItem[];
   metricCategories: MetricCategory[];
   expandedCategories: string[];
   selectedMetric: string;
@@ -65,8 +61,6 @@ interface SidebarProps {
 }
 
 export function Sidebar({
-  pathname,
-  navItems,
   metricCategories,
   expandedCategories,
   selectedMetric,
@@ -106,67 +100,41 @@ export function Sidebar({
           "var(--ease-standard, cubic-bezier(0.2, 0, 0, 1))",
       }}
     >
-      {/* M3 Navigation Rail */}
-      <div className="w-16 md:w-20 border-r border-outline-variant flex flex-col items-center py-4 gap-1">
-        {navItems.map((item) => {
-          const isActive = pathname === item.href;
-          return (
-            <Link
-              key={item.id}
-              href={item.href}
-              onClick={onCloseMobileMenu}
-              className={`w-14 md:w-16 py-2 md:py-3 rounded-2xl flex flex-col items-center gap-1 transition-all duration-200 ${
-                isActive
-                  ? "bg-primary-container text-on-primary-container"
-                  : "text-on-surface-variant hover:bg-surface-container"
-              }`}
-            >
-              <span
-                className={
-                  isActive
-                    ? "text-on-primary-container"
-                    : "text-on-surface-variant"
-                }
-              >
-                {item.icon}
-              </span>
-              <span className="text-[10px] md:text-xs font-medium">
-                {item.label}
-              </span>
-            </Link>
-          );
-        })}
+      {/*
+        The M3 navigation rail that used to sit here is gone. It duplicated
+        AppBar — two navigation models on one screen — and cost 64-80px of
+        map. Every destination it carried now lives in AppBar: /market as a
+        tool, /graphs, /pricing and /about behind its overflow.
 
-        {/* Spacer to push toggle to bottom */}
-        <div className="flex-1" />
-
-        {/* Collapse/expand toggle - desktop only */}
-        {onToggleSidebarCollapsed && (
-          <button
-            onClick={onToggleSidebarCollapsed}
-            className="hidden md:flex w-10 h-10 items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container transition-colors duration-200"
-            aria-label={
-              sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"
-            }
-            title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+        The collapse toggle it also held survives here, deliberately OUTSIDE
+        the panel below: that panel goes to `md:w-0 md:overflow-hidden` when
+        collapsed, so a toggle inside it would be unreachable the moment you
+        used it. Straddling the aside's edge keeps it hittable in both states.
+      */}
+      {onToggleSidebarCollapsed && (
+        <button
+          onClick={onToggleSidebarCollapsed}
+          className="absolute -right-3 top-4 z-10 hidden size-6 items-center justify-center rounded-full border border-outline-variant bg-surface text-on-surface-variant shadow-sm transition-colors duration-200 hover:bg-surface-container md:flex"
+          aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-expanded={!sidebarCollapsed}
+          title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className={`transition-transform duration-200 ${sidebarCollapsed ? "" : "rotate-180"}`}
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className={`transition-transform duration-200 ${sidebarCollapsed ? "" : "rotate-180"}`}
-            >
-              <polyline points="9 18 15 12 9 6" />
-            </svg>
-          </button>
-        )}
-      </div>
+            <polyline points="9 18 15 12 9 6" />
+          </svg>
+        </button>
+      )}
 
       {/* Metric Panel - fixed 256px on mobile, dynamic sidebarWidth on desktop via CSS variable.
           On desktop (md+), hidden when sidebarCollapsed is true. On mobile, always visible (controlled by mobileMenuOpen on the aside). */}

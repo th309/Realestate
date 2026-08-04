@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FeatureCollection } from "geojson";
-import { usePathname } from "next/navigation";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import type { GeoLevel, SearchResult, MapData } from "./types";
@@ -22,7 +21,7 @@ import { useMapCamera } from "./hooks/useMapCamera";
 import { useMapDeepLinkNav } from "./hooks/useMapDeepLinkNav";
 import { useSelectedGeoCinematic } from "./hooks/useSelectedGeoCinematic";
 
-import { NAV_ITEMS, MAPBOX_ACCESS_TOKEN } from "./config";
+import { MAPBOX_ACCESS_TOKEN } from "./config";
 import { useEntitlements } from "@/lib/entitlements";
 import {
   usePreferences,
@@ -39,7 +38,6 @@ mapboxgl.accessToken = MAPBOX_ACCESS_TOKEN;
 // first-load JS. Keep the mapbox import + `mapboxgl.accessToken =` side
 // effect in THIS file, not page.tsx, or the dynamic split does nothing.
 export default function MapPageInner() {
-  const pathname = usePathname();
 
   const { isMetricGated } = useEntitlements();
 
@@ -304,8 +302,6 @@ export default function MapPageInner() {
 
         <div data-tour="metric-sidebar" className="min-h-0 overflow-hidden">
           <Sidebar
-            pathname={pathname}
-            navItems={NAV_ITEMS}
             metricCategories={metricCategories}
             expandedCategories={expandedCategories}
             selectedMetric={selectedMetric}
