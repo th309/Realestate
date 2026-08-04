@@ -2284,7 +2284,7 @@ Expected: FAIL on the `ControlBar` assertion
 
 `AppBar` from Task 8 already replaced the light top nav. Now fold the second row — breadcrumb, hamburger, search, and the National / State / Metro / County / City / ZIP pills — into a single `<ControlBar>`. Keep every geography level and the search behaviour.
 
-- [ ] **Step 5: Remove the left icon rail**
+- [x] **Step 5: Remove the left icon rail**
 
 The rail (Home / Maps / Analyzer / Markets / Graphs / Reports / About Us / Pricing) duplicates `AppBar`, leaving two navigation models on one screen. Delete it and return the ~64px. Confirm nothing else routes through it — some of its entries (Graphs, Markets, About Us, Pricing) are not in `AppBar`, so add any missing destinations to the `AppBar` overflow rather than dropping them.
 
@@ -2345,7 +2345,9 @@ git commit -m "refactor(map): restyle the chrome, leaving the Mapbox canvas unch
 
 ---
 
-**Status: PARTIAL.** Steps 1-3, 8 and 11 are done and committed. Steps 4-7, 9, 10 (the chrome restructure) are NOT done.
+**Status: PARTIAL.** Steps 1-3, 5, 8 and 11 are done and committed. **Steps 4, 6, 7, 9, 10 are NOT done** — fold the toolbar into `ControlBar`, move the metric picker in, dock the legend, dock Table View, restyle the sidebar.
+
+**Step 5 done.** Rail removed; canvas grows 1100x700 to 1180x700, and 1408x700 collapsed. The collapse toggle moved OUT of the panel — the panel is `md:w-0 md:overflow-hidden` when collapsed, so a toggle inside it would have been unreachable the moment it was used. `tsc` caught a second `Sidebar` consumer the grep did not suggest: `app/embed/map-full`.
 
 **The plan contradicts itself at step 1.** Its grep flags `MapPageInner.tsx` as off-limits, but steps 4, 6 and 9 all require editing that file. Resolved in favour of the prose ("any file that **configures** Mapbox sources, layers, paint properties, or label placement"), which is the real rule. The grep returns **26 files, three of them false positives**: `MapPageInner.tsx` matches because it *imports* mapbox-gl and the hooks; `page.tsx` and `MapToolbar.tsx` match only inside *comments*. None configures a source, layer, paint property, or label. **The true off-limits set is 23 files.** Step 11 verified against that set — the diff touches `Sidebar.tsx` and `SidebarScoreCard.tsx` only, and `MapPageInner.tsx` is not modified at all.
 
