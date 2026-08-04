@@ -1,6 +1,7 @@
 "use client";
 
 import React, { Suspense, useState, useEffect } from "react";
+import Link from "next/link";
 import {
   TrendingUp,
   MapPin,
@@ -155,7 +156,7 @@ function ReportsLanding() {
         />
 
         {/* Sample Report CTA - prominent */}
-        <a
+        <Link
           href="/reports/sample"
           className="group block relative overflow-hidden rounded-3xl p-8 md:p-10 mb-10
             bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5
@@ -188,7 +189,7 @@ function ReportsLanding() {
               <ArrowRight className="w-6 h-6 transition-transform group-hover:translate-x-0.5" />
             </div>
           </div>
-        </a>
+        </Link>
 
         {/* Feature grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">

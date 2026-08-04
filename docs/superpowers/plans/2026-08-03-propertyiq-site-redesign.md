@@ -2227,7 +2227,6 @@ git commit -m "refactor(market): restyle onto KpiTile, ScorePill, and DataTable"
 
 **Note for whoever touches routing:** `MarketExplorer` mounts at `/market`, not `/market/explorer` — that URL falls through to `[id]` and renders a market page for a market literally named "explorer".
 
-
 ### Task 18: Map — chrome only
 
 **Mockup:** https://claude.ai/code/artifact/c2a2557f-0576-4a24-a720-20d0e0032f78
@@ -2353,12 +2352,11 @@ git commit -m "refactor(map): restyle the chrome, leaving the Mapbox canvas unch
 
 **Step 5 done.** Rail removed; canvas grows 1100x700 to 1180x700, and 1408x700 collapsed. The collapse toggle moved OUT of the panel — the panel is `md:w-0 md:overflow-hidden` when collapsed, so a toggle inside it would have been unreachable the moment it was used. `tsc` caught a second `Sidebar` consumer the grep did not suggest: `app/embed/map-full`.
 
-**The plan contradicts itself at step 1.** Its grep flags `MapPageInner.tsx` as off-limits, but steps 4, 6 and 9 all require editing that file. Resolved in favour of the prose ("any file that **configures** Mapbox sources, layers, paint properties, or label placement"), which is the real rule. The grep returns **26 files, three of them false positives**: `MapPageInner.tsx` matches because it *imports* mapbox-gl and the hooks; `page.tsx` and `MapToolbar.tsx` match only inside *comments*. None configures a source, layer, paint property, or label. **The true off-limits set is 23 files.** Step 11 verified against that set — the diff touches `Sidebar.tsx` and `SidebarScoreCard.tsx` only, and `MapPageInner.tsx` is not modified at all.
+**The plan contradicts itself at step 1.** Its grep flags `MapPageInner.tsx` as off-limits, but steps 4, 6 and 9 all require editing that file. Resolved in favour of the prose ("any file that **configures** Mapbox sources, layers, paint properties, or label placement"), which is the real rule. The grep returns **26 files, three of them false positives**: `MapPageInner.tsx` matches because it _imports_ mapbox-gl and the hooks; `page.tsx` and `MapToolbar.tsx` match only inside _comments_. None configures a source, layer, paint property, or label. **The true off-limits set is 23 files.** Step 11 verified against that set — the diff touches `Sidebar.tsx` and `SidebarScoreCard.tsx` only, and `MapPageInner.tsx` is not modified at all.
 
 **Step 5 blocker — RESOLVED.** The `AppBar` overflow is built (`AppBarOverflow.tsx`), `/market` is promoted into the main tool row, and `/graphs`, `/pricing`, `/about` sit behind "More". All eight rail destinations are now reachable from the app bar on every authed surface, so the rail can be deleted without stranding anything. Built as a **disclosure, not an ARIA menu** — `role="menu"`/`"menuitem"` strips the links' own semantics (a test caught it: the items stopped being findable as links) and promises arrow-key behaviour it does not implement.
 
 **Original blocker, for context.** Deleting the left rail would strand four destinations: the rail links to `/`, `/about`, `/analyzer`, `/graphs`, `/map`, `/market`, `/pricing`, `/reports`, while `AppBar` carries only `/dashboard`, `/map`, `/analyzer`, `/screener`, `/reports`. So **`/market`, `/about`, `/graphs` and `/pricing` exist in no other chrome** — `/market` most notably, a first-class tool absent from the app bar entirely. Step 5's own instruction covers this ("add any missing destinations to the `AppBar` overflow rather than dropping them"), but that means building an overflow menu on the shared `AppBar`, which changes every app surface and wants verifying across all of them. Do that before removing the rail, not after.
-
 
 # Phase D — Defects and retirement
 
@@ -2508,7 +2506,15 @@ Run after every phase, and in full before shipping.
 
 1. `cd packages/frontend && npm run test:unit` — all green, including the marketing, app-shell, and per-surface guards.
 2. `npx tsc --noEmit` — exits 0. Plain `tsc`, not `nest build`; `build.json` and `nest build` exclude spec files and will hide errors.
-3. `npm run lint` — clean.
+3. `npm run lint` — **no new problems**, not "clean". The repo carries a standing baseline of ~987 problems (569 errors, 418 warnings), dominated by `@typescript-eslint/no-explicit-any` (~407) and `no-unused-vars` (~269). A blanket "clean" is not achievable and treating it as the gate just trains people to ignore the run. The achievable gate is that files THIS work changed introduce nothing new:
+
+   ```bash
+   git diff --name-only <base> HEAD -- 'packages/frontend/**/*.ts' 'packages/frontend/**/*.tsx' \
+     | sed 's|packages/frontend/||' | xargs npx eslint
+   ```
+
+   Note: run this AFTER any production build. eslint previously ignored only `.next-dev`, so a build into `.next-verify` — which step 4 prescribes — pulled ~1,280 generated files into the lint run and reported ~89,000 phantom problems. `eslint.config.mjs` now ignores `.next-*/**`, matching the convention `.gitignore` documents.
+
 4. `npm run build && npx next start -p 3100` — production preview, never dev. Dev-mode rendering hides bundling and RSC problems.
 5. Walk every surface at 1440px and 390px, in light and dark:
    - `/` · `/blog` · a blog post · `/analyzer` with a real address · `/screener` with a real screen · `/reports` and a generated report · `/market` and a market detail page
@@ -2522,11 +2528,17 @@ Run after every phase, and in full before shipping.
    grep -rE "\[#[0-9A-Fa-f]{6}\]" app/components/marketing app/components/app-shell app/components/home/landing-v2 | wc -l
    ```
    Expected: `0`.
-7. Confirm the layout contract is singular:
+7. Confirm the layout contract is singular. **Assert on the contract, not on a text grep** — the grep this step used to prescribe returns six values and none of the extras is a container:
+
    ```bash
-   grep -rhoE "max-w-[0-9a-z]+" app/components/home/landing-v2 "app/(app)/blog" | sort -u
+   grep -nE "^export const (CONTAINER|PROSE)" app/components/marketing/layout-contract.ts
+   grep -rn "max-w-" app/components/home/landing-v2 --include=*.tsx | grep -v "__tests__" | grep -vE "^\s*\*|//"
    ```
-   Expected: at most `max-w-6xl`, `max-w-3xl`, `max-w-2xl` — never five or six distinct values.
+
+   Expected: `CONTAINER` and `PROSE` are the only container widths defined (`max-w-6xl` and `max-w-3xl`), every marketing section reaches them through `<Section>`, and any remaining `max-w-*` in a beat is a reading-measure cap on a `<p>` (e.g. `max-w-xl`), not a competing container.
+
+   The naive grep counted a `max-w-5xl` inside a comment describing what was replaced, a `max-w-6xl` inside a test assertion, `prose max-w-none` (which REMOVES a width rather than setting one), and paragraph measure caps. All four are fine; the check was measuring text, not layout.
+
 8. Confirm every blog post has an image:
    ```bash
    grep -L "^image:" content/blog/*.mdx | wc -l
