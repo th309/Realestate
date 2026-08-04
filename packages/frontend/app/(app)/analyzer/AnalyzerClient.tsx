@@ -24,7 +24,7 @@ import { toEngineStrategy, useGradingResult } from "./lib/use-grading-result";
 import { useAnalyzerDefaultsPrefill } from "./lib/use-analyzer-defaults-prefill";
 import { StrategyKPI } from "./components/Hero/StrategyKPI";
 import { JumpBar } from "@/app/components/app-shell";
-import { JUMP_ITEMS } from "./lib/jump-items";
+import { getJumpItems } from "./lib/jump-items";
 import { PropertyHeader } from "./components/PropertyHeader";
 import { AnalyzerSidebar } from "./components/chrome/AnalyzerSidebar";
 import { SavedAnalysesPanel } from "./components/SavedAnalysesPanel";
@@ -254,7 +254,10 @@ export default function AnalyzerClient({
 
           <div className="space-y-6 min-w-0">
             {hasGradableInput && (
-              <JumpBar items={JUMP_ITEMS} activeId="verdict" />
+              <JumpBar
+                items={getJumpItems(!!grading.data)}
+                activeId={grading.data ? "verdict" : "cashflow"}
+              />
             )}
             <SavedAnalysesPanel />
             {hasGradableInput && <EditInputsBar onClick={openInputs} />}

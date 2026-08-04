@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { fmtUsd } from "../lib/format-helpers";
 import { MetricBlock } from "../components/primitives/MetricBlock";
 import { AnalyzerEmptyState } from "../components/chrome/AnalyzerEmptyState";
+import { getJumpItems } from "../lib/jump-items";
 
 const read = (rel: string) =>
   readFileSync(join(__dirname, "..", rel), "utf8").replace(
@@ -65,6 +66,31 @@ describe("analyzer pairs its widest blocks two-up on wide viewports", () => {
 
   it("puts the grading table beside the improvement levers", () => {
     expect(GRADING).toContain("min-[1240px]:grid-cols-2");
+  });
+});
+
+/**
+ * Fix & Flip with no ARV, and BRRRR with no rehab budget, produce no grading
+ * result — so GradingResultPanel never mounts and the verdict / grading /
+ * improve anchors are absent. The jump bar must not offer links into sections
+ * that are not on the page.
+ */
+describe("analyzer jump bar only links to sections that exist", () => {
+  it("offers all five sections once the deal is graded", () => {
+    expect(getJumpItems(true).map((i) => i.id)).toEqual([
+      "verdict",
+      "cashflow",
+      "grading",
+      "improve",
+      "market",
+    ]);
+  });
+
+  it("drops the grading-panel anchors when there is no grading result", () => {
+    expect(getJumpItems(false).map((i) => i.id)).toEqual([
+      "cashflow",
+      "market",
+    ]);
   });
 });
 
