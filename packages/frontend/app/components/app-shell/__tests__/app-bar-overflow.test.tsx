@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 vi.mock("../AppBarActions", () => ({
   AppBarActions: () => <div data-testid="app-bar-actions" />,
@@ -45,6 +47,31 @@ describe("AppBar reaches every destination the map rail had", () => {
     }
   });
 
+  /**
+   * The original overflow was scoped to "whatever the map's old rail carried",
+   * which missed /blog, /compare and /scores — reachable from the marketing
+   * header, and from nowhere at all once you were inside a tool. The marketing
+   * header is the real inventory of public destinations, so diff against that.
+   */
+  it("reaches every destination the marketing header offers", () => {
+    const navData = readFileSync(
+      join(__dirname, "../../../../src/components/layout/header-nav-data.ts"),
+      "utf8",
+    );
+    const headerRoutes = [
+      ...new Set([...navData.matchAll(/"(\/[a-z0-9-]*)"/g)].map((m) => m[1])),
+    ].filter((r) => r !== "/");
+
+    render(<AppBar />);
+    fireEvent.click(screen.getByRole("button", { name: /more destinations/i }));
+    const hrefs = screen
+      .getAllByRole("link")
+      .map((a) => a.getAttribute("href"));
+
+    const unreachable = headerRoutes.filter((r) => !hrefs.includes(r));
+    expect(unreachable).toEqual([]);
+  });
+
   it("promotes Market into the main row, not the overflow", () => {
     // It is a first-class tool; burying it behind More would be a demotion.
     render(<AppBar />);
@@ -58,7 +85,9 @@ describe("AppBar reaches every destination the map rail had", () => {
 describe("AppBar overflow menu", () => {
   it("is closed until asked for", () => {
     render(<AppBar />);
-    expect(screen.queryByRole("list", { name: /more destinations/i })).toBeNull();
+    expect(
+      screen.queryByRole("list", { name: /more destinations/i }),
+    ).toBeNull();
     expect(
       screen.getByRole("button", { name: /more destinations/i }),
     ).toHaveAttribute("aria-expanded", "false");
@@ -71,21 +100,37 @@ describe("AppBar overflow menu", () => {
     expect(trigger).toHaveAttribute("aria-expanded", "true");
     const list = screen.getByRole("list", { name: /more destinations/i });
     expect(list).toBeInTheDocument();
-    expect(list.querySelectorAll("a")).toHaveLength(3);
+    // Assert on contents rather than a count — a bare number goes stale every
+    // time a destination is added, which is exactly how /blog stayed missing.
+    const labels = [...list.querySelectorAll("a")].map((a) =>
+      a.textContent?.trim(),
+    );
+    expect(labels).toEqual([
+      "Blog",
+      "Scores",
+      "Compare",
+      "Graphs",
+      "Pricing",
+      "About",
+    ]);
   });
 
   it("closes on Escape", () => {
     render(<AppBar />);
     fireEvent.click(screen.getByRole("button", { name: /more destinations/i }));
     fireEvent.keyDown(document, { key: "Escape" });
-    expect(screen.queryByRole("list", { name: /more destinations/i })).toBeNull();
+    expect(
+      screen.queryByRole("list", { name: /more destinations/i }),
+    ).toBeNull();
   });
 
   it("closes on an outside click", () => {
     render(<AppBar />);
     fireEvent.click(screen.getByRole("button", { name: /more destinations/i }));
     fireEvent.mouseDown(document.body);
-    expect(screen.queryByRole("list", { name: /more destinations/i })).toBeNull();
+    expect(
+      screen.queryByRole("list", { name: /more destinations/i }),
+    ).toBeNull();
   });
 
   it("marks the trigger active when the current route lives inside it", () => {

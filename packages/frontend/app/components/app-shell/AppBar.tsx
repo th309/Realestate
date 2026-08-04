@@ -12,6 +12,9 @@ import {
   Info,
   LineChart,
   Tag,
+  BookOpen,
+  Target,
+  GitCompare,
 } from "lucide-react";
 import { AppBarActions } from "./AppBarActions";
 import { AppBarOverflow, type OverflowLink } from "./AppBarOverflow";
@@ -43,10 +46,20 @@ const TOOLS = [
 ] as const;
 
 /**
- * Secondary destinations, also inherited from the map's left rail. They are
- * not tools, so they sit behind "More" rather than widening the main row.
+ * Secondary destinations. Not tools, so they sit behind "More" rather than
+ * widening the main row.
+ *
+ * Kept in step with `src/components/layout/header-nav-data.ts`, which is the
+ * marketing header's list and therefore the full set of public destinations.
+ * Scoping this to "whatever the map's old rail carried" was too narrow: the
+ * rail never linked /blog, /compare or /scores, so all three were reachable
+ * from the marketing header and from nowhere at all once you were inside a
+ * tool. If a destination is added there, add it here too.
  */
 const OVERFLOW: OverflowLink[] = [
+  { href: "/blog", label: "Blog", Icon: BookOpen },
+  { href: "/scores", label: "Scores", Icon: Target },
+  { href: "/compare", label: "Compare", Icon: GitCompare },
   { href: "/graphs", label: "Graphs", Icon: LineChart },
   { href: "/pricing", label: "Pricing", Icon: Tag },
   { href: "/about", label: "About", Icon: Info },
