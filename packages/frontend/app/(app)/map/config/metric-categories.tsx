@@ -14,12 +14,14 @@
 
 import type { MetricCategory, ViewMode, Metric } from "../types";
 import { getMetricConfig } from "./metrics";
-import {
-  AttachMoneyIcon,
-  ShowChartIcon,
-  PeopleIcon,
-  AnalyticsIcon,
-} from "../components";
+// lucide-react, matching the rest of the app's icon vocabulary rather than
+// the map's own hand-rolled Material glyphs.
+import { BarChart3, DollarSign, LineChart, Users } from "lucide-react";
+
+const AttachMoneyIcon = () => <DollarSign className="size-5" />;
+const ShowChartIcon = () => <LineChart className="size-5" />;
+const PeopleIcon = () => <Users className="size-5" />;
+const AnalyticsIcon = () => <BarChart3 className="size-5" />;
 import {
   EconomicIcon,
   SpeedIcon,
