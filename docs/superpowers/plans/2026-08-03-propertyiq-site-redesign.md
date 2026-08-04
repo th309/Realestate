@@ -118,7 +118,7 @@ Every task's requirements implicitly include this section.
 - Consumes: nothing
 - Produces: Tailwind utilities `from-hero-from`, `to-hero-to`
 
-- [ ] **Step 1: Add light-mode raw tokens**
+- [x] **Step 1: Add light-mode raw tokens**
 
 In `:root`, after the `--md-warning-*` group (around line 38):
 
@@ -129,7 +129,7 @@ In `:root`, after the `--md-warning-*` group (around line 38):
 --md-hero-to: #efeefa;
 ```
 
-- [ ] **Step 2: Add dark-mode raw tokens**
+- [x] **Step 2: Add dark-mode raw tokens**
 
 Inside `@media (prefers-color-scheme: dark)` (starts line 86):
 
@@ -138,7 +138,7 @@ Inside `@media (prefers-color-scheme: dark)` (starts line 86):
 --md-hero-to: #14131f;
 ```
 
-- [ ] **Step 3: Map into the Tailwind theme**
+- [x] **Step 3: Map into the Tailwind theme**
 
 Inside `@theme inline` (starts line 146), after the `--color-warning-*` group:
 
@@ -147,12 +147,12 @@ Inside `@theme inline` (starts line 146), after the `--color-warning-*` group:
 --color-hero-to: var(--md-hero-to);
 ```
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
 
 Run: `npm run build 2>&1 | tail -20`
 Expected: build completes, no CSS errors.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -- packages/frontend/app/globals.css
@@ -172,7 +172,7 @@ git commit -m "feat(design): add hero gradient tokens to the M3 theme" -- packag
 
 - Produces: `CONTAINER: string`, `PROSE: string`, `RHYTHM: Record<Rhythm, string>`, `SURFACE: Record<Surface, string>`, `HEADING: Record<HeadingLevel, string>`; types `Rhythm = "standard" | "tight"`, `Surface = "a" | "b"`, `HeadingLevel = "hero" | "page" | "section" | "card"`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `packages/frontend/app/components/marketing/__tests__/layout-contract.test.ts`:
 
@@ -221,12 +221,12 @@ describe("layout contract is singular", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npm run test:unit -- app/components/marketing`
 Expected: FAIL — `Failed to resolve import "../layout-contract"`
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 Create `packages/frontend/app/components/marketing/layout-contract.ts`:
 
@@ -273,12 +273,12 @@ export const HEADING = {
 export type HeadingLevel = keyof typeof HEADING;
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npm run test:unit -- app/components/marketing`
 Expected: PASS, 7 tests
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -- packages/frontend/app/components/marketing
@@ -299,7 +299,7 @@ git commit -m "feat(marketing): add the shared layout contract" -- packages/fron
 - Consumes: `CONTAINER`, `RHYTHM`, `SURFACE`, `Rhythm`, `Surface` from `./layout-contract`
 - Produces: `Section({ surface?: Surface; rhythm?: Rhythm; id?: string; children: ReactNode })`, defaults `surface="a"`, `rhythm="standard"`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `packages/frontend/app/components/marketing/__tests__/primitives.test.tsx`:
 
@@ -349,12 +349,12 @@ describe("Section", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npm run test:unit -- app/components/marketing`
 Expected: FAIL — `Failed to resolve import "../Section"`
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 Create `packages/frontend/app/components/marketing/Section.tsx`:
 
@@ -392,12 +392,12 @@ export function Section({
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npm run test:unit -- app/components/marketing`
 Expected: PASS, 13 tests total
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -- packages/frontend/app/components/marketing
@@ -424,7 +424,7 @@ These four are independent presentational primitives with no interdependencies. 
   - `StatTile({ label: string; value: string; caption?: string; accent?: "primary" | "tertiary" | "warning" | "error" })`
   - `ScreenshotFrame({ src: string; alt: string; width: number; height: number; priority?: boolean })`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Append to `__tests__/primitives.test.tsx`, adding the four imports at the top:
 
@@ -536,12 +536,12 @@ describe("ScreenshotFrame", () => {
 });
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `npm run test:unit -- app/components/marketing`
 Expected: FAIL — four unresolved imports
 
-- [ ] **Step 3: Write SectionHeading**
+- [x] **Step 3: Write SectionHeading**
 
 ```tsx
 import type { ReactNode } from "react";
@@ -586,7 +586,7 @@ export function SectionHeading({
 }
 ```
 
-- [ ] **Step 4: Write Chip**
+- [x] **Step 4: Write Chip**
 
 ```tsx
 import type { ReactNode } from "react";
@@ -628,7 +628,7 @@ export function Chip({
 }
 ```
 
-- [ ] **Step 5: Write StatTile**
+- [x] **Step 5: Write StatTile**
 
 ```tsx
 type Accent = "primary" | "tertiary" | "warning" | "error";
@@ -674,7 +674,7 @@ export function StatTile({
 }
 ```
 
-- [ ] **Step 6: Write ScreenshotFrame**
+- [x] **Step 6: Write ScreenshotFrame**
 
 ```tsx
 import Image from "next/image";
@@ -712,12 +712,12 @@ export function ScreenshotFrame({
 }
 ```
 
-- [ ] **Step 7: Run tests to verify they pass**
+- [x] **Step 7: Run tests to verify they pass**
 
 Run: `npm run test:unit -- app/components/marketing`
 Expected: PASS, 26 tests total
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add -- packages/frontend/app/components/marketing
@@ -733,7 +733,7 @@ git commit -m "feat(marketing): add SectionHeading, Chip, StatTile, and Screensh
 - Create: `packages/frontend/app/components/marketing/index.ts`
 - Create: `packages/frontend/app/components/marketing/__tests__/no-hex.test.ts`
 
-- [ ] **Step 1: Write the guard**
+- [x] **Step 1: Write the guard**
 
 Create `packages/frontend/app/components/marketing/__tests__/no-hex.test.ts`:
 
@@ -772,12 +772,12 @@ describe("marketing primitives use semantic tokens only", () => {
 });
 ```
 
-- [ ] **Step 2: Run it — should already pass**
+- [x] **Step 2: Run it — should already pass**
 
 Run: `npm run test:unit -- app/components/marketing/__tests__/no-hex`
 Expected: PASS. If it fails, a primitive has a hex literal; replace it with the semantic token of the same role before continuing.
 
-- [ ] **Step 3: Write the barrel**
+- [x] **Step 3: Write the barrel**
 
 Create `packages/frontend/app/components/marketing/index.ts`:
 
@@ -799,12 +799,12 @@ export {
 } from "./layout-contract";
 ```
 
-- [ ] **Step 4: Verify suite and types**
+- [x] **Step 4: Verify suite and types**
 
 Run: `npm run test:unit -- app/components/marketing && npx tsc --noEmit`
 Expected: all PASS; `tsc` exits 0.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -- packages/frontend/app/components/marketing
@@ -828,7 +828,7 @@ git commit -m "feat(marketing): add barrel export and hex regression guard" -- p
   - `ScorePill({ score: number; showLabel?: boolean })`
   - `JumpBar({ items: { id: string; label: string; icon: ReactNode; accent: string }[]; activeId: string })`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `packages/frontend/app/components/app-shell/__tests__/app-shell.test.tsx`:
 
@@ -911,12 +911,12 @@ describe("JumpBar", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npm run test:unit -- app/components/app-shell`
 Expected: FAIL — three unresolved imports
 
-- [ ] **Step 3: Write KpiTile**
+- [x] **Step 3: Write KpiTile**
 
 ```tsx
 type Accent = "primary" | "tertiary" | "warning" | "error";
@@ -973,7 +973,7 @@ export function KpiTile({
 }
 ```
 
-- [ ] **Step 4: Write ScorePill**
+- [x] **Step 4: Write ScorePill**
 
 ```tsx
 import {
@@ -1021,7 +1021,7 @@ export function ScorePill({
 
 > `getScoreColor()` returns a colour string, so it is applied via `style`, not a class — this is the one sanctioned exception to the no-inline-colour rule, because the value is computed from data. Do not hardcode a palette here.
 
-- [ ] **Step 5: Write JumpBar**
+- [x] **Step 5: Write JumpBar**
 
 ```tsx
 import type { ReactNode } from "react";
@@ -1075,12 +1075,12 @@ export function JumpBar({
 }
 ```
 
-- [ ] **Step 6: Run test to verify it passes**
+- [x] **Step 6: Run test to verify it passes**
 
 Run: `npm run test:unit -- app/components/app-shell`
 Expected: PASS, 9 tests
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add -- packages/frontend/app/components/app-shell
@@ -1100,7 +1100,7 @@ git commit -m "feat(app-shell): add KpiTile, ScorePill, and JumpBar primitives" 
 
 - Produces: `DataTable<T>({ columns, rows, sortKey, sortDir, onSort })` where `columns: { key: keyof T & string; header: string; align?: "left" | "right"; render?: (row: T) => ReactNode }[]`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `__tests__/app-shell.test.tsx`, adding `import { DataTable } from "../DataTable";`:
 
@@ -1161,12 +1161,12 @@ describe("DataTable", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npm run test:unit -- app/components/app-shell`
 Expected: FAIL — `Failed to resolve import "../DataTable"`
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 Create `packages/frontend/app/components/app-shell/DataTable.tsx`:
 
@@ -1251,12 +1251,12 @@ export function DataTable<T extends Record<string, unknown>>({
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npm run test:unit -- app/components/app-shell`
 Expected: PASS, 14 tests total
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -- packages/frontend/app/components/app-shell
@@ -1280,13 +1280,13 @@ git commit -m "feat(app-shell): add the shared DataTable primitive" -- packages/
 - Consumes: `lucide-react`, `usePathname` from `next/navigation`
 - Produces: `AppBar()` (self-contained, reads the active route itself); `ControlBar({ children })`
 
-- [ ] **Step 1: Read the current shell and header**
+- [x] **Step 1: Read the current shell and header**
 
 Run: `cat app/components/AppShell.tsx && wc -l src/components/layout/Header.tsx`
 
 Record which routes render `AppShell` and what `Header` currently provides — search, tier badge, mobile menu, breadcrumbs. `AppBar` must preserve every one of those affordances; this is a restyle, not a feature reduction.
 
-- [ ] **Step 2: Write the failing test**
+- [x] **Step 2: Write the failing test**
 
 Append to `__tests__/app-shell.test.tsx`, adding `import { AppBar } from "../AppBar";`:
 
@@ -1316,12 +1316,12 @@ describe("AppBar", () => {
 });
 ```
 
-- [ ] **Step 3: Run test to verify it fails**
+- [x] **Step 3: Run test to verify it fails**
 
 Run: `npm run test:unit -- app/components/app-shell`
 Expected: FAIL — `Failed to resolve import "../AppBar"`
 
-- [ ] **Step 4: Write AppBar**
+- [x] **Step 4: Write AppBar**
 
 Use the existing `--color-inverse-surface` / `--color-inverse-on-surface` tokens for the dark bar — they are already defined in `globals.css` and flip correctly in dark mode. Do not add new dark-bar tokens.
 
@@ -1411,7 +1411,7 @@ export function AppBar() {
 
 Then port the remaining `Header.tsx` affordances recorded in Step 1 — tier badge, notifications, account menu, mobile menu — into the right-hand side of this bar. Do not drop any.
 
-- [ ] **Step 5: Write ControlBar**
+- [x] **Step 5: Write ControlBar**
 
 ```tsx
 import type { ReactNode } from "react";
@@ -1430,20 +1430,20 @@ export function ControlBar({ children }: { children: ReactNode }) {
 }
 ```
 
-- [ ] **Step 6: Add the barrel and hex guard**
+- [x] **Step 6: Add the barrel and hex guard**
 
 Create `index.ts` exporting `AppBar`, `ControlBar`, `KpiTile`, `DataTable`, `ScorePill`, `JumpBar`, and the `Column` / `JumpItem` types. Create `__tests__/no-hex.test.ts` as an exact copy of the marketing guard from Task 5, with its `describe` renamed to `"app-shell primitives use semantic tokens only"`.
 
-- [ ] **Step 7: Adopt AppBar in the shell**
+- [x] **Step 7: Adopt AppBar in the shell**
 
 In `app/components/AppShell.tsx`, replace the existing header render with `<AppBar />`. Leave the `(public)` layout on the light marketing nav.
 
-- [ ] **Step 8: Verify**
+- [x] **Step 8: Verify**
 
 Run: `npm run test:unit -- app/components/app-shell && npx tsc --noEmit && npm run build`
 Expected: all pass. Then `npx next start -p 3100` and confirm every authed route still has working navigation, tier badge, and account menu.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add -- packages/frontend/app/components/app-shell packages/frontend/app/components/AppShell.tsx
@@ -1466,13 +1466,13 @@ git commit -m "feat(app-shell): add the AppBar and ControlBar chrome" -- package
 - Consumes: `Section`, `Surface` from `@/app/components/marketing`
 - Produces: `BeatSection` with its existing props preserved
 
-- [ ] **Step 1: Read the current file**
+- [x] **Step 1: Read the current file**
 
 Run: `cat "app/components/home/landing-v2/BeatSection.tsx"`
 
 Note the exact prop signature. It currently applies `py-20 md:py-28` and `max-w-6xl px-5` itself; those move to `Section`.
 
-- [ ] **Step 2: Write the failing test**
+- [x] **Step 2: Write the failing test**
 
 ```tsx
 import { describe, it, expect } from "vitest";
@@ -1498,12 +1498,12 @@ describe("BeatSection delegates layout to the shared contract", () => {
 });
 ```
 
-- [ ] **Step 3: Run test to verify it fails**
+- [x] **Step 3: Run test to verify it fails**
 
 Run: `npm run test:unit -- app/components/home/landing-v2`
 Expected: FAIL — current component emits `px-5` and `py-20 md:py-28`
 
-- [ ] **Step 4: Rewrite**
+- [x] **Step 4: Rewrite**
 
 Preserve every prop found in Step 1; the shape below assumes `{ id?, surface?, children }`.
 
@@ -1533,12 +1533,12 @@ export function BeatSection({
 }
 ```
 
-- [ ] **Step 5: Run test to verify it passes**
+- [x] **Step 5: Run test to verify it passes**
 
 Run: `npm run test:unit -- app/components/home/landing-v2`
 Expected: PASS, 3 tests
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add -- packages/frontend/app/components/home/landing-v2
@@ -1559,13 +1559,13 @@ git commit -m "refactor(home): delegate BeatSection layout to the shared contrac
 - Consumes: `Section`, `ScreenshotFrame`, `HEADING` from `@/app/components/marketing`
 - Produces: `BeatHero` with existing props unchanged
 
-- [ ] **Step 1: Read the current file**
+- [x] **Step 1: Read the current file**
 
 Run: `cat "app/components/home/landing-v2/BeatHero.tsx"`
 
 Record the headline and subhead copy verbatim, CTA labels and hrefs, props, and any `trackEvent` calls. **All content is preserved.** Only layout, gradient, and numeral typography change.
 
-- [ ] **Step 2: Write the failing test**
+- [x] **Step 2: Write the failing test**
 
 ```tsx
 import { describe, it, expect } from "vitest";
@@ -1611,12 +1611,12 @@ describe("BeatHero", () => {
 });
 ```
 
-- [ ] **Step 3: Run test to verify it fails**
+- [x] **Step 3: Run test to verify it fails**
 
 Run: `npm run test:unit -- app/components/home/landing-v2/__tests__/beat-hero`
 Expected: FAIL on hero-scale, monospace, gradient-token, and screenshot assertions
 
-- [ ] **Step 4: Rebuild the hero layout**
+- [x] **Step 4: Rebuild the hero layout**
 
 Keep every string of copy, every CTA href, and every analytics call from Step 1. Change only:
 
@@ -1647,12 +1647,12 @@ Wrap each score numeral: `<span className="font-mono tabular-nums">16</span>`.
 
 `market-scores-detail-v2.png` already exists in `public/images/home/`.
 
-- [ ] **Step 5: Run test to verify it passes**
+- [x] **Step 5: Run test to verify it passes**
 
 Run: `npm run test:unit -- app/components/home/landing-v2/__tests__/beat-hero`
 Expected: PASS, 6 tests
 
-- [ ] **Step 6: Check LCP did not regress**
+- [x] **Step 6: Check LCP did not regress**
 
 ```bash
 npm run build && npx next start -p 3100
@@ -1660,7 +1660,7 @@ npm run build && npx next start -p 3100
 
 The H1 and subhead must paint in the initial SSR HTML with no opacity gating — a previous fix pinned LCP to ~3.5s by animating them in. Do not reintroduce `opacity: 0` on either. Confirm the hero image carries `priority` and is not lazy-loaded.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add -- packages/frontend/app/components/home/landing-v2
@@ -1676,7 +1676,7 @@ git commit -m "feat(home): rebuild the hero on the layout contract with a produc
 - Modify: `BeatScore.tsx` (93), `BeatProof.tsx` (215), `BeatTension.tsx` (83), `BeatDataDepth.tsx` (78), `BeatFoundation.tsx` (102), `BeatPersona.tsx` (31), `BeatMap.tsx` (23), `BeatClose.tsx` (44) — all under `app/components/home/landing-v2/`
 - Test: `packages/frontend/app/components/home/landing-v2/__tests__/beats-contract.test.tsx`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```tsx
 import { describe, it, expect } from "vitest";
@@ -1709,12 +1709,12 @@ describe("Beat sections defer to the layout contract", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npm run test:unit -- app/components/home/landing-v2/__tests__/beats-contract`
 Expected: FAIL for several files
 
-- [ ] **Step 3: Convert each Beat, smallest first**
+- [x] **Step 3: Convert each Beat, smallest first**
 
 Order: `BeatMap`, `BeatPersona`, `BeatClose`, `BeatDataDepth`, `BeatTension`, `BeatScore`, `BeatFoundation`, `BeatProof`. For each:
 
@@ -1786,12 +1786,12 @@ Copy stays byte-identical. What disappears is the padding, the container, the be
 
 **`BeatProof.tsx` is 215 lines.** If conversion pushes past 400, split the score-band table into a sibling `BeatProofBands.tsx`.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npm run test:unit -- app/components/home/landing-v2`
 Expected: PASS
 
-- [ ] **Step 5: Verify against the mockup**
+- [x] **Step 5: Verify against the mockup**
 
 ```bash
 npm run build && npx next start -p 3100
@@ -1799,7 +1799,7 @@ npm run build && npx next start -p 3100
 
 Compare `http://localhost:3100/` to the homepage mockup at 1440px and 390px, light and dark. Bands must alternate; no section runs edge-to-edge on a gradient.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add -- packages/frontend/app/components/home/landing-v2
@@ -1822,7 +1822,7 @@ git commit -m "refactor(home): move the Beat sections onto the marketing primiti
 - Consumes: the content-pipeline headless-Chromium PNG renderer (find it with `grep -rn "POST_IMAGE_RENDERER" packages/backend/src | head`)
 - Produces: `image: string` frontmatter field; PNG files at `public/images/blog/<slug>.png`
 
-- [ ] **Step 1: Locate the existing renderer**
+- [x] **Step 1: Locate the existing renderer**
 
 ```bash
 grep -rn "POST_IMAGE_RENDERER" ../backend/src | head
@@ -1831,7 +1831,7 @@ grep -rn "targetKeyword" lib app --include="*.ts" | head
 
 The content pipeline already renders PNGs headlessly with Chromium and embeds fonts (production has Chromium but not Roboto). Reuse that renderer — do not add a second image pipeline. Note the font-embedding requirement; a generator that omits it produces images with fallback type in production.
 
-- [ ] **Step 2: Write the failing test**
+- [x] **Step 2: Write the failing test**
 
 ```ts
 import { describe, it, expect } from "vitest";
@@ -1873,23 +1873,23 @@ describe("buildPostImageSpec", () => {
 });
 ```
 
-- [ ] **Step 3: Run test to verify it fails**
+- [x] **Step 3: Run test to verify it fails**
 
 Run: `npm run test:unit -- scripts/content`
 Expected: FAIL — unresolved import
 
-- [ ] **Step 4: Write the generator**
+- [x] **Step 4: Write the generator**
 
 Export a pure `buildPostImageSpec()` (so it is unit-testable) plus a `main()` that walks `content/blog/*.mdx`, builds a spec per post, renders through the existing Chromium renderer, writes to `public/images/blog/`, and appends `image: "/images/blog/<slug>.png"` to the frontmatter if absent. Keep the file under 300 lines — it is a logic file.
 
 The card design is a branded data card: category eyebrow, large display title, and the headline number over a gradient in brand colours. Match the blog thumbnails in the homepage mockup.
 
-- [ ] **Step 5: Run test to verify it passes**
+- [x] **Step 5: Run test to verify it passes**
 
 Run: `npm run test:unit -- scripts/content`
 Expected: PASS, 4 tests
 
-- [ ] **Step 6: Generate for all 77 posts**
+- [x] **Step 6: Generate for all 77 posts**
 
 ```bash
 npx tsx scripts/content/generate-post-images.ts
@@ -1898,7 +1898,7 @@ ls public/images/blog/*.png | wc -l
 
 Expected: 77. Spot-check three PNGs for correct fonts — not fallback type.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add -- packages/frontend/scripts/content packages/frontend/content/blog packages/frontend/public/images/blog
@@ -1914,7 +1914,7 @@ git commit -m "feat(blog): generate branded hero images for every post" -- packa
 - Modify: `app/(app)/blog/components/PostCard.tsx` (70), `app/(app)/blog/BlogIndexContent.tsx` (343), `app/(app)/blog/[slug]/BlogPostContent.tsx` (128), `app/(app)/blog/layout.tsx`, `app/(app)/blog/[slug]/page.tsx`
 - Test: `packages/frontend/app/(app)/blog/__tests__/post-card.test.tsx`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```tsx
 import { describe, it, expect } from "vitest";
@@ -1956,20 +1956,20 @@ describe("PostCard", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npm run test:unit -- "app/(app)/blog"`
 Expected: FAIL — no image rendered, description only shows when `featured`
 
-- [ ] **Step 3: Rebuild PostCard**
+- [x] **Step 3: Rebuild PostCard**
 
 Add a 16:9 `next/image` at the top of the card. Remove the `featured` gate on the description — every card shows it. Keep the category chip, date, and reading time; swap the chip for the shared `<Chip>`.
 
-- [ ] **Step 4: Switch the index to a two-column grid**
+- [x] **Step 4: Switch the index to a two-column grid**
 
 In `BlogIndexContent.tsx`, render the post grid at `grid-cols-1 md:grid-cols-2 gap-7`, matching the mockup.
 
-- [ ] **Step 5: Fix the double pad and apply serif prose**
+- [x] **Step 5: Fix the double pad and apply serif prose**
 
 `blog/layout.tsx` applies `px-4 py-8` and `blog/[slug]/page.tsx` applies `px-4 py-10` again — 32px inset and 72px top. Remove the page-level duplication and use `PROSE` from the contract. In `BlogPostContent.tsx`, replace bare `prose prose-lg max-w-none` with the serif editorial face per CLAUDE.md §8.3:
 
@@ -1977,12 +1977,12 @@ In `BlogIndexContent.tsx`, render the post grid at `grid-cols-1 md:grid-cols-2 g
 <div className="prose prose-lg max-w-none font-[family-name:var(--font-serif)] prose-headings:font-sans">
 ```
 
-- [ ] **Step 6: Run test and verify visually**
+- [x] **Step 6: Run test and verify visually**
 
 Run: `npm run test:unit -- "app/(app)/blog" && npm run build && npx next start -p 3100`
 Expected: tests PASS; `/blog` shows a two-column card grid with images; a post body renders in Source Serif with sans headings; no double padding.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add -- "packages/frontend/app/(app)/blog"
@@ -2373,7 +2373,7 @@ Not a design change — a live defect on the most differentiated feature.
 
 **Reproduction:** analyze `200 Orlando Avenue, Normal, IL 61761`. The verdict narrative says _"No PIQ Score data is available for this location, so I can't gauge market tailwinds or headwinds"_ and the grading table applies `Market adj +0.00`. But Bloomington, IL (CBSA 14010) scores **75** at confidence **A** as of 2026-06-30, with a 12-month range of 68–93.
 
-- [ ] **Step 1: Determine how the analyzer resolves geography**
+- [x] **Step 1: Determine how the analyzer resolves geography**
 
 ```bash
 grep -rn "propertyiq_scores\|getScore\|score" app/\(app\)/analyzer --include="*.ts" --include="*.tsx" | grep -i "fetch\|resolve\|zip\|metro" | head -20
@@ -2381,15 +2381,15 @@ grep -rn "propertyiq_scores\|getScore\|score" app/\(app\)/analyzer --include="*.
 
 Establish whether it queries by ZIP directly or routes through `MetricResolutionService`. CLAUDE.md §5.1 requires all backend metric fallback and geography inheritance to go through that service, with ZIP → County → Metro → State inheritance enabled by `supportsGeoInheritance: true` in `fallback-registry.ts`.
 
-- [ ] **Step 2: Write a failing test** asserting that resolving a PropertyIQ Score for ZIP 61761 returns the Bloomington metro score of 75 by inheritance rather than null.
+- [x] **Step 2: Write a failing test** asserting that resolving a PropertyIQ Score for ZIP 61761 returns the Bloomington metro score of 75 by inheritance rather than null.
 
-- [ ] **Step 3: Run it to confirm the bug reproduces.**
+- [x] **Step 3: Run it to confirm the bug reproduces.**
 
-- [ ] **Step 4: Fix** — either enable geo inheritance for the score in the fallback registry, or route the analyzer's score lookup through `MetricResolutionService` if it currently bypasses it.
+- [x] **Step 4: Fix** — either enable geo inheritance for the score in the fallback registry, or route the analyzer's score lookup through `MetricResolutionService` if it currently bypasses it.
 
-- [ ] **Step 5: Verify** the analyzer now shows a non-zero market adjustment for that address, and quantify the blast radius: how many ZIPs resolve to a scored parent but currently return null.
+- [x] **Step 5: Verify** the analyzer now shows a non-zero market adjustment for that address, and quantify the blast radius: how many ZIPs resolve to a scored parent but currently return null.
 
-- [ ] **Step 6: Commit** with a pathspec covering only the files changed.
+- [x] **Step 6: Commit** with a pathspec covering only the files changed.
 
 ---
 
@@ -2399,17 +2399,17 @@ Establish whether it queries by ZIP directly or routes through `MetricResolution
 
 - Modify: `app/(app)/about/page.tsx` (408 — over the 400-line limit), `app/(app)/pricing/layout.tsx`, `pricing/components/FeatureShowcaseInsights.tsx`, `pricing/components/FeatureShowcaseData.tsx`
 
-- [ ] **Step 1: Resolve the founder contradiction.** "Behind PropertyIQ" is first-person solo and signed "— Troy H, MBA · Founder"; "Our Team" two sections later says PropertyIQ was "founded in 2024 by a team of data scientists and real estate professionals". Pick one and make both sections agree — this is the page carrying the `Person` JSON-LD for E-E-A-T.
+- [x] **Step 1: Resolve the founder contradiction.** "Behind PropertyIQ" is first-person solo and signed "— Troy H, MBA · Founder"; "Our Team" two sections later says PropertyIQ was "founded in 2024 by a team of data scientists and real estate professionals". Pick one and make both sections agree — this is the page carrying the `Person` JSON-LD for E-E-A-T.
 
-- [ ] **Step 2: Split `about/page.tsx`** below 400 lines by extracting the timeline and the differentiator grid into siblings.
+- [x] **Step 2: Split `about/page.tsx`** below 400 lines by extracting the timeline and the differentiator grid into siblings.
 
-- [ ] **Step 3: Source the "+12% excess returns" claim.** `FeatureShowcaseInsights.tsx` hardcodes it around line 283 while every other stat routes through `lib/data/validation-claims.ts`. Move it there, or remove it.
+- [x] **Step 3: Source the "+12% excess returns" claim.** `FeatureShowcaseInsights.tsx` hardcodes it around line 283 while every other stat routes through `lib/data/validation-claims.ts`. Move it there, or remove it.
 
-- [ ] **Step 4: Move the pricing FAQ below the content.** `pricing/layout.tsx:142-144` emits `<FaqSection>` before `{children}`, so the FAQ renders above the pricing cards. Every other page renders it last.
+- [x] **Step 4: Move the pricing FAQ below the content.** `pricing/layout.tsx:142-144` emits `<FaqSection>` before `{children}`, so the FAQ renders above the pricing cards. Every other page renders it last.
 
-- [ ] **Step 5: Replace the fabricated Nashville figures.** The feature showcase renders a score tile of `68`, a `$445K / DOM 34 / +3.2%` grid, and a `Nashville MSA → Davidson Co. → ZIP 37209` drill-down as static JSX, on the page that asks for $39/month while claiming institutional-grade analysis. Fetch real values via `@/lib/data`, or label them explicitly as illustrative.
+- [x] **Step 5: Replace the fabricated Nashville figures.** The feature showcase renders a score tile of `68`, a `$445K / DOM 34 / +3.2%` grid, and a `Nashville MSA → Davidson Co. → ZIP 37209` drill-down as static JSX, on the page that asks for $39/month while claiming institutional-grade analysis. Fetch real values via `@/lib/data`, or label them explicitly as illustrative.
 
-- [ ] **Step 6: Verify and commit.**
+- [x] **Step 6: Verify and commit.**
 
 ```bash
 npm run test:unit && npx tsc --noEmit
@@ -2428,7 +2428,7 @@ git commit -m "fix(marketing): resolve founder contradiction, source claims, reo
 - Modify: `app/(app)/page.tsx`, `middleware.ts` (rewrite block ~lines 169–230)
 - Delete: `app/(app)/home-v2/`, `lib/experiments/landing-variant.ts`, `app/components/home/landing-v2/VariantStamp.tsx`, dead `app/components/home/*.tsx`
 
-- [ ] **Step 1: Establish what variant A uniquely owns**
+- [x] **Step 1: Establish what variant A uniquely owns**
 
 ```bash
 cd packages/frontend
@@ -2441,7 +2441,7 @@ done | sort -n
 
 Anything at `0` after variant A is removed is dead. Do not guess — `Footer`, `JsonLd`, and `StickyScoreBar` may still be imported elsewhere.
 
-- [ ] **Step 2: Write the failing test**
+- [x] **Step 2: Write the failing test**
 
 ```ts
 import { describe, it, expect } from "vitest";
@@ -2469,13 +2469,13 @@ describe("the homepage A/B split is retired", () => {
 });
 ```
 
-- [ ] **Step 3: Run it to verify it fails.**
+- [x] **Step 3: Run it to verify it fails.**
 
-- [ ] **Step 4: Move variant B's body to the root route.** Copy the component body of `app/(app)/home-v2/page.tsx` into `app/(app)/page.tsx`, replacing variant A entirely. Keep `export const metadata = landingMetadata` so canonical SEO carries over. Remove `<VariantStamp />`.
+- [x] **Step 4: Move variant B's body to the root route.** Copy the component body of `app/(app)/home-v2/page.tsx` into `app/(app)/page.tsx`, replacing variant A entirely. Keep `export const metadata = landingMetadata` so canonical SEO carries over. Remove `<VariantStamp />`.
 
-- [ ] **Step 5: Remove the middleware rewrite.** Delete the block that rewrites `/` to `/home-v2`, the cookie set, the `/home-v2` guard near line 223, and the `@/lib/experiments/landing-variant` import at line 10. Leave auth session handling untouched.
+- [x] **Step 5: Remove the middleware rewrite.** Delete the block that rewrites `/` to `/home-v2`, the cookie set, the `/home-v2` guard near line 223, and the `@/lib/experiments/landing-variant` import at line 10. Leave auth session handling untouched.
 
-- [ ] **Step 6: Delete the dead files.**
+- [x] **Step 6: Delete the dead files.**
 
 ```bash
 rm -rf "app/(app)/home-v2"
@@ -2484,7 +2484,7 @@ rm -f lib/experiments/landing-variant.ts app/components/home/landing-v2/VariantS
 
 Then delete each zero-importer component from Step 1 and re-run that command to confirm nothing newly orphaned was missed.
 
-- [ ] **Step 7: Verify.**
+- [x] **Step 7: Verify.**
 
 ```bash
 npm run test:unit && npx tsc --noEmit && npm run lint && npm run build && npx next start -p 3100
@@ -2493,7 +2493,7 @@ curl -sI http://localhost:3100/ | head -5
 
 Expected: `200`, no redirect, no `piq_landing_variant` cookie.
 
-- [ ] **Step 8: Commit.**
+- [x] **Step 8: Commit.**
 
 ```bash
 git add -A -- packages/frontend/app packages/frontend/lib packages/frontend/middleware.ts packages/frontend/__tests__
