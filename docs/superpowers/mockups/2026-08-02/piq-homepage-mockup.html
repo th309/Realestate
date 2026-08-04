@@ -1,0 +1,2017 @@
+<title>PropertyIQ — Proposed Homepage & Blog</title>
+<style>
+  :root {
+    --top: #f4f8f8;
+    --bot: #efeefa;
+    --white: #ffffff;
+    --grey: #f7f8fb;
+    --line: #e4e7f2;
+    --ink: #12141d;
+    --body: #5b6076;
+    --muted: #8b91a8;
+    --indigo: #3949ab;
+    --indigo-deep: #1a237e;
+    --indigo-soft: #eef0fb;
+    --green: #00a84a;
+    --green-b: #00c853;
+    --green-soft: #e6f8ee;
+    --red: #b3261e;
+    --amber: #ff8f00;
+    --violet: #7c4dff;
+    --teal: #00838f;
+    --shadow:
+      0 1px 2px rgba(18, 20, 29, 0.05), 0 4px 16px rgba(18, 20, 29, 0.06);
+    --shadow-lg: 0 18px 50px rgba(26, 35, 126, 0.13);
+    --sans:
+      "Segoe UI Variable Display", -apple-system, BlinkMacSystemFont,
+      "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono:
+      "Roboto Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --top: #101520;
+      --bot: #14131f;
+      --white: #1b1e2b;
+      --grey: #161924;
+      --line: #2c3145;
+      --ink: #edeff7;
+      --body: #a5abc2;
+      --muted: #797f96;
+      --indigo: #8c9ae8;
+      --indigo-deep: #b6bff0;
+      --indigo-soft: #232841;
+      --green: #3dd87a;
+      --green-soft: #17301f;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 4px 16px rgba(0, 0, 0, 0.35);
+      --shadow-lg: 0 18px 50px rgba(0, 0, 0, 0.55);
+    }
+  }
+  :root[data-theme="dark"] {
+    --top: #101520;
+    --bot: #14131f;
+    --white: #1b1e2b;
+    --grey: #161924;
+    --line: #2c3145;
+    --ink: #edeff7;
+    --body: #a5abc2;
+    --muted: #797f96;
+    --indigo: #8c9ae8;
+    --indigo-deep: #b6bff0;
+    --indigo-soft: #232841;
+    --green: #3dd87a;
+    --green-soft: #17301f;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 4px 16px rgba(0, 0, 0, 0.35);
+    --shadow-lg: 0 18px 50px rgba(0, 0, 0, 0.55);
+  }
+  :root[data-theme="light"] {
+    --top: #f4f8f8;
+    --bot: #efeefa;
+    --white: #ffffff;
+    --grey: #f7f8fb;
+    --line: #e4e7f2;
+    --ink: #12141d;
+    --body: #5b6076;
+    --muted: #8b91a8;
+    --indigo: #3949ab;
+    --indigo-deep: #1a237e;
+    --indigo-soft: #eef0fb;
+    --green: #00a84a;
+    --green-soft: #e6f8ee;
+    --shadow:
+      0 1px 2px rgba(18, 20, 29, 0.05), 0 4px 16px rgba(18, 20, 29, 0.06);
+    --shadow-lg: 0 18px 50px rgba(26, 35, 126, 0.13);
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+    font-family: var(--sans);
+    color: var(--body);
+    background: var(--white);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding-inline: 32px;
+  }
+  h1,
+  h2,
+  h3 {
+    color: var(--ink);
+    margin: 0;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    text-wrap: balance;
+  }
+  p {
+    margin: 0;
+  }
+  .num {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+  section {
+    padding-block: 96px;
+  }
+  .grey {
+    background: var(--grey);
+  }
+
+  /* Lucide inline icons */
+  .ic {
+    width: 1em;
+    height: 1em;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    display: block;
+    flex: none;
+  }
+  .tile {
+    border-radius: 14px;
+    display: grid;
+    place-items: center;
+    flex: none;
+  }
+
+  /* ---------- nav ---------- */
+  .nav {
+    background: var(--white);
+    border-bottom: 1px solid var(--line);
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    padding: 0;
+  }
+  .nav .wrap {
+    height: 78px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .logo .mark {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: var(--indigo);
+    color: #fff;
+    display: grid;
+    place-items: center;
+    font-weight: 800;
+    font-size: 19px;
+  }
+  .logo b {
+    color: var(--ink);
+    font-size: 21px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .logo b i {
+    color: var(--indigo);
+    font-style: normal;
+  }
+  .logo small {
+    display: block;
+    font-size: 8px;
+    letter-spacing: 0.18em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-top: -2px;
+  }
+  .pillnav {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--indigo-soft);
+    border-radius: 999px;
+    padding: 5px;
+  }
+  .pillnav a {
+    padding: 9px 18px;
+    border-radius: 999px;
+    font-size: 14.5px;
+    font-weight: 500;
+    color: var(--body);
+    text-decoration: none;
+  }
+  .pillnav a.on {
+    background: var(--white);
+    color: var(--indigo);
+    font-weight: 600;
+    box-shadow: var(--shadow);
+  }
+  .navr {
+    display: flex;
+    gap: 10px;
+  }
+  .ghost {
+    padding: 11px 20px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: var(--white);
+    color: var(--ink);
+    font-size: 14.5px;
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .solid {
+    padding: 11px 22px;
+    border-radius: 10px;
+    background: var(--indigo);
+    color: #fff;
+    font-size: 14.5px;
+    font-weight: 600;
+    text-decoration: none;
+    border: 1px solid transparent;
+  }
+  @media (max-width: 1080px) {
+    .pillnav {
+      display: none;
+    }
+  }
+
+  /* ---------- hero ---------- */
+  .hero {
+    position: relative;
+    background: linear-gradient(178deg, var(--top), var(--bot));
+    overflow: hidden;
+    padding: 0;
+  }
+  #stars {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+  .hero .wrap {
+    position: relative;
+    z-index: 2;
+    display: grid;
+    gap: 48px;
+    grid-template-columns: 1fr;
+    padding-block: 56px 40px;
+  }
+  @media (min-width: 980px) {
+    .hero .wrap {
+      grid-template-columns: 42fr 58fr;
+      gap: 56px;
+      align-items: center;
+    }
+  }
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 8px 16px;
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--indigo);
+  }
+  .eyebrow i {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--green-b);
+  }
+  h1 {
+    font-size: clamp(2.6rem, 5.1vw, 4.35rem);
+    line-height: 1;
+    margin: 26px 0 24px;
+    font-weight: 800;
+  }
+  h1 .grad {
+    background: linear-gradient(96deg, var(--green), var(--indigo));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .sub {
+    font-size: 17px;
+    line-height: 1.62;
+    max-width: 33em;
+    color: var(--body);
+  }
+  .voice {
+    font-style: italic;
+    color: var(--green);
+    font-size: 15px;
+    margin-top: 14px;
+  }
+  .cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 28px;
+    font-size: 16.5px;
+    background: var(--indigo);
+    color: #fff;
+    font-weight: 700;
+    padding: 19px 34px;
+    border-radius: 14px;
+    text-decoration: none;
+    box-shadow: var(--shadow-lg);
+    transition:
+      transform 0.2s cubic-bezier(0.2, 0, 0, 1),
+      filter 0.2s;
+  }
+  .cta .ic {
+    font-size: 19px;
+    stroke-width: 2.4;
+  }
+  .cta:hover {
+    filter: brightness(1.08);
+    transform: translateY(-1px);
+  }
+  .cta:focus-visible {
+    outline: 2px solid var(--indigo);
+    outline-offset: 4px;
+  }
+  .note {
+    margin-top: 18px;
+    font-size: 13.5px;
+    color: var(--muted);
+  }
+  .note b {
+    color: var(--ink);
+  }
+
+  .rig {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .monitor {
+    width: 100%;
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 9px;
+    box-shadow: var(--shadow-lg);
+  }
+  .screen {
+    border-radius: 9px;
+    overflow: hidden;
+    background: var(--white);
+    position: relative;
+    border: 1px solid var(--line);
+  }
+  .neck {
+    width: 74px;
+    height: 26px;
+    background: linear-gradient(180deg, #e8eaf2, #dde0ec);
+    margin-top: -1px;
+  }
+  .base {
+    width: 210px;
+    height: 7px;
+    border-radius: 0 0 7px 7px;
+    background: #dde0ec;
+  }
+  :root[data-theme="dark"] .neck {
+    background: linear-gradient(180deg, #2c3145, #242838);
+  }
+  :root[data-theme="dark"] .base {
+    background: #242838;
+  }
+  .stab {
+    display: flex;
+    gap: 4px;
+    padding: 7px 9px;
+    border-bottom: 1px solid var(--line);
+    background: var(--indigo-soft);
+    flex-wrap: wrap;
+  }
+  .stab span {
+    font-size: 8.5px;
+    font-weight: 600;
+    color: var(--muted);
+    padding: 3px 7px;
+    border-radius: 5px;
+  }
+  .stab span.on {
+    background: var(--white);
+    color: var(--indigo);
+    box-shadow: var(--shadow);
+  }
+  .sbody {
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+  }
+  .bigrow {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 14px;
+    border-radius: 9px;
+    background: var(--indigo-soft);
+  }
+  .bigrow .huge {
+    font-family: var(--mono);
+    font-size: 38px;
+    font-weight: 700;
+    color: var(--green);
+    line-height: 1;
+  }
+  .bigrow .lab {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .bigrow .nm {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .kpis {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+  .kpi {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 9px;
+  }
+  .kpi u {
+    display: block;
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-decoration: none;
+  }
+  .kpi v {
+    display: block;
+    font-family: var(--mono);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--ink);
+    margin-top: 3px;
+  }
+  .mini {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .mini div {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-size: 11px;
+  }
+  .mini .bar {
+    height: 5px;
+    border-radius: 3px;
+    flex: 1;
+  }
+  .mini .sc {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--ink);
+    width: 20px;
+    text-align: right;
+  }
+  .mini .cy {
+    color: var(--body);
+    width: 88px;
+    flex: none;
+  }
+  .cap {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 9px 13px;
+    background: linear-gradient(
+      180deg,
+      rgba(18, 20, 29, 0),
+      rgba(18, 20, 29, 0.82) 55%
+    );
+  }
+  .cap b {
+    color: #fff;
+    font-size: 12.5px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .cap b .tile {
+    width: 18px;
+    height: 18px;
+    background: var(--indigo);
+    border-radius: 5px;
+    color: #fff;
+  }
+  .cap b .ic {
+    font-size: 11px;
+  }
+  .dots {
+    display: flex;
+    gap: 4px;
+  }
+  .dots i {
+    width: 5px;
+    height: 5px;
+    border-radius: 99px;
+    background: rgba(255, 255, 255, 0.4);
+  }
+  .dots i.on {
+    width: 14px;
+    background: #fff;
+  }
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 9px;
+    justify-content: center;
+    margin-top: 30px;
+    max-width: 660px;
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 7px 16px 7px 8px;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--ink);
+    box-shadow: var(--shadow);
+    cursor: pointer;
+  }
+  .chip .tile {
+    width: 24px;
+    height: 24px;
+    border-radius: 8px;
+    color: #fff;
+  }
+  .chip .ic {
+    font-size: 14px;
+    stroke-width: 2.2;
+  }
+  .chip.on {
+    background: var(--indigo);
+    color: #fff;
+    border-color: transparent;
+  }
+  .chip.on .tile {
+    background: rgba(255, 255, 255, 0.26) !important;
+  }
+  .proof {
+    background: var(--white);
+    border-top: 1px solid var(--line);
+    padding-block: 20px;
+    text-align: center;
+    font-size: 14.5px;
+    color: var(--body);
+  }
+  .proof b {
+    color: var(--ink);
+  }
+
+  /* ---------- section header ---------- */
+  .sechead {
+    text-align: center;
+    max-width: 760px;
+    margin: 0 auto 48px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    align-items: center;
+  }
+  .kicker {
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--green);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .kicker .ic {
+    font-size: 14px;
+  }
+  .kicker.i {
+    color: var(--indigo);
+  }
+  h2 {
+    font-size: clamp(1.9rem, 3.6vw, 2.85rem);
+    line-height: 1.1;
+    font-weight: 800;
+  }
+  .sechead p {
+    font-size: 17px;
+    color: var(--body);
+    max-width: 36em;
+  }
+
+  /* ---------- persona ---------- */
+  .toggle {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-bottom: 36px;
+    flex-wrap: wrap;
+  }
+  .tg {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 13px 26px;
+    border-radius: 999px;
+    background: var(--white);
+    border: 1px solid var(--line);
+    font-size: 15.5px;
+    font-weight: 700;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .tg .ic {
+    font-size: 19px;
+    color: var(--green);
+  }
+  .tg.on {
+    background: var(--green);
+    color: #fff;
+    border-color: transparent;
+  }
+  .tg.on .ic {
+    color: #fff;
+  }
+  .persona {
+    max-width: 1120px;
+    margin: 0 auto;
+    background: var(--white);
+    border: 2px solid var(--green);
+    border-radius: 20px;
+    padding: 40px;
+  }
+  .pgrid {
+    display: grid;
+    gap: 40px;
+    grid-template-columns: 1fr;
+  }
+  @media (min-width: 860px) {
+    .pgrid {
+      grid-template-columns: 1fr 1fr;
+      gap: 56px;
+    }
+  }
+  .phead {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    margin-bottom: 18px;
+  }
+  .phead .tile {
+    width: 48px;
+    height: 48px;
+    background: var(--green-soft);
+    color: var(--green);
+  }
+  .phead .ic {
+    font-size: 23px;
+  }
+  .phead h3 {
+    font-size: 22px;
+  }
+  .phead span {
+    font-size: 14px;
+    color: var(--muted);
+  }
+  .checks {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .checks li {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    font-size: 15.5px;
+    color: var(--ink);
+  }
+  .checks .tile {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--green);
+    color: #fff;
+    margin-top: 2px;
+  }
+  .checks .ic {
+    font-size: 13px;
+    stroke-width: 3;
+  }
+  .prow {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 30px;
+    padding-top: 26px;
+    border-top: 1px solid var(--line);
+  }
+  .bg {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    padding: 15px 26px;
+    border-radius: 12px;
+    background: var(--green);
+    color: #fff;
+    font-weight: 700;
+    font-size: 15px;
+    text-decoration: none;
+  }
+  .bo {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    padding: 15px 26px;
+    border-radius: 12px;
+    background: var(--white);
+    border: 1px solid var(--green);
+    color: var(--green);
+    font-weight: 700;
+    font-size: 15px;
+    text-decoration: none;
+  }
+  .bg .ic,
+  .bo .ic {
+    font-size: 17px;
+  }
+
+  /* ---------- steps ---------- */
+  .steps {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: 1fr;
+    align-items: stretch;
+    max-width: 1120px;
+    margin: 0 auto;
+  }
+  @media (min-width: 820px) {
+    .steps {
+      grid-template-columns: 1fr 30px 1fr 30px 1fr;
+    }
+  }
+  .step {
+    background: var(--white);
+    border: 1px solid var(--sc, var(--line));
+    border-radius: 16px;
+    padding: 30px 26px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-items: center;
+  }
+  .step .tile {
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+  }
+  .step .ic {
+    font-size: 25px;
+  }
+  .step h3 {
+    font-size: 19px;
+  }
+  .step p {
+    font-size: 14.5px;
+    color: var(--body);
+  }
+  .arrow {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+  }
+  .arrow .ic {
+    font-size: 20px;
+  }
+  @media (min-width: 820px) {
+    .arrow {
+      display: flex;
+    }
+  }
+
+  /* ---------- features ---------- */
+  .fchips {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 44px;
+  }
+  .fchip {
+    padding: 11px 22px;
+    border-radius: 999px;
+    background: var(--white);
+    border: 1px solid var(--line);
+    font-size: 14.5px;
+    font-weight: 600;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .fchip.on {
+    border-color: var(--indigo);
+    color: var(--indigo);
+    background: var(--indigo-soft);
+  }
+  .fcards {
+    display: grid;
+    gap: 20px;
+    grid-template-columns: 1fr;
+    max-width: 1120px;
+    margin: 0 auto;
+  }
+  @media (min-width: 760px) {
+    .fcards {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+  .fcard {
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    box-shadow: var(--shadow);
+  }
+  .fcard .tile {
+    width: 46px;
+    height: 46px;
+    border-radius: 13px;
+  }
+  .fcard .ic {
+    font-size: 21px;
+  }
+  .fcard h3 {
+    font-size: 18px;
+  }
+  .fcard p {
+    font-size: 14.5px;
+    color: var(--body);
+  }
+  .fcard .stat {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--indigo);
+    font-weight: 600;
+    margin-top: auto;
+    padding-top: 12px;
+  }
+
+  /* ---------- testimonials ---------- */
+  .tcards {
+    display: grid;
+    gap: 20px;
+    grid-template-columns: 1fr;
+    max-width: 1120px;
+    margin: 0 auto;
+  }
+  @media (min-width: 800px) {
+    .tcards {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  .tcard {
+    background: var(--grey);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+  .grey .tcard {
+    background: var(--white);
+  }
+  .tcard q {
+    font-style: italic;
+    color: var(--body);
+    font-size: 16px;
+    line-height: 1.62;
+    quotes: none;
+  }
+  .tcard .lead {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    align-self: flex-start;
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--indigo);
+    background: var(--indigo-soft);
+    border-radius: 999px;
+    padding: 5px 12px;
+  }
+  .tcard .lead .ic {
+    font-size: 12px;
+  }
+  .tcard .who {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-top: auto;
+  }
+  .tcard .av {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--indigo-soft);
+    flex: none;
+    display: grid;
+    place-items: center;
+    color: var(--indigo);
+  }
+  .tcard .av {
+    font-weight: 700;
+    font-size: 14.5px;
+    letter-spacing: 0.02em;
+  }
+  .tcard .nm {
+    color: var(--ink);
+    font-weight: 700;
+    font-size: 15px;
+  }
+  .tcard .rl {
+    font-size: 13.5px;
+    color: var(--muted);
+  }
+  .slotnote {
+    font-size: 14px;
+    color: var(--muted);
+    font-style: italic;
+    text-align: center;
+    margin: 26px auto 0;
+    max-width: 46em;
+  }
+
+  /* ---------- final cta ---------- */
+  .final {
+    background: linear-gradient(178deg, var(--top), var(--bot));
+    text-align: center;
+  }
+  .final h2 {
+    margin-bottom: 14px;
+  }
+  .final p {
+    font-size: 16.5px;
+    color: var(--body);
+  }
+  .final .go {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 30px;
+    background: var(--green);
+    color: #fff;
+    font-size: 16.5px;
+    font-weight: 700;
+    padding: 19px 38px;
+    border-radius: 999px;
+    text-decoration: none;
+    box-shadow: var(--shadow-lg);
+  }
+  .final .go .ic {
+    font-size: 19px;
+    stroke-width: 2.4;
+  }
+
+  /* ---------- blog ---------- */
+  .posts {
+    display: grid;
+    gap: 28px;
+    grid-template-columns: 1fr;
+    max-width: 1120px;
+    margin: 0 auto;
+  }
+  @media (min-width: 800px) {
+    .posts {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  .post {
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: var(--shadow);
+  }
+  .thumb {
+    aspect-ratio: 16/9;
+    padding: 26px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: relative;
+  }
+  .thumb .tk {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.75);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .thumb .tk .ic {
+    font-size: 14px;
+  }
+  .thumb .tt {
+    font-size: clamp(1.5rem, 3vw, 2.1rem);
+    font-weight: 800;
+    color: #fff;
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+    max-width: 11em;
+  }
+  .thumb .tb {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+  }
+  .thumb .tv {
+    font-family: var(--mono);
+    font-size: clamp(2rem, 4.4vw, 3rem);
+    font-weight: 700;
+    color: #fff;
+    line-height: 1;
+  }
+  .thumb .tl {
+    font-size: 12.5px;
+    color: rgba(255, 255, 255, 0.85);
+    padding-bottom: 5px;
+  }
+  .post-body {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex: 1;
+  }
+  .post h3 {
+    font-size: 20px;
+    line-height: 1.3;
+  }
+  .post .desc {
+    font-size: 14.5px;
+    color: var(--body);
+  }
+  .post .meta {
+    margin-top: auto;
+    padding-top: 6px;
+    font-size: 13.5px;
+    color: var(--muted);
+    display: flex;
+    gap: 10px;
+  }
+
+  /* ---------- notes ---------- */
+  .notes {
+    background: var(--white);
+    border-top: 1px solid var(--line);
+    padding-block: 64px;
+  }
+  .notes h2 {
+    font-size: 26px;
+    margin-bottom: 22px;
+  }
+  .notes ol {
+    margin: 0;
+    padding-left: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 13px;
+    max-width: 58em;
+    font-size: 15px;
+  }
+  .notes strong {
+    color: var(--ink);
+  }
+  .notes code {
+    font-family: var(--mono);
+    font-size: 13px;
+    background: var(--grey);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 1px 5px;
+    color: var(--ink);
+  }
+  .banner {
+    background: var(--indigo-soft);
+    border-bottom: 1px solid var(--line);
+    padding-block: 13px;
+  }
+  .banner .wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+    align-items: baseline;
+  }
+  .banner b {
+    color: var(--ink);
+    font-size: 14px;
+  }
+  .banner span {
+    font-size: 13px;
+    color: var(--muted);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
+</style>
+
+<svg width="0" height="0" style="position: absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-target" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="10" />
+      <circle cx="12" cy="12" r="6" />
+      <circle cx="12" cy="12" r="2" />
+    </symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24">
+      <path d="M3 3v18h18" />
+      <path d="M18 17V9" />
+      <path d="M13 17V5" />
+      <path d="M8 17v-3" />
+    </symbol>
+    <symbol id="i-trend" viewBox="0 0 24 24">
+      <polyline points="22 7 13.5 15.5 8.5 10.5 2 18" />
+      <polyline points="16 7 22 7 22 13" />
+    </symbol>
+    <symbol id="i-map" viewBox="0 0 24 24">
+      <path
+        d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z"
+      />
+      <path d="M15 5.764v15" />
+      <path d="M9 3.236v15" />
+    </symbol>
+    <symbol id="i-search" viewBox="0 0 24 24">
+      <circle cx="11" cy="11" r="8" />
+      <path d="m21 21-4.3-4.3" />
+    </symbol>
+    <symbol id="i-sparkles" viewBox="0 0 24 24">
+      <path
+        d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"
+      />
+      <path d="M20 3v4" />
+      <path d="M22 5h-4" />
+      <path d="M4 17v2" />
+      <path d="M5 18H3" />
+    </symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24">
+      <path
+        d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"
+      />
+      <circle cx="12" cy="10" r="3" />
+    </symbol>
+    <symbol id="i-file" viewBox="0 0 24 24">
+      <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+      <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+      <path d="M16 13H8" />
+      <path d="M16 17H8" />
+      <path d="M10 9H8" />
+    </symbol>
+    <symbol id="i-building" viewBox="0 0 24 24">
+      <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z" />
+      <path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2" />
+      <path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2" />
+      <path d="M10 6h4" />
+      <path d="M10 10h4" />
+      <path d="M10 14h4" />
+      <path d="M10 18h4" />
+    </symbol>
+    <symbol id="i-check" viewBox="0 0 24 24">
+      <path d="M20 6 9 17l-5-5" />
+    </symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24">
+      <path d="M5 12h14" />
+      <path d="m12 5 7 7-7 7" />
+    </symbol>
+    <symbol id="i-down" viewBox="0 0 24 24">
+      <path d="M12 5v14" />
+      <path d="m19 12-7 7-7-7" />
+    </symbol>
+    <symbol id="i-layers" viewBox="0 0 24 24">
+      <path
+        d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"
+      />
+      <path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65" />
+      <path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65" />
+    </symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24">
+      <path
+        d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"
+      />
+      <path d="m9 12 2 2 4-4" />
+    </symbol>
+    <symbol id="i-user" viewBox="0 0 24 24">
+      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+      <circle cx="12" cy="7" r="4" />
+    </symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24">
+      <path d="M10.268 21a2 2 0 0 0 3.464 0" />
+      <path
+        d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"
+      />
+    </symbol>
+  </defs>
+</svg>
+
+<div class="banner">
+  <div class="wrap">
+    <b>Mockup v4 — Lucide icons, no emoji</b>
+    <span
+      >Same icon set your codebase already imports: Target, BarChart3,
+      TrendingUp, Map, Search, Sparkles, MapPin, FileText, Building2.</span
+    >
+  </div>
+</div>
+
+<nav class="nav">
+  <div class="wrap">
+    <div class="logo">
+      <div class="mark">P</div>
+      <div>
+        <b>Property<i>IQ</i></b
+        ><small>The IQ behind every market</small>
+      </div>
+    </div>
+    <div class="pillnav">
+      <a class="on" href="#">Home</a><a href="#">Markets</a
+      ><a href="#">Analyzer</a> <a href="#">Scores</a><a href="#">Pricing</a
+      ><a href="#">Blog</a>
+    </div>
+    <div class="navr">
+      <a class="ghost" href="#">Log in</a
+      ><a class="solid" href="#">Get Started Free</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ===== HERO ===== -->
+<section class="hero">
+  <canvas id="stars" aria-hidden="true"></canvas>
+  <div class="wrap">
+    <div>
+      <span class="eyebrow"><i></i>Forward-looking market scores</span>
+      <h1>
+        Know where a market is headed <span class="grad">before you buy.</span>
+      </h1>
+      <p class="sub">
+        Seattle scores 16. Buffalo scores 98. PropertyIQ distils price momentum,
+        days on market, and price cuts into one number per metro, county, and
+        ZIP — updated monthly, and calibrated so 50 is that market's own state
+        average.
+      </p>
+      <p class="voice">Built on twenty-five years of data, not vibes.</p>
+      <a class="cta" href="#"
+        >Start free — no credit card
+        <svg class="ic"><use href="#i-arrow" /></svg
+      ></a>
+      <p class="note">
+        <b>900+ metros, 3,000+ counties, 29,000+ ZIPs.</b> Scored monthly, with
+        history back to 2001.
+      </p>
+      <p class="voice">
+        Everyone else is still guessing off median list price.
+      </p>
+    </div>
+    <div class="rig">
+      <div class="monitor">
+        <div class="screen">
+          <div class="stab">
+            <span class="on">Market Score</span><span>Interactive Map</span
+            ><span>AI Report</span> <span>Forecast</span><span>Screener</span
+            ><span>Comparison</span><span>ZIP Drill-Down</span>
+          </div>
+          <div class="sbody">
+            <div class="bigrow">
+              <div class="huge">98</div>
+              <div>
+                <div class="lab">Strongest outlook</div>
+                <div class="nm">Buffalo, NY</div>
+                <div style="font-size: 11px; color: var(--body)">
+                  Very strong ↑ · Confidence A · vs New York State
+                </div>
+              </div>
+            </div>
+            <div class="kpis">
+              <div class="kpi">
+                <u>ZHVI 12&nbsp;mo</u><v style="color: var(--green)">+12.07%</v>
+              </div>
+              <div class="kpi">
+                <u>ZHVI 3&nbsp;mo</u><v style="color: var(--green)">+3.10%</v>
+              </div>
+              <div class="kpi"><u>Days on mkt</u><v>29</v></div>
+              <div class="kpi"><u>Price cuts</u><v>9.6%</v></div>
+            </div>
+            <div class="mini">
+              <div>
+                <span class="cy">Rochester, NY</span
+                ><span
+                  class="bar"
+                  style="background: var(--green-b); width: 97%"
+                ></span
+                ><span class="sc">99</span>
+              </div>
+              <div>
+                <span class="cy">Hartford, CT</span
+                ><span
+                  class="bar"
+                  style="background: var(--green-b); width: 90%"
+                ></span
+                ><span class="sc">91</span>
+              </div>
+              <div>
+                <span class="cy">Grand Rapids, MI</span
+                ><span
+                  class="bar"
+                  style="background: var(--green-b); width: 82%"
+                ></span
+                ><span class="sc">93</span>
+              </div>
+              <div>
+                <span class="cy">Columbus, OH</span
+                ><span
+                  class="bar"
+                  style="background: var(--amber); width: 50%"
+                ></span
+                ><span class="sc">50</span>
+              </div>
+              <div>
+                <span class="cy">Seattle, WA</span
+                ><span
+                  class="bar"
+                  style="background: var(--red); width: 16%"
+                ></span
+                ><span class="sc">16</span>
+              </div>
+            </div>
+          </div>
+          <div class="cap">
+            <b
+              ><span class="tile"
+                ><svg class="ic"><use href="#i-target" /></svg></span
+              >PropertyIQ Score</b
+            >
+            <div class="dots">
+              <i></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="neck"></div>
+      <div class="base"></div>
+      <div class="chips">
+        <span class="chip on"
+          ><span class="tile"
+            ><svg class="ic"><use href="#i-target" /></svg></span
+          >Market Score</span
+        >
+        <span class="chip"
+          ><span class="tile" style="background: #3949ab"
+            ><svg class="ic"><use href="#i-map" /></svg></span
+          >Interactive Map</span
+        >
+        <span class="chip"
+          ><span class="tile" style="background: #00c853"
+            ><svg class="ic"><use href="#i-file" /></svg></span
+          >AI Reports</span
+        >
+        <span class="chip"
+          ><span class="tile" style="background: #ff8f00"
+            ><svg class="ic"><use href="#i-trend" /></svg></span
+          >Forecasts</span
+        >
+        <span class="chip"
+          ><span class="tile" style="background: #5c6bc0"
+            ><svg class="ic"><use href="#i-search" /></svg></span
+          >Screener</span
+        >
+        <span class="chip"
+          ><span class="tile" style="background: #b3261e"
+            ><svg class="ic"><use href="#i-chart" /></svg></span
+          >Comparison</span
+        >
+        <span class="chip"
+          ><span class="tile" style="background: #00838f"
+            ><svg class="ic"><use href="#i-sparkles" /></svg></span
+          >MCP for Claude</span
+        >
+        <span class="chip"
+          ><span class="tile" style="background: #7c4dff"
+            ><svg class="ic"><use href="#i-layers" /></svg></span
+          >ZIP Drill-Down</span
+        >
+      </div>
+    </div>
+  </div>
+  <div class="proof">
+    Used by <b>investors, agents, and syndicators</b> who'd rather not learn a
+    market the expensive way
+  </div>
+</section>
+
+<!-- ===== PERSONA ===== -->
+<section class="grey">
+  <div class="wrap">
+    <div class="sechead">
+      <h2>The edge that shows up before the headlines do</h2>
+      <p>
+        Whether you're deploying your own capital or advising clients,
+        PropertyIQ replaces market intuition with a number you can defend.
+      </p>
+    </div>
+    <div class="toggle">
+      <span class="tg on"
+        ><svg class="ic"><use href="#i-trend" /></svg>For Investors</span
+      >
+      <span class="tg"
+        ><svg class="ic"><use href="#i-building" /></svg>For Agents &amp;
+        Syndicators</span
+      >
+    </div>
+    <div class="persona">
+      <div class="pgrid">
+        <div>
+          <div class="phead">
+            <span class="tile"
+              ><svg class="ic"><use href="#i-trend" /></svg
+            ></span>
+            <div>
+              <h3>For Investors</h3>
+              <span>Buy the trend, not the story.</span>
+            </div>
+          </div>
+          <p style="font-size: 15.5px">
+            By the time a market lands on a "best places to invest" list, the
+            momentum is already priced in. PropertyIQ ranks every market
+            cross-sectionally each month and calibrates the result against its
+            own state, so you can see which markets are turning while they're
+            still cheap.
+          </p>
+          <div class="prow">
+            <a class="bg" href="#"
+              >Start free <svg class="ic"><use href="#i-arrow" /></svg
+            ></a>
+            <a class="bo" href="#"
+              >See the methodology <svg class="ic"><use href="#i-down" /></svg
+            ></a>
+          </div>
+        </div>
+        <ul class="checks">
+          <li>
+            <span class="tile"
+              ><svg class="ic"><use href="#i-check" /></svg></span
+            >One 1–99 score per metro, county, and ZIP — updated monthly
+          </li>
+          <li>
+            <span class="tile"
+              ><svg class="ic"><use href="#i-check" /></svg></span
+            >Calibrated so 50 equals that market's own state average
+          </li>
+          <li>
+            <span class="tile"
+              ><svg class="ic"><use href="#i-check" /></svg></span
+            >Backtested to 2001; markets scoring 45–55 realised ≈0 excess return
+          </li>
+          <li>
+            <span class="tile"
+              ><svg class="ic"><use href="#i-check" /></svg></span
+            >Confidence grade on every score, so you know what the data supports
+          </li>
+          <li>
+            <span class="tile"
+              ><svg class="ic"><use href="#i-check" /></svg></span
+            >Drill metro → county → ZIP without changing tools
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== STEPS ===== -->
+<section>
+  <div class="wrap">
+    <div class="sechead">
+      <span class="kicker"
+        ><svg class="ic"><use href="#i-sparkles" /></svg>How it works</span
+      >
+      <h2>Three steps to a defensible market call</h2>
+    </div>
+    <div class="steps">
+      <div class="step" style="--sc: #7c4dff33">
+        <span class="tile" style="background: #f1ecff; color: #7c4dff"
+          ><svg class="ic"><use href="#i-pin" /></svg
+        ></span>
+        <h3>Pick a market</h3>
+        <p>
+          Search any metro, county, or ZIP — or start from the map and let the
+          colour tell you where to look.
+        </p>
+      </div>
+      <div class="arrow" aria-hidden="true">
+        <svg class="ic"><use href="#i-arrow" /></svg>
+      </div>
+      <div class="step" style="--sc: #00c85333">
+        <span
+          class="tile"
+          style="background: var(--green-soft); color: var(--green)"
+          ><svg class="ic"><use href="#i-target" /></svg
+        ></span>
+        <h3>Read the score</h3>
+        <p>
+          One number, four inputs, a confidence grade, and the state benchmark
+          it's measured against.
+        </p>
+      </div>
+      <div class="arrow" aria-hidden="true">
+        <svg class="ic"><use href="#i-arrow" /></svg>
+      </div>
+      <div class="step" style="--sc: #ff8f0033">
+        <span class="tile" style="background: #fff3e0; color: #e07b00"
+          ><svg class="ic"><use href="#i-file" /></svg
+        ></span>
+        <h3>Act before the crowd</h3>
+        <p>
+          Export a branded report, set an alert, or query it straight from
+          Claude over MCP.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FEATURES ===== -->
+<section class="grey">
+  <div class="wrap">
+    <div class="sechead">
+      <span class="kicker i"
+        ><svg class="ic"><use href="#i-shield" /></svg>Platform</span
+      >
+      <h2>Everything you need to judge a market like an allocator</h2>
+      <p>
+        Built for investors and agents alike — the full toolkit behind the
+        score.
+      </p>
+    </div>
+    <div class="fchips">
+      <span class="fchip on">Scoring &amp; Forecasts</span
+      ><span class="fchip">Maps &amp; Discovery</span
+      ><span class="fchip">AI &amp; Delivery</span>
+    </div>
+    <div class="fcards">
+      <div class="fcard">
+        <span
+          class="tile"
+          style="background: var(--green-soft); color: var(--green)"
+          ><svg class="ic"><use href="#i-target" /></svg
+        ></span>
+        <h3>PropertyIQ Score</h3>
+        <p>
+          Cross-sectional rank of price momentum, days on market, and price
+          cuts, recalibrated monthly against each market's state.
+        </p>
+        <span class="stat">33,000+ markets scored</span>
+      </div>
+      <div class="fcard">
+        <span
+          class="tile"
+          style="background: var(--indigo-soft); color: var(--indigo)"
+          ><svg class="ic"><use href="#i-chart" /></svg
+        ></span>
+        <h3>Validated backtest</h3>
+        <p>
+          Published accuracy, not marketing claims. Every score band's realised
+          excess return is measured and disclosed.
+        </p>
+        <span class="stat">History back to 2001</span>
+      </div>
+      <div class="fcard">
+        <span class="tile" style="background: #fff3e0; color: #e07b00"
+          ><svg class="ic"><use href="#i-trend" /></svg
+        ></span>
+        <h3>Home value forecasts</h3>
+        <p>
+          Twelve-month forward projections alongside the score, so momentum and
+          expectation sit side by side.
+        </p>
+        <span class="stat">Metro · county · ZIP</span>
+      </div>
+      <div class="fcard">
+        <span class="tile" style="background: #e0f7fa; color: #00838f"
+          ><svg class="ic"><use href="#i-map" /></svg
+        ></span>
+        <h3>Interactive map</h3>
+        <p>
+          Sixty-plus metrics rendered nationally with dynamic colour scales — no
+          fixed breakpoints hiding the spread.
+        </p>
+        <span class="stat">60+ metrics</span>
+      </div>
+      <div class="fcard">
+        <span class="tile" style="background: #f1ecff; color: #7c4dff"
+          ><svg class="ic"><use href="#i-search" /></svg
+        ></span>
+        <h3>Market screener</h3>
+        <p>
+          Filter the full universe on yield, momentum, supply, and score, then
+          drill into any result.
+        </p>
+        <span class="stat">Save &amp; alert on any screen</span>
+      </div>
+      <div class="fcard">
+        <span
+          class="tile"
+          style="background: var(--indigo-soft); color: var(--indigo)"
+          ><svg class="ic"><use href="#i-sparkles" /></svg
+        ></span>
+        <h3>MCP for Claude</h3>
+        <p>
+          Query every market directly from Claude or ChatGPT. Around fifty
+          tools, no copy-paste.
+        </p>
+        <span class="stat">~50 MCP tools</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== TESTIMONIALS ===== -->
+<section>
+  <div class="wrap">
+    <div class="sechead"><h2>What investors and agents are saying</h2></div>
+    <div class="tcards">
+      <div class="tcard">
+        <span class="lead"
+          ><svg class="ic"><use href="#i-sparkles" /></svg>Why they
+          switched</span
+        >
+        <q
+          >What sold me wasn't the dashboard, it was hooking PropertyIQ into
+          Claude through MCP. I can ask for a full market breakdown, migration
+          trends, rent-to-price ratios, economic indicators, and get back a
+          detailed narrative instead of a pile of raw numbers I have to
+          interpret myself. It's like having a research analyst on call.</q
+        >
+        <div class="who">
+          <div class="av">JK</div>
+          <div>
+            <div class="nm">Jordan K.</div>
+            <div class="rl">Real Estate Investor &amp; Data Nerd</div>
+          </div>
+        </div>
+      </div>
+      <div class="tcard">
+        <q
+          >I used to spend hours cross-referencing Zillow, Census data, and
+          spreadsheets before making an offer. Now I pull up a market's
+          PropertyIQ Score and know in seconds whether it fits my buy-and-hold
+          strategy. The deal grading caught a flip I almost overpaid for. This
+          tool paid for itself on the first deal.</q
+        >
+        <div class="who">
+          <div class="av">MT</div>
+          <div>
+            <div class="nm">Marcus T.</div>
+            <div class="rl">Real Estate Investor · Charlotte, NC</div>
+          </div>
+        </div>
+      </div>
+      <div class="tcard">
+        <q
+          >My clients expect data, not just gut feelings. PropertyIQ lets me
+          generate a buyer consultation brief in minutes — market comps, price
+          trends, neighborhood scores, all in one clean report I can hand
+          straight to a client. It's made me look sharper in every listing
+          presentation.</q
+        >
+        <div class="who">
+          <div class="av">DR</div>
+          <div>
+            <div class="nm">Dana R.</div>
+            <div class="rl">Broker Associate · Austin, TX</div>
+          </div>
+        </div>
+      </div>
+      <div class="tcard">
+        <q
+          >The A to F deal grading is what sold me. I can run a property through
+          the Deal Analyzer and immediately see if the numbers work for a BRRRR
+          or a flip — cash on cash, cap rate, the whole picture. I stopped
+          guessing and started closing deals I can actually defend to my
+          lender.</q
+        >
+        <div class="who">
+          <div class="av">CL</div>
+          <div>
+            <div class="nm">Chris L.</div>
+            <div class="rl">BRRRR Investor · Columbus, OH</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FINAL CTA ===== -->
+<section class="final">
+  <div class="wrap">
+    <h2>Ready to score your first market?</h2>
+    <p>Free account, no credit card required · Every account starts on Pro</p>
+    <a class="go" href="#"
+      >Get Started Free <svg class="ic"><use href="#i-arrow" /></svg
+    ></a>
+  </div>
+</section>
+
+<!-- ===== BLOG ===== -->
+<section class="grey">
+  <div class="wrap">
+    <div class="sechead">
+      <h2>The PropertyIQ Blog</h2>
+      <p>
+        Market breakdowns and rankings, generated from the same scored dataset
+        that powers the product.
+      </p>
+    </div>
+    <div class="posts">
+      <article class="post">
+        <div
+          class="thumb"
+          style="background: linear-gradient(140deg, #1a237e, #3949ab)"
+        >
+          <span class="tk"
+            ><svg class="ic"><use href="#i-target" /></svg>Ranked by PropertyIQ
+            Score</span
+          >
+          <div class="tt">Best markets for appreciation in 2026</div>
+          <div class="tb">
+            <span class="tv">99</span
+            ><span class="tl">Rochester, NY · forecast +4.3%</span>
+          </div>
+        </div>
+        <div class="post-body">
+          <h3>Best Real Estate Markets for Appreciation in 2026</h3>
+          <p class="desc">
+            The best appreciation markets share one trait: supply cannot catch
+            demand. Hartford, Rochester, and Grand Rapids lead a field dominated
+            by constrained Midwest and Northeast metros.
+          </p>
+          <div class="meta">
+            <span>April 11, 2026</span><span>·</span><span>9 min read</span>
+          </div>
+        </div>
+      </article>
+      <article class="post">
+        <div
+          class="thumb"
+          style="background: linear-gradient(140deg, #00701f, #00c853)"
+        >
+          <span class="tk"
+            ><svg class="ic"><use href="#i-chart" /></svg>Gross yield
+            leaders</span
+          >
+          <div class="tt">Where cash flow still clears the bar</div>
+          <div class="tb">
+            <span class="tv">8.4%</span
+            ><span class="tl">Cleveland, OH · gross yield</span>
+          </div>
+        </div>
+        <div class="post-body">
+          <h3>Best Cash Flow Real Estate Markets in 2026</h3>
+          <p class="desc">
+            Rent-to-price ratios that survive debt service, vacancy, and tax.
+            Twelve metros where the arithmetic still works at today's rates.
+          </p>
+          <div class="meta">
+            <span>March 28, 2026</span><span>·</span><span>7 min read</span>
+          </div>
+        </div>
+      </article>
+      <article class="post">
+        <div
+          class="thumb"
+          style="background: linear-gradient(140deg, #7b1e14, #b3261e)"
+        >
+          <span class="tk"
+            ><svg class="ic"><use href="#i-trend" /></svg>Head to head</span
+          >
+          <div class="tt">Austin vs Houston</div>
+          <div class="tb">
+            <span class="tv">38 / 62</span
+            ><span class="tl">PropertyIQ Score, June 2026</span>
+          </div>
+        </div>
+        <div class="post-body">
+          <h3>Austin vs Houston Real Estate in 2026</h3>
+          <p class="desc">
+            Two Texas metros, opposite momentum. The gap between them is wider
+            than the headlines suggest, and it has been widening for six
+            quarters.
+          </p>
+          <div class="meta">
+            <span>February 14, 2026</span><span>·</span><span>11 min read</span>
+          </div>
+        </div>
+      </article>
+      <article class="post">
+        <div
+          class="thumb"
+          style="background: linear-gradient(140deg, #004d40, #00838f)"
+        >
+          <span class="tk"
+            ><svg class="ic"><use href="#i-pin" /></svg>Under the radar</span
+          >
+          <div class="tt">Markets under $200K worth scoring</div>
+          <div class="tb">
+            <span class="tv">$186K</span
+            ><span class="tl">median · 14 metros</span>
+          </div>
+        </div>
+        <div class="post-body">
+          <h3>Best Real Estate Markets Under $200K in 2026</h3>
+          <p class="desc">
+            Cheap is not the same as undervalued. These fourteen metros clear
+            both the price filter and the momentum filter.
+          </p>
+          <div class="meta">
+            <span>January 30, 2026</span><span>·</span><span>8 min read</span>
+          </div>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ===== NOTES ===== -->
+<section class="notes">
+  <div class="wrap">
+    <h2>Notes</h2>
+    <ol>
+      <li>
+        <strong>Every emoji is gone.</strong> All icons are inline Lucide SVG at
+        <code>stroke-width:2</code>, <code>linecap:round</code> — drawn from the
+        set your codebase already imports: <code>Target</code>,
+        <code>BarChart3</code>, <code>TrendingUp</code>, <code>Map</code>,
+        <code>Search</code>, <code>Sparkles</code>, <code>MapPin</code>,
+        <code>FileText</code>, <code>Building2</code>, <code>Check</code>,
+        <code>ArrowRight</code>, <code>Layers</code>, <code>ShieldCheck</code>.
+      </li>
+      <li>
+        <strong>Defined once as an SVG sprite</strong> and referenced with
+        <code>&lt;use&gt;</code>. In the real build these are just
+        <code>lucide-react</code> components, so nothing here needs
+        hand-maintaining.
+      </li>
+      <li>
+        <strong>Icons sit in rounded tinted tiles</strong>, matching how
+        PropertyWiz treats theirs and how your pricing page already renders
+        Lucide icons in containers.
+      </li>
+      <li>
+        <strong>Section order mirrors theirs</strong>: hero → persona toggle →
+        three steps → platform features → testimonials → final CTA.
+      </li>
+      <li>
+        <strong>One section-header formula everywhere</strong>: coloured
+        uppercase kicker with a small icon → big centred H2 → grey subhead →
+        chips.
+      </li>
+      <li>
+        <strong>Two accents, split by role.</strong> Indigo owns nav and product
+        chrome; green owns persona, steps, and the closing CTA — their
+        indigo/teal division.
+      </li>
+      <li>
+        <strong>Four real testimonials, verbatim.</strong> Two columns rather
+        than their three-up, because your quotes run longer than theirs. Jordan
+        K. leads and carries a "Why they switched" tag — it's the only quote
+        about MCP, which is the capability no competitor has.
+      </li>
+      <li>
+        <strong>Blog is a two-column grid with 16:9 thumbnails.</strong> These
+        are generated data cards — headline number over a branded gradient —
+        which your content-pipeline Chromium renderer can produce for all 77
+        posts.
+      </li>
+    </ol>
+  </div>
+</section>
+
+<script>
+  (function () {
+    var c = document.getElementById("stars");
+    if (!c) return;
+    var x = c.getContext("2d"),
+      pts = [],
+      W = 0,
+      H = 0;
+    function dark() {
+      var t = document.documentElement.getAttribute("data-theme");
+      if (t) return t === "dark";
+      return window.matchMedia("(prefers-color-scheme: dark)").matches;
+    }
+    function size() {
+      var r = c.parentElement.getBoundingClientRect();
+      W = c.width = r.width;
+      H = c.height = r.height;
+      pts = [];
+      var n = Math.round((W * H) / 26000);
+      for (var i = 0; i < n; i++)
+        pts.push({
+          x: Math.random() * W,
+          y: Math.random() * H,
+          r: Math.random() * 1.6 + 0.7,
+        });
+      draw();
+    }
+    function draw() {
+      if (!W || !H) return;
+      x.clearRect(0, 0, W, H);
+      var d = dark(),
+        dot = d ? "rgba(140,154,232,.42)" : "rgba(57,73,171,.30)",
+        ln = d ? "rgba(140,154,232,.13)" : "rgba(57,73,171,.10)";
+      x.strokeStyle = ln;
+      x.lineWidth = 1;
+      for (var i = 0; i < pts.length; i++) {
+        for (var j = i + 1; j < pts.length; j++) {
+          var dx = pts[i].x - pts[j].x,
+            dy = pts[i].y - pts[j].y;
+          if (dx * dx + dy * dy < 20000) {
+            x.beginPath();
+            x.moveTo(pts[i].x, pts[i].y);
+            x.lineTo(pts[j].x, pts[j].y);
+            x.stroke();
+          }
+        }
+      }
+      x.fillStyle = dot;
+      for (var k = 0; k < pts.length; k++) {
+        x.beginPath();
+        x.arc(pts[k].x, pts[k].y, pts[k].r, 0, 6.284);
+        x.fill();
+      }
+    }
+    size();
+    window.addEventListener("resize", size);
+    new MutationObserver(draw).observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme"],
+    });
+    window
+      .matchMedia("(prefers-color-scheme: dark)")
+      .addEventListener("change", draw);
+  })();
+</script>

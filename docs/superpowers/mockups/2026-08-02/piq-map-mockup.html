@@ -1,0 +1,340 @@
+<title>PropertyIQ — Map Chrome Restyle</title>
+<style>
+  :root{
+    --canvas:#F5F6FA; --white:#FFFFFF; --line:#E4E7F2; --soft:#EDEFF7;
+    --ink:#12141D; --body:#5B6076; --muted:#8B91A8;
+    --indigo:#3949AB; --indigo-soft:#EEF0FB;
+    --green:#00A84A; --green-b:#00C853; --green-soft:#E6F8EE;
+    --amber:#E07B00; --amber-soft:#FFF3E0; --red:#B3261E;
+    --violet:#7C4DFF; --violet-soft:#F1ECFF; --teal:#00838F; --teal-soft:#E0F7FA;
+    --bar:#151828; --bar-mute:#9AA1BA; --bar-line:#272C40;
+    --sh:0 1px 2px rgba(18,20,29,.05),0 2px 8px rgba(18,20,29,.04);
+    --sans:"Segoe UI Variable Display",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:"Roboto Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --c1:#1E3A8A; --c2:#3B82F6; --c3:#22C55E; --c4:#EAB308; --c5:#F97316; --c6:#EF4444; --c7:#B91C1C;
+  }
+  @media (prefers-color-scheme:dark){:root{
+    --canvas:#0F1119; --white:#1A1D29; --line:#2A2F42; --soft:#232838;
+    --ink:#EDEFF7; --body:#A5ABC2; --muted:#797F96;
+    --indigo:#8C9AE8; --indigo-soft:#232841; --green:#3DD87A; --green-soft:#17301F;
+    --amber:#FFB74D; --amber-soft:#33280F; --violet:#B39DFF; --violet-soft:#241F38;
+    --teal:#4DD0E1; --teal-soft:#13292E;
+    --bar:#0A0C14; --bar-line:#1E2333; --sh:0 1px 2px rgba(0,0,0,.5),0 2px 8px rgba(0,0,0,.3);}}
+  :root[data-theme="dark"]{
+    --canvas:#0F1119; --white:#1A1D29; --line:#2A2F42; --soft:#232838;
+    --ink:#EDEFF7; --body:#A5ABC2; --muted:#797F96;
+    --indigo:#8C9AE8; --indigo-soft:#232841; --green:#3DD87A; --green-soft:#17301F;
+    --amber:#FFB74D; --amber-soft:#33280F; --violet:#B39DFF; --violet-soft:#241F38;
+    --teal:#4DD0E1; --teal-soft:#13292E;
+    --bar:#0A0C14; --bar-line:#1E2333; --sh:0 1px 2px rgba(0,0,0,.5),0 2px 8px rgba(0,0,0,.3);}
+  :root[data-theme="light"]{
+    --canvas:#F5F6FA; --white:#FFFFFF; --line:#E4E7F2; --soft:#EDEFF7;
+    --ink:#12141D; --body:#5B6076; --muted:#8B91A8;
+    --indigo:#3949AB; --indigo-soft:#EEF0FB; --green:#00A84A; --green-soft:#E6F8EE;
+    --amber:#E07B00; --amber-soft:#FFF3E0; --violet:#7C4DFF; --violet-soft:#F1ECFF;
+    --teal:#00838F; --teal-soft:#E0F7FA;
+    --bar:#151828; --bar-line:#272C40; --sh:0 1px 2px rgba(18,20,29,.05),0 2px 8px rgba(18,20,29,.04);}
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--canvas);color:var(--body);font-family:var(--sans);font-size:14px;
+    line-height:1.5;-webkit-font-smoothing:antialiased}
+  h1,h2,h3,h4{margin:0;color:var(--ink);font-weight:700;letter-spacing:-.02em}
+  p{margin:0}
+  .ic{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;
+    stroke-linejoin:round;display:block;flex:none}
+  .n{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+  .lab{font-size:9.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--muted)}
+  .tile{border-radius:8px;display:grid;place-items:center;flex:none}
+
+  /* app bar — identical to analyzer / screener / market */
+  .bar{background:var(--bar);border-bottom:1px solid var(--bar-line)}
+  .bar .in{display:flex;align-items:center;gap:18px;padding:0 20px;height:56px}
+  .brand{display:flex;align-items:center;gap:9px;color:#fff;font-weight:700;font-size:16px}
+  .brand .m{width:28px;height:28px;border-radius:8px;background:var(--indigo);display:grid;
+    place-items:center;font-size:13.5px;font-weight:800}
+  .brand i{color:#8C9AE8;font-style:normal}
+  .tabs{display:flex;gap:3px}
+  .tabs a{display:flex;align-items:center;gap:7px;padding:7px 12px;border-radius:9px;
+    color:var(--bar-mute);font-size:12.5px;font-weight:600;text-decoration:none}
+  .tabs a .tile{width:18px;height:18px;border-radius:6px;color:#fff}
+  .tabs a .ic{font-size:10.5px}
+  .tabs a.on{background:var(--indigo);color:#fff}
+  .tabs a.on .tile{background:rgba(255,255,255,.25)}
+  .barr{margin-left:auto;display:flex;align-items:center;gap:11px}
+  .tier{padding:4px 11px;border-radius:999px;background:rgba(255,255,255,.1);color:#fff;font-size:11px;font-weight:700}
+  .barr .ib{width:29px;height:29px;border-radius:8px;display:grid;place-items:center;color:var(--bar-mute)}
+  .barr .ib .ic{font-size:15px}
+  @media(max-width:1200px){.tabs .lb{display:none}}
+
+  /* ONE control bar */
+  .ctl{background:var(--white);border-bottom:1px solid var(--line);padding:11px 20px;
+    display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .search{flex:1;min-width:200px;max-width:340px;display:flex;align-items:center;gap:9px;
+    border:1px solid var(--line);border-radius:10px;padding:9px 13px;background:var(--canvas)}
+  .search .ic{font-size:15px;color:var(--muted)}
+  .search input{border:0;background:transparent;flex:1;min-width:0;font:inherit;font-size:13.5px;color:var(--ink)}
+  .search input:focus{outline:none}
+  .metricbtn{display:flex;align-items:center;gap:9px;border:1px solid var(--indigo);background:var(--indigo-soft);
+    border-radius:10px;padding:7px 13px;cursor:pointer;font:inherit}
+  .metricbtn .tile{width:24px;height:24px;background:var(--indigo);color:#fff}
+  .metricbtn .ic{font-size:13px}
+  .metricbtn .tx{text-align:left;line-height:1.15}
+  .metricbtn .tx b{display:block;font-size:13.5px;color:var(--ink);font-weight:700}
+  .metricbtn .tx span{font-size:10px;color:var(--muted)}
+  .metricbtn .cv{font-size:14px;color:var(--indigo)}
+  .seg{display:flex;gap:2px;background:var(--canvas);border-radius:10px;padding:3px;border:1px solid var(--line)}
+  .seg button{padding:7px 12px;border:0;border-radius:8px;background:transparent;color:var(--body);
+    font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px}
+  .seg button.on{background:var(--indigo);color:#fff}
+  .seg.ghost button.on{background:var(--white);color:var(--indigo);box-shadow:var(--sh)}
+  .seg .ic{font-size:14px}
+  .ctlr{margin-left:auto;display:flex;align-items:center;gap:9px}
+
+  /* body */
+  .shell{display:grid;grid-template-columns:1fr;height:calc(100vh - 56px - 59px);min-height:640px}
+  @media(min-width:1080px){.shell{grid-template-columns:296px minmax(0,1fr)}}
+
+  /* sidebar */
+  .side{background:var(--white);border-right:1px solid var(--line);overflow:auto;padding:14px}
+  .card{background:var(--white);border:1px solid var(--line);border-radius:12px;box-shadow:var(--sh)}
+  .nudge{background:var(--indigo-soft);border:1px solid var(--line);border-radius:12px;padding:13px;margin-bottom:14px;position:relative}
+  .nudge h4{font-size:13px;margin-bottom:2px}
+  .nudge p{font-size:11.5px;color:var(--muted);margin-bottom:9px}
+  .nudge a{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:var(--indigo);
+    text-decoration:none;padding:5px 0}
+  .nudge a .ic{font-size:13px}
+  .nudge .x{position:absolute;top:10px;right:10px;color:var(--muted)}
+  .nudge .x .ic{font-size:13px}
+  .persona{display:flex;gap:2px;background:var(--canvas);border-radius:10px;padding:3px;
+    border:1px solid var(--line);margin-bottom:14px}
+  .persona button{flex:1;padding:7px;border:0;border-radius:8px;background:transparent;color:var(--body);
+    font:inherit;font-size:12.5px;font-weight:600;cursor:pointer}
+  .persona button.on{background:var(--white);color:var(--indigo);box-shadow:var(--sh)}
+  .scorecard{padding:14px;margin-bottom:16px}
+  .sc1{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .sc1 h4{font-size:13px;display:flex;align-items:center;gap:7px}
+  .sc1 .tile{width:22px;height:22px;background:var(--indigo-soft);color:var(--indigo)}
+  .sc1 .ic{font-size:12px}
+  .sc1 a{font-size:11px;color:var(--indigo);text-decoration:none;font-weight:600}
+  .scbody{display:flex;align-items:center;gap:13px}
+  .ring{width:56px;height:56px;position:relative;flex:none}
+  .ring svg{transform:rotate(-90deg);display:block}
+  .ring b{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--mono);
+    font-size:18px;font-weight:700;color:var(--ink)}
+  .scbody .t{font-size:14px;font-weight:700;color:var(--ink)}
+  .scbody .s{font-size:11.5px;color:var(--muted)}
+  .cats{display:flex;flex-direction:column;gap:1px}
+  .cat{display:flex;align-items:center;gap:11px;padding:10px 8px;border-radius:9px;cursor:pointer;border:0;
+    background:transparent;font:inherit;width:100%;text-align:left}
+  .cat:hover{background:var(--canvas)}
+  .cat.on{background:var(--indigo-soft)}
+  .cat .tile{width:26px;height:26px;border-radius:8px}
+  .cat .ic{font-size:13px}
+  .cat .tx{flex:1;min-width:0}
+  .cat .tx b{display:block;font-size:12.5px;color:var(--ink);font-weight:600}
+  .cat .tx span{display:block;font-size:10.5px;color:var(--muted)}
+  .cat .cv{font-size:14px;color:var(--muted)}
+  .explore{display:flex;align-items:center;justify-content:space-between;margin-top:14px;padding:11px 8px;
+    border-top:1px solid var(--line);font-size:12.5px;font-weight:600;color:var(--indigo);
+    text-decoration:none}
+  .explore .ic{font-size:14px}
+
+  /* map area */
+  .mapzone{position:relative;display:flex;flex-direction:column;background:var(--soft);min-width:0}
+  .maphead{display:flex;align-items:center;gap:14px;padding:11px 16px;background:var(--white);
+    border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .maphead h2{font-size:14px}
+  .maphead .sub{font-size:11.5px;color:var(--muted)}
+  .scale{margin-left:auto;display:flex;align-items:center;gap:9px}
+  .swatches{display:flex;gap:2px}
+  .swatches i{width:24px;height:9px;border-radius:2px;display:block}
+  .scale .e{font-family:var(--mono);font-size:11px;color:var(--muted)}
+  .nd{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)}
+  .ndbox{width:12px;height:12px;border-radius:3px;border:1px dashed var(--line);background:var(--soft)}
+
+  .canvas{flex:1;position:relative;display:grid;place-items:center;overflow:hidden;
+    background:linear-gradient(160deg,#E8EDF4,#DDE4EE)}
+  :root[data-theme="dark"] .canvas{background:linear-gradient(160deg,#182030,#121826)}
+  @media(prefers-color-scheme:dark){.canvas{background:linear-gradient(160deg,#182030,#121826)}}
+  .canvas .stand{text-align:center;max-width:420px;padding:24px}
+  .canvas .stand .tile{width:46px;height:46px;border-radius:14px;background:var(--indigo);color:#fff;margin:0 auto 14px}
+  .canvas .stand .ic{font-size:22px}
+  .canvas .stand h3{font-size:15px;margin-bottom:7px}
+  .canvas .stand p{font-size:12.5px;color:var(--body)}
+  .canvas .stand code{font-family:var(--mono);font-size:11.5px;background:var(--white);
+    border:1px solid var(--line);border-radius:4px;padding:1px 5px;color:var(--ink)}
+  .attrib{position:absolute;right:10px;bottom:8px;font-size:10.5px;color:var(--muted)}
+  .zoom{position:absolute;right:12px;top:12px;display:flex;flex-direction:column;gap:1px;
+    background:var(--white);border:1px solid var(--line);border-radius:9px;overflow:hidden;box-shadow:var(--sh)}
+  .zoom button{width:30px;height:30px;border:0;background:transparent;color:var(--ink);cursor:pointer;
+    display:grid;place-items:center;font:inherit}
+  .zoom button + button{border-top:1px solid var(--line)}
+  .zoom .ic{font-size:14px}
+
+  .footstrip{display:flex;align-items:center;gap:16px;padding:9px 16px;background:var(--white);
+    border-top:1px solid var(--line);font-size:11.5px;flex-wrap:wrap}
+  .footstrip a{color:var(--indigo);text-decoration:none;font-weight:600}
+  .footstrip .dis{color:var(--muted);margin-left:auto}
+
+  .banner{background:var(--indigo-soft);border-bottom:1px solid var(--line);padding:11px 20px;
+    display:flex;flex-wrap:wrap;gap:5px 14px;align-items:baseline}
+  .banner b{color:var(--ink);font-size:13px} .banner span{font-size:12px;color:var(--muted)}
+  .notes{padding:30px 22px 56px;max-width:1000px}
+  .notes h2{font-size:18px;margin-bottom:14px}
+  .notes ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:11px;font-size:13.5px}
+  .notes strong{color:var(--ink)}
+  .notes code{font-family:var(--mono);font-size:12px;background:var(--white);border:1px solid var(--line);
+    border-radius:4px;padding:1px 5px;color:var(--ink)}
+  .keep{border-left:3px solid var(--green);background:var(--green-soft);padding:13px 16px;
+    border-radius:0 10px 10px 0;margin:16px 0;font-size:13.5px}
+  .keep b{color:var(--ink)}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="i-home" viewBox="0 0 24 24"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+<symbol id="i-map" viewBox="0 0 24 24"><path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z"/><path d="M15 5.764v15"/><path d="M9 3.236v15"/></symbol>
+<symbol id="i-calc" viewBox="0 0 24 24"><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="16" x2="16" y1="14" y2="18"/><path d="M16 10h.01"/><path d="M12 10h.01"/><path d="M8 10h.01"/><path d="M12 14h.01"/><path d="M8 14h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+<symbol id="i-file" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></symbol>
+<symbol id="i-grid" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/><path d="M15 3v18"/></symbol>
+<symbol id="i-layers" viewBox="0 0 24 24"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/></symbol>
+<symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></symbol>
+<symbol id="i-chev" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+<symbol id="i-chevd" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+<symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+<symbol id="i-dollar" viewBox="0 0 24 24"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></symbol>
+<symbol id="i-zap" viewBox="0 0 24 24"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></symbol>
+<symbol id="i-trend" viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 18"/><polyline points="16 7 22 7 22 13"/></symbol>
+<symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+<symbol id="i-chart" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></symbol>
+<symbol id="i-build" viewBox="0 0 24 24"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/></symbol>
+<symbol id="i-sparkles" viewBox="0 0 24 24"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
+<symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+<symbol id="i-bell" viewBox="0 0 24 24"><path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/></symbol>
+<symbol id="i-user" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+</defs></svg>
+
+<div class="banner"><b>Map — chrome restyle only</b>
+  <span>The Mapbox canvas, choropleth, colour scale, and labels are untouched. Everything around them matches the other tools.</span></div>
+
+<div class="bar"><div class="in">
+  <div class="brand"><div class="m">P</div>Property<i>IQ</i></div>
+  <nav class="tabs">
+    <a href="#"><span class="tile" style="background:#3949AB"><svg class="ic"><use href="#i-home"/></svg></span><span class="lb">Dashboard</span></a>
+    <a class="on" href="#"><span class="tile"><svg class="ic"><use href="#i-map"/></svg></span><span class="lb">Map</span></a>
+    <a href="#"><span class="tile" style="background:#3949AB"><svg class="ic"><use href="#i-calc"/></svg></span><span class="lb">Analyzer</span></a>
+    <a href="#"><span class="tile" style="background:#7C4DFF"><svg class="ic"><use href="#i-search"/></svg></span><span class="lb">Screener</span></a>
+    <a href="#"><span class="tile" style="background:#00C853"><svg class="ic"><use href="#i-file"/></svg></span><span class="lb">Reports</span></a>
+  </nav>
+  <div class="barr"><span class="tier">Pro</span>
+    <span class="ib"><svg class="ic"><use href="#i-bell"/></svg></span>
+    <span class="ib"><svg class="ic"><use href="#i-user"/></svg></span></div>
+</div></div>
+
+<div class="ctl">
+  <div class="search"><svg class="ic"><use href="#i-search"/></svg><input placeholder="Search city, ZIP, or county"></div>
+  <button class="metricbtn"><span class="tile"><svg class="ic"><use href="#i-layers"/></svg></span>
+    <span class="tx"><b>Median home value</b><span>Pricing &amp; deals</span></span>
+    <svg class="ic cv"><use href="#i-chevd"/></svg></button>
+  <div class="seg"><button>National</button><button class="on">State</button><button>Metro</button>
+    <button>County</button><button>City</button><button>ZIP</button></div>
+  <div class="ctlr">
+    <div class="seg ghost"><button class="on"><svg class="ic"><use href="#i-map"/></svg>Map</button>
+      <button><svg class="ic"><use href="#i-grid"/></svg>Table</button></div>
+  </div>
+</div>
+
+<div class="shell">
+  <aside class="side">
+    <div class="nudge">
+      <span class="x"><svg class="ic"><use href="#i-x"/></svg></span>
+      <h4>Make the most of Pro</h4>
+      <p>2 features you haven't tried yet</p>
+      <a href="#"><svg class="ic"><use href="#i-sparkles"/></svg>Generate an AI market report</a>
+      <a href="#"><svg class="ic"><use href="#i-calc"/></svg>Analyze a specific property</a>
+    </div>
+
+    <div class="persona"><button class="on">Homebuyer/Renter</button><button>Investor</button></div>
+
+    <div class="card scorecard">
+      <div class="sc1"><h4><span class="tile"><svg class="ic"><use href="#i-target"/></svg></span>PropertyIQ Score</h4>
+        <a href="#">How it's scored</a></div>
+      <div class="scbody">
+        <div class="ring"><svg width="56" height="56" viewBox="0 0 56 56">
+          <circle cx="28" cy="28" r="23" fill="none" stroke="var(--line)" stroke-width="6" stroke-dasharray="3 4"/>
+          </svg><b style="font-size:15px;color:var(--muted)">—</b></div>
+        <div><div class="t">Not scored at state level</div>
+          <div class="s">Scores run at metro, county, and ZIP. Switch geography or search a market.</div></div>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:12px">
+        <button class="jump-geo" style="flex:1;padding:7px;border:1px solid var(--indigo);border-radius:8px;background:var(--white);color:var(--indigo);font:inherit;font-size:12px;font-weight:700;cursor:pointer">Metro</button>
+        <button class="jump-geo" style="flex:1;padding:7px;border:1px solid var(--line);border-radius:8px;background:var(--white);color:var(--body);font:inherit;font-size:12px;font-weight:600;cursor:pointer">County</button>
+        <button class="jump-geo" style="flex:1;padding:7px;border:1px solid var(--line);border-radius:8px;background:var(--white);color:var(--body);font:inherit;font-size:12px;font-weight:600;cursor:pointer">ZIP</button>
+      </div>
+    </div>
+
+    <div class="cats">
+      <button class="cat"><span class="tile" style="background:var(--green-soft);color:var(--green)"><svg class="ic"><use href="#i-dollar"/></svg></span>
+        <span class="tx"><b>Affordability</b><span>Can I afford to live here?</span></span><svg class="ic cv"><use href="#i-chev"/></svg></button>
+      <button class="cat"><span class="tile" style="background:var(--amber-soft);color:var(--amber)"><svg class="ic"><use href="#i-zap"/></svg></span>
+        <span class="tx"><b>Market Competition</b><span>Should I act fast?</span></span><svg class="ic cv"><use href="#i-chev"/></svg></button>
+      <button class="cat on"><span class="tile" style="background:var(--indigo-soft);color:var(--indigo)"><svg class="ic"><use href="#i-trend"/></svg></span>
+        <span class="tx"><b>Pricing &amp; Deals</b><span>Are prices going up or down?</span></span><svg class="ic cv"><use href="#i-chevd"/></svg></button>
+      <button class="cat"><span class="tile" style="background:var(--violet-soft);color:var(--violet)"><svg class="ic"><use href="#i-users"/></svg></span>
+        <span class="tx"><b>Area Profile</b><span>Who lives here?</span></span><svg class="ic cv"><use href="#i-chev"/></svg></button>
+      <button class="cat"><span class="tile" style="background:var(--teal-soft);color:var(--teal)"><svg class="ic"><use href="#i-chart"/></svg></span>
+        <span class="tx"><b>Local Economy</b><span>How strong is the job market?</span></span><svg class="ic cv"><use href="#i-chev"/></svg></button>
+      <button class="cat"><span class="tile" style="background:var(--amber-soft);color:var(--amber)"><svg class="ic"><use href="#i-build"/></svg></span>
+        <span class="tx"><b>New Construction</b><span>What new homes are being built?</span></span><svg class="ic cv"><use href="#i-chev"/></svg></button>
+      <button class="cat"><span class="tile" style="background:var(--green-soft);color:var(--green)"><svg class="ic"><use href="#i-sparkles"/></svg></span>
+        <span class="tx"><b>PropertyIQ Scores</b><span>AI-powered market analysis</span></span><svg class="ic cv"><use href="#i-chev"/></svg></button>
+    </div>
+
+    <a class="explore" href="#">Explore data points <svg class="ic"><use href="#i-chev"/></svg></a>
+  </aside>
+
+  <div class="mapzone">
+    <div class="maphead">
+      <div><h2>Median home value by state</h2><div class="sub">June 2026 · Zillow ZHVI</div></div>
+      <div class="scale">
+        <span class="e">$183K</span>
+        <span class="swatches"><i style="background:var(--c1)"></i><i style="background:var(--c2)"></i><i style="background:var(--c3)"></i><i style="background:var(--c4)"></i><i style="background:var(--c5)"></i><i style="background:var(--c6)"></i><i style="background:var(--c7)"></i></span>
+        <span class="e">$673K+</span>
+        <span class="nd"><span class="ndbox"></span>No data</span>
+      </div>
+    </div>
+
+    <div class="canvas">
+      <div class="zoom"><button><svg class="ic"><use href="#i-plus"/></svg></button><button><svg class="ic"><use href="#i-minus"/></svg></button></div>
+      <div class="stand">
+        <span class="tile"><svg class="ic"><use href="#i-map"/></svg></span>
+        <h3>Mapbox canvas — unchanged</h3>
+        <p>The choropleth, the seven-colour scale, state labels and values, zoom and pan all stay exactly as they are today. Nothing inside <code>app/(app)/map</code>'s Mapbox layer is touched — only the chrome around it.</p>
+      </div>
+      <span class="attrib">© Mapbox © OpenStreetMap</span>
+    </div>
+
+    <div class="footstrip">
+      <a href="#">Methodology</a><a href="#">Data Sources</a><a href="#">About</a>
+      <span class="dis">Data is provided for informational purposes only.</span>
+    </div>
+  </div>
+</div>
+
+<section class="notes">
+  <h2>What changes, and what doesn't</h2>
+
+  <div class="keep"><b>Untouched:</b> the Mapbox canvas, choropleth fills, the seven-colour violet-to-red scale, the baked-on state labels and values, zoom and pan. That includes the East Coast label stack — nine states rendering as a text column in the Atlantic is Mapbox label placement, so it stays with the rest of the map.</div>
+
+  <ol>
+    <li><strong>Two nav bars became one.</strong> The light top nav is replaced by the same dark app bar the analyzer, screener, reports, and market pages use. The breadcrumb, hamburger, search, and geography pills collapse into one control row.</li>
+    <li><strong>The left icon rail is gone.</strong> Home / Maps / Analyzer / Markets / Graphs / Reports / About Us / Pricing duplicated the top nav — two navigation models competing on one screen. Removing it returns 64px and leaves a single way to move between tools.</li>
+    <li><strong>The metric picker moved into the bar.</strong> One button showing the active metric and its category, opening the full catalogue. The seven categories and their question subtitles all survive in the sidebar.</li>
+    <li><strong>The legend is docked.</strong> It floated on the map over the Pacific with a "No data available" checkbox inside it. It is now a compact scale in the map header, with the no-data key on the same line.</li>
+    <li><strong>The score card says why it is empty, and offers a way out.</strong> It currently shows a grey ring reading "Select a region to see scores", which is ambiguous at the State level — a user can click every state on the map and never get a score. There is no state-level PropertyIQ Score: the geography enum is metro, county, and ZIP, and 50 is the <em>calibration point</em> against a state average, not a score a state has. The card now states that plainly and offers the three geography levels that are scored. At Metro, County, or ZIP it behaves as it does today and fills on selection.</li>
+    <li><strong>Table View stopped floating.</strong> It was an orphan pill in the bottom-right corner; it is now a Map/Table segmented control in the bar, next to the thing it switches.</li>
+    <li><strong>Sidebar categories use the shared row pattern</strong> — coloured Lucide icon tile, label, question subtitle — the same unit the other tools use for grouped navigation. Same content, same order.</li>
+    <li><strong>The footer strip is kept</strong>, restyled to match. Methodology, Data Sources, About, and the disclaimer all remain.</li>
+  </ol>
+</section>

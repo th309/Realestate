@@ -1,0 +1,2063 @@
+<title>PropertyIQ — Deal Analyzer, Restyled</title>
+<style>
+  :root {
+    --canvas: #f5f6fa;
+    --white: #ffffff;
+    --line: #e4e7f2;
+    --soft: #edeff7;
+    --ink: #12141d;
+    --body: #5b6076;
+    --muted: #8b91a8;
+    --indigo: #3949ab;
+    --indigo-soft: #eef0fb;
+    --green: #00a84a;
+    --green-b: #00c853;
+    --green-soft: #e6f8ee;
+    --red: #b3261e;
+    --red-soft: #fdecea;
+    --amber: #e07b00;
+    --amber-soft: #fff3e0;
+    --violet: #7c4dff;
+    --violet-soft: #f1ecff;
+    --teal: #00838f;
+    --teal-soft: #e0f7fa;
+    --bar: #151828;
+    --bar-mute: #9aa1ba;
+    --bar-line: #272c40;
+    --sh: 0 1px 2px rgba(18, 20, 29, 0.05), 0 2px 8px rgba(18, 20, 29, 0.04);
+    --sans:
+      "Segoe UI Variable Display", -apple-system, BlinkMacSystemFont,
+      "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono:
+      "Roboto Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --canvas: #0f1119;
+      --white: #1a1d29;
+      --line: #2a2f42;
+      --soft: #232838;
+      --ink: #edeff7;
+      --body: #a5abc2;
+      --muted: #797f96;
+      --indigo: #8c9ae8;
+      --indigo-soft: #232841;
+      --green: #3dd87a;
+      --green-soft: #17301f;
+      --red: #f2b8b5;
+      --red-soft: #33201f;
+      --amber: #ffb74d;
+      --amber-soft: #33280f;
+      --violet: #b39dff;
+      --violet-soft: #241f38;
+      --teal: #4dd0e1;
+      --teal-soft: #13292e;
+      --bar: #0a0c14;
+      --bar-line: #1e2333;
+      --sh: 0 1px 2px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+  }
+  :root[data-theme="dark"] {
+    --canvas: #0f1119;
+    --white: #1a1d29;
+    --line: #2a2f42;
+    --soft: #232838;
+    --ink: #edeff7;
+    --body: #a5abc2;
+    --muted: #797f96;
+    --indigo: #8c9ae8;
+    --indigo-soft: #232841;
+    --green: #3dd87a;
+    --green-soft: #17301f;
+    --red: #f2b8b5;
+    --red-soft: #33201f;
+    --amber: #ffb74d;
+    --amber-soft: #33280f;
+    --violet: #b39dff;
+    --violet-soft: #241f38;
+    --teal: #4dd0e1;
+    --teal-soft: #13292e;
+    --bar: #0a0c14;
+    --bar-line: #1e2333;
+    --sh: 0 1px 2px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+  :root[data-theme="light"] {
+    --canvas: #f5f6fa;
+    --white: #ffffff;
+    --line: #e4e7f2;
+    --soft: #edeff7;
+    --ink: #12141d;
+    --body: #5b6076;
+    --muted: #8b91a8;
+    --indigo: #3949ab;
+    --indigo-soft: #eef0fb;
+    --green: #00a84a;
+    --green-soft: #e6f8ee;
+    --red: #b3261e;
+    --red-soft: #fdecea;
+    --amber: #e07b00;
+    --amber-soft: #fff3e0;
+    --violet: #7c4dff;
+    --violet-soft: #f1ecff;
+    --teal: #00838f;
+    --teal-soft: #e0f7fa;
+    --bar: #151828;
+    --bar-line: #272c40;
+    --sh: 0 1px 2px rgba(18, 20, 29, 0.05), 0 2px 8px rgba(18, 20, 29, 0.04);
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+    background: var(--canvas);
+    color: var(--body);
+    font-family: var(--sans);
+    font-size: 14.5px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    margin: 0;
+    color: var(--ink);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  p {
+    margin: 0;
+  }
+  .ic {
+    width: 1em;
+    height: 1em;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    display: block;
+    flex: none;
+  }
+  .n {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+  .lab {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .card {
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    box-shadow: var(--sh);
+  }
+  .tile {
+    border-radius: 9px;
+    display: grid;
+    place-items: center;
+    flex: none;
+  }
+
+  /* app bar */
+  .bar {
+    background: var(--bar);
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    border-bottom: 1px solid var(--bar-line);
+  }
+  .bar .in {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 0 22px;
+    height: 58px;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    color: #fff;
+    font-weight: 700;
+    font-size: 16.5px;
+  }
+  .brand .m {
+    width: 29px;
+    height: 29px;
+    border-radius: 8px;
+    background: var(--indigo);
+    display: grid;
+    place-items: center;
+    font-size: 14px;
+    font-weight: 800;
+  }
+  .brand i {
+    color: #8c9ae8;
+    font-style: normal;
+  }
+  .tabs {
+    display: flex;
+    gap: 3px;
+  }
+  .tabs a {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 13px;
+    border-radius: 9px;
+    color: var(--bar-mute);
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .tabs a .tile {
+    width: 19px;
+    height: 19px;
+    border-radius: 6px;
+    color: #fff;
+  }
+  .tabs a .ic {
+    font-size: 11px;
+  }
+  .tabs a.on {
+    background: var(--indigo);
+    color: #fff;
+  }
+  .tabs a.on .tile {
+    background: rgba(255, 255, 255, 0.25);
+  }
+  .barr {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 13px;
+  }
+  .tier {
+    padding: 4px 12px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    font-size: 11.5px;
+    font-weight: 700;
+  }
+  .barr .ib {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    display: grid;
+    place-items: center;
+    color: var(--bar-mute);
+  }
+  .barr .ib .ic {
+    font-size: 16px;
+  }
+  @media (max-width: 1150px) {
+    .tabs .lb {
+      display: none;
+    }
+  }
+
+  /* head */
+  .head {
+    padding: 20px 22px 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .head h1 {
+    font-size: 23px;
+  }
+  .addr {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 13px;
+    margin-top: 3px;
+  }
+  .addr .ic {
+    font-size: 14px;
+    color: var(--indigo);
+  }
+  .head .sp {
+    margin-left: auto;
+    display: flex;
+    gap: 8px;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 9px 15px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    border: 1px solid var(--line);
+    background: var(--white);
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .btn.pri {
+    background: var(--indigo);
+    color: #fff;
+    border-color: transparent;
+  }
+  .btn .ic {
+    font-size: 14px;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+    padding: 16px 22px 44px;
+    align-items: start;
+  }
+  @media (min-width: 1140px) {
+    .grid {
+      grid-template-columns: 344px minmax(0, 1fr);
+    }
+  }
+
+  /* two-up rows */
+  .pair {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+    align-items: start;
+    margin-bottom: 16px;
+  }
+  @media (min-width: 1240px) {
+    .pair {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  .pair > .card {
+    min-width: 0;
+  }
+
+  /* left */
+  .side {
+    position: sticky;
+    top: 74px;
+  }
+  .stabs {
+    display: flex;
+    gap: 2px;
+    border-bottom: 1px solid var(--line);
+    padding: 0 8px;
+  }
+  .stabs button {
+    flex: 1;
+    padding: 12px 4px;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+  }
+  .stabs button.on {
+    color: var(--indigo);
+    border-bottom-color: var(--indigo);
+  }
+  .pad {
+    padding: 16px;
+  }
+  .seg {
+    display: flex;
+    gap: 3px;
+    padding: 3px;
+    background: var(--canvas);
+    border-radius: 9px;
+    margin-bottom: 16px;
+  }
+  .seg button {
+    flex: 1;
+    padding: 7px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--body);
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .seg button.on {
+    background: var(--white);
+    color: var(--indigo);
+    box-shadow: var(--sh);
+  }
+  .fetch {
+    width: 100%;
+    padding: 11px;
+    border-radius: 10px;
+    background: var(--indigo);
+    color: #fff;
+    border: 0;
+    font: inherit;
+    font-size: 13.5px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .fetch .ic {
+    font-size: 15px;
+  }
+  .two {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .fld {
+    margin-bottom: 14px;
+    min-width: 0;
+  }
+  .fld .top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    margin-bottom: 5px;
+  }
+  .fld label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .inp {
+    display: flex;
+    align-items: stretch;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    overflow: hidden;
+    background: var(--white);
+  }
+  .inp .pre {
+    padding: 0 9px;
+    display: grid;
+    place-items: center;
+    color: var(--muted);
+    font-size: 13px;
+    background: var(--canvas);
+    border-right: 1px solid var(--line);
+  }
+  .inp input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    padding: 9px 11px;
+    font-family: var(--mono);
+    font-size: 13.5px;
+    color: var(--ink);
+    background: transparent;
+    font-variant-numeric: tabular-nums;
+  }
+  .inp input:focus {
+    outline: none;
+  }
+  .inp:focus-within {
+    border-color: var(--indigo);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--indigo) 14%, transparent);
+  }
+  .conf {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 5px;
+  }
+  .stars {
+    display: flex;
+    gap: 1px;
+    color: var(--green-b);
+  }
+  .stars .ic {
+    font-size: 10px;
+    fill: currentColor;
+    stroke: none;
+  }
+  .stars .off {
+    color: var(--line);
+  }
+  .stars.low {
+    color: var(--red);
+  }
+  .conf span {
+    font-size: 10.5px;
+    color: var(--muted);
+  }
+  .sl {
+    margin-bottom: 15px;
+  }
+  .sl .top {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 7px;
+  }
+  .sl .v {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .trk {
+    height: 5px;
+    border-radius: 99px;
+    background: var(--line);
+    position: relative;
+  }
+  .trk .f {
+    position: absolute;
+    inset: 0 auto 0 0;
+    border-radius: 99px;
+    background: var(--indigo);
+  }
+  .trk .k {
+    position: absolute;
+    top: 50%;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--white);
+    border: 2px solid var(--indigo);
+    transform: translate(-50%, -50%);
+  }
+  .cashline {
+    display: flex;
+    justify-content: space-between;
+    padding-top: 14px;
+    margin-top: 4px;
+    border-top: 1px solid var(--line);
+    font-size: 12.5px;
+  }
+  .cashline b {
+    font-family: var(--mono);
+    color: var(--ink);
+  }
+
+  /* jump bar */
+  .jump {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+    padding: 9px;
+  }
+  .jb {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 13px 7px 7px;
+    border-radius: 9px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--body);
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+  }
+  .jb .tile {
+    width: 21px;
+    height: 21px;
+    color: #fff;
+  }
+  .jb .ic {
+    font-size: 12px;
+  }
+  .jb.on {
+    background: var(--white);
+    border-color: var(--indigo);
+    color: var(--indigo);
+    box-shadow: var(--sh);
+  }
+
+  /* alert */
+  .alert {
+    border: 1px solid var(--red);
+    background: var(--red-soft);
+    border-radius: 14px;
+    padding: 16px 18px;
+    margin-bottom: 16px;
+  }
+  .alert .hd {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-bottom: 9px;
+  }
+  .alert .hd .ic {
+    font-size: 17px;
+    color: var(--red);
+  }
+  .alert h3 {
+    color: var(--red);
+    font-size: 14.5px;
+    flex: 1;
+  }
+  .alert ul {
+    margin: 0 0 9px;
+    padding-left: 19px;
+    font-size: 13.5px;
+    color: var(--ink);
+  }
+  .alert .fine {
+    font-size: 12.5px;
+    color: var(--body);
+  }
+  .lnk {
+    padding: 5px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--red);
+    color: var(--red);
+    background: transparent;
+    font: inherit;
+    font-size: 11.5px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  /* verdict */
+  .verdict {
+    border-top: 3px solid var(--red);
+    padding: 26px;
+    margin-bottom: 16px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 22px;
+  }
+  @media (min-width: 720px) {
+    .verdict {
+      grid-template-columns: 118px minmax(0, 1fr);
+    }
+  }
+  .gbadge {
+    width: 106px;
+    height: 106px;
+    border-radius: 22px;
+    background: var(--red-soft);
+    display: grid;
+    place-items: center;
+    font-family: var(--mono);
+    font-size: 56px;
+    font-weight: 700;
+    color: var(--red);
+    border: 1px solid color-mix(in srgb, var(--red) 25%, transparent);
+  }
+  .verdict h2 {
+    font-size: 26px;
+    margin-bottom: 10px;
+  }
+  .verdict .story {
+    font-size: 14.5px;
+    line-height: 1.65;
+    color: var(--body);
+  }
+  .vchips {
+    display: flex;
+    gap: 7px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+  }
+  .vc {
+    font-size: 11.5px;
+    font-weight: 600;
+    padding: 5px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    color: var(--body);
+    background: var(--canvas);
+  }
+  .vc b {
+    font-family: var(--mono);
+    color: var(--ink);
+  }
+
+  /* market strip */
+  .mkt {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 18px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    background: linear-gradient(100deg, var(--green-soft), transparent 65%);
+  }
+  .ring {
+    width: 60px;
+    height: 60px;
+    position: relative;
+    flex: none;
+  }
+  .ring svg {
+    transform: rotate(-90deg);
+    display: block;
+  }
+  .ring b {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    font-family: var(--mono);
+    font-size: 19px;
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .mkt .tx {
+    flex: 1;
+    min-width: 230px;
+  }
+  .mkt h4 {
+    font-size: 14.5px;
+    margin-bottom: 2px;
+  }
+  .mkt p {
+    font-size: 12.5px;
+  }
+  .mkt .go {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--indigo);
+    font-size: 12.5px;
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  /* rules + kpi */
+  .rules {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+  }
+  .rule {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 13px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--white);
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .rule .ic {
+    font-size: 13px;
+  }
+  .rule.ok {
+    border-color: color-mix(in srgb, var(--green) 40%, transparent);
+    color: var(--green);
+  }
+  .rule.warn {
+    border-color: color-mix(in srgb, var(--amber) 45%, transparent);
+    color: var(--amber);
+  }
+  .kpis {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 11px;
+    margin-bottom: 16px;
+  }
+  @media (min-width: 700px) {
+    .kpis {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+  .kpi {
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--ac);
+    border-radius: 12px;
+    padding: 13px 14px;
+    box-shadow: var(--sh);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .kpi .v {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 24px;
+    font-weight: 600;
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+    color: var(--vc, var(--ink));
+  }
+  .kpi .c {
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  /* card header */
+  .sh {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--line);
+  }
+  .sh .tile {
+    width: 25px;
+    height: 25px;
+  }
+  .sh .ic {
+    font-size: 13px;
+  }
+  .sh h3 {
+    font-size: 14px;
+    flex: 1;
+    min-width: 0;
+  }
+  .sh .lab {
+    white-space: nowrap;
+  }
+
+  /* waterfall — compact for half width */
+  .wf {
+    padding: 16px;
+  }
+  .wfhead {
+    margin-bottom: 14px;
+  }
+  .wfhead .big {
+    font-family: var(--mono);
+    font-size: 30px;
+    font-weight: 700;
+    color: var(--red);
+    line-height: 1;
+  }
+  .chart {
+    display: flex;
+    align-items: stretch;
+    gap: 6px;
+    height: 206px;
+    position: relative;
+  }
+  .col {
+    flex: 1;
+    position: relative;
+    min-width: 0;
+  }
+  .b {
+    position: absolute;
+    left: 12%;
+    right: 12%;
+    border-radius: 4px;
+  }
+  .zero {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: var(--line);
+    top: 160px;
+  }
+  .cl {
+    position: absolute;
+    left: -2px;
+    right: -2px;
+    top: 168px;
+    text-align: center;
+    font-size: 9.5px;
+    color: var(--muted);
+    line-height: 1.25;
+  }
+  .cl b {
+    display: block;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    margin-top: 1px;
+  }
+
+  /* table — compact for half width */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+  }
+  th {
+    text-align: right;
+    padding: 9px 10px;
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+  }
+  th:first-child {
+    text-align: left;
+    padding-left: 16px;
+  }
+  th:last-child {
+    padding-right: 16px;
+  }
+  td {
+    padding: 9px 10px;
+    border-bottom: 1px solid var(--soft);
+    text-align: right;
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+    white-space: nowrap;
+  }
+  td:first-child {
+    text-align: left;
+    font-family: var(--sans);
+    color: var(--body);
+    white-space: normal;
+    padding-left: 16px;
+  }
+  td:last-child {
+    padding-right: 16px;
+  }
+  tr.tot td {
+    background: var(--canvas);
+    font-weight: 700;
+  }
+  .gp {
+    display: inline-grid;
+    place-items: center;
+    width: 21px;
+    height: 21px;
+    border-radius: 50%;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    background: var(--red-soft);
+    color: var(--red);
+  }
+  .warnrow td {
+    color: var(--amber) !important;
+  }
+  .warnrow td:first-child {
+    color: var(--amber) !important;
+  }
+
+  /* levers — compact for half width */
+  .lev {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--soft);
+  }
+  .lev:last-child {
+    border-bottom: 0;
+  }
+  .lv1 {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-bottom: 9px;
+    flex-wrap: wrap;
+  }
+  .lv1 h4 {
+    font-size: 13.5px;
+  }
+  .lv1 .cur {
+    font-size: 12px;
+    color: var(--muted);
+    font-family: var(--mono);
+  }
+  .arrowg {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .gp.sm {
+    width: 19px;
+    height: 19px;
+    font-size: 10px;
+  }
+  .gp.d {
+    background: var(--amber-soft);
+    color: var(--amber);
+  }
+  .arrowg .ic {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .lvbox {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 10px 11px;
+    padding: 12px;
+    border-radius: 11px;
+    background: var(--canvas);
+    border: 1px solid var(--line);
+    align-items: center;
+  }
+  .lvbox .tile {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+  }
+  .lvbox .ic {
+    font-size: 15px;
+  }
+  .lvbox .t {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    flex-wrap: wrap;
+  }
+  .diff {
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: var(--red-soft);
+    color: var(--red);
+  }
+  .diff.easy {
+    background: var(--green-soft);
+    color: var(--green);
+  }
+  .lvbox .d {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--body);
+    margin-top: 2px;
+  }
+  .lvbox .d em {
+    color: var(--amber);
+    font-style: normal;
+    font-weight: 600;
+  }
+  .apply {
+    grid-column: 1/-1;
+    padding: 9px;
+    border-radius: 9px;
+    border: 1px solid var(--indigo);
+    background: var(--white);
+    color: var(--indigo);
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .nolever {
+    font-size: 12px;
+    color: var(--muted);
+    font-style: italic;
+    padding: 11px 12px;
+    background: var(--canvas);
+    border-radius: 10px;
+    border: 1px dashed var(--line);
+  }
+
+  /* projection — compact for half width */
+  .pj {
+    padding: 16px;
+  }
+  .pjtop {
+    display: flex;
+    align-items: flex-end;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+  .pjtop .big {
+    font-family: var(--mono);
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--ink);
+    line-height: 1;
+  }
+  .pjtop .up {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    color: var(--green);
+    font-weight: 600;
+  }
+  .rng {
+    margin-left: auto;
+    display: flex;
+    gap: 2px;
+    background: var(--canvas);
+    padding: 3px;
+    border-radius: 9px;
+  }
+  .rng button {
+    padding: 5px 10px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--body);
+    font: inherit;
+    font-size: 11.5px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .rng button.on {
+    background: var(--white);
+    color: var(--indigo);
+    box-shadow: var(--sh);
+  }
+  .leg {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 7px 14px;
+    margin-top: 12px;
+    font-size: 12px;
+  }
+  .leg span {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    min-width: 0;
+  }
+  .leg i {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex: none;
+  }
+  .leg b {
+    font-family: var(--mono);
+    color: var(--ink);
+    margin-left: auto;
+  }
+
+  .ai {
+    display: flex;
+    gap: 10px;
+    padding: 13px 16px;
+    background: var(--indigo-soft);
+    border-top: 1px solid var(--line);
+    font-size: 12.5px;
+    font-style: italic;
+    line-height: 1.6;
+  }
+  .ai .ic {
+    font-size: 15px;
+    color: var(--indigo);
+    margin-top: 2px;
+  }
+
+  .banner {
+    background: var(--indigo-soft);
+    border-bottom: 1px solid var(--line);
+    padding: 12px 22px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px 15px;
+    align-items: baseline;
+  }
+  .banner b {
+    color: var(--ink);
+    font-size: 13.5px;
+  }
+  .banner span {
+    font-size: 12.5px;
+    color: var(--muted);
+  }
+  .notes {
+    padding: 32px 22px 60px;
+    max-width: 1020px;
+  }
+  .notes h2 {
+    font-size: 19px;
+    margin-bottom: 15px;
+  }
+  .notes ol {
+    margin: 0;
+    padding-left: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+    font-size: 14px;
+  }
+  .notes strong {
+    color: var(--ink);
+  }
+  .notes code {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 1px 5px;
+    color: var(--ink);
+  }
+</style>
+
+<svg width="0" height="0" style="position: absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-home" viewBox="0 0 24 24">
+      <path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8" />
+      <path
+        d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"
+      />
+    </symbol>
+    <symbol id="i-map" viewBox="0 0 24 24">
+      <path
+        d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z"
+      />
+      <path d="M15 5.764v15" />
+      <path d="M9 3.236v15" />
+    </symbol>
+    <symbol id="i-calc" viewBox="0 0 24 24">
+      <rect width="16" height="20" x="4" y="2" rx="2" />
+      <line x1="8" x2="16" y1="6" y2="6" />
+      <line x1="16" x2="16" y1="14" y2="18" />
+      <path d="M16 10h.01" />
+      <path d="M12 10h.01" />
+      <path d="M8 10h.01" />
+      <path d="M12 14h.01" />
+      <path d="M8 14h.01" />
+      <path d="M12 18h.01" />
+      <path d="M8 18h.01" />
+    </symbol>
+    <symbol id="i-search" viewBox="0 0 24 24">
+      <circle cx="11" cy="11" r="8" />
+      <path d="m21 21-4.3-4.3" />
+    </symbol>
+    <symbol id="i-file" viewBox="0 0 24 24">
+      <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+      <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+      <path d="M16 13H8" />
+      <path d="M16 17H8" />
+      <path d="M10 9H8" />
+    </symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24">
+      <path
+        d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"
+      />
+      <circle cx="12" cy="10" r="3" />
+    </symbol>
+    <symbol id="i-share" viewBox="0 0 24 24">
+      <circle cx="18" cy="5" r="3" />
+      <circle cx="6" cy="12" r="3" />
+      <circle cx="18" cy="19" r="3" />
+      <line x1="8.59" x2="15.42" y1="13.51" y2="17.49" />
+      <line x1="15.41" x2="8.59" y1="6.51" y2="10.49" />
+    </symbol>
+    <symbol id="i-dl" viewBox="0 0 24 24">
+      <path d="M12 15V3" />
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <path d="m7 10 5 5 5-5" />
+    </symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24">
+      <path d="M5 12h14" />
+      <path d="m12 5 7 7-7 7" />
+    </symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24">
+      <path
+        d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"
+      />
+      <path d="M12 9v4" />
+      <path d="M12 17h.01" />
+    </symbol>
+    <symbol id="i-target" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="10" />
+      <circle cx="12" cy="12" r="6" />
+      <circle cx="12" cy="12" r="2" />
+    </symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24">
+      <path d="M3 3v18h18" />
+      <path d="M18 17V9" />
+      <path d="M13 17V5" />
+      <path d="M8 17v-3" />
+    </symbol>
+    <symbol id="i-trend" viewBox="0 0 24 24">
+      <polyline points="22 7 13.5 15.5 8.5 10.5 2 18" />
+      <polyline points="16 7 22 7 22 13" />
+    </symbol>
+    <symbol id="i-bulb" viewBox="0 0 24 24">
+      <path
+        d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"
+      />
+      <path d="M9 18h6" />
+      <path d="M10 22h4" />
+    </symbol>
+    <symbol id="i-wallet" viewBox="0 0 24 24">
+      <path
+        d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"
+      />
+      <path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4" />
+    </symbol>
+    <symbol id="i-check" viewBox="0 0 24 24">
+      <path d="M20 6 9 17l-5-5" />
+    </symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14" /></symbol>
+    <symbol id="i-star" viewBox="0 0 24 24">
+      <path
+        d="M11.5 2.3a.6.6 0 0 1 1 0l2.6 5.3 5.8.8a.6.6 0 0 1 .3 1l-4.2 4.1 1 5.8a.6.6 0 0 1-.8.6L12 17.2l-5.2 2.7a.6.6 0 0 1-.8-.6l1-5.8-4.2-4.1a.6.6 0 0 1 .3-1l5.8-.8z"
+      />
+    </symbol>
+    <symbol id="i-bookmark" viewBox="0 0 24 24">
+      <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+    </symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24">
+      <path d="M10.268 21a2 2 0 0 0 3.464 0" />
+      <path
+        d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"
+      />
+    </symbol>
+    <symbol id="i-user" viewBox="0 0 24 24">
+      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+      <circle cx="12" cy="7" r="4" />
+    </symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24">
+      <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+      <path d="M21 3v5h-5" />
+      <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+      <path d="M8 16H3v5" />
+    </symbol>
+  </defs>
+</svg>
+
+<div class="banner">
+  <b>Restyled Deal Analyzer · two-up rows</b>
+  <span
+    >Charts paired at half width; grading and levers side by side. All features
+    and content unchanged.</span
+  >
+</div>
+
+<div class="bar">
+  <div class="in">
+    <div class="brand">
+      <div class="m">P</div>
+      Property<i>IQ</i>
+    </div>
+    <nav class="tabs">
+      <a href="#"
+        ><span class="tile" style="background: #3949ab"
+          ><svg class="ic"><use href="#i-home" /></svg></span
+        ><span class="lb">Dashboard</span></a
+      >
+      <a href="#"
+        ><span class="tile" style="background: #00838f"
+          ><svg class="ic"><use href="#i-map" /></svg></span
+        ><span class="lb">Map</span></a
+      >
+      <a class="on" href="#"
+        ><span class="tile"
+          ><svg class="ic"><use href="#i-calc" /></svg></span
+        ><span class="lb">Analyzer</span></a
+      >
+      <a href="#"
+        ><span class="tile" style="background: #7c4dff"
+          ><svg class="ic"><use href="#i-search" /></svg></span
+        ><span class="lb">Screener</span></a
+      >
+      <a href="#"
+        ><span class="tile" style="background: #00c853"
+          ><svg class="ic"><use href="#i-file" /></svg></span
+        ><span class="lb">Reports</span></a
+      >
+    </nav>
+    <div class="barr">
+      <span class="tier">Pro</span>
+      <span class="ib"
+        ><svg class="ic"><use href="#i-bookmark" /></svg
+      ></span>
+      <span class="ib"
+        ><svg class="ic"><use href="#i-bell" /></svg
+      ></span>
+      <span class="ib"
+        ><svg class="ic"><use href="#i-user" /></svg
+      ></span>
+    </div>
+  </div>
+</div>
+
+<div class="head">
+  <div>
+    <h1>Deal Analyzer</h1>
+    <div class="addr">
+      <svg class="ic"><use href="#i-pin" /></svg>200 Orlando Avenue, Normal, IL
+      61761 · Buy &amp; hold · Saved analyses (1)
+    </div>
+  </div>
+  <div class="sp">
+    <a class="btn" href="#"
+      ><svg class="ic"><use href="#i-dl" /></svg>PDF</a
+    >
+    <a class="btn pri" href="#"
+      ><svg class="ic"><use href="#i-share" /></svg>Share</a
+    >
+  </div>
+</div>
+
+<div class="grid">
+  <aside class="side">
+    <div class="card">
+      <div class="stabs">
+        <button class="on">Purchase</button><button>Rent</button
+        ><button>Expenses</button><button>Financing</button>
+      </div>
+      <div class="pad">
+        <div class="seg">
+          <button class="on">Buy &amp; Hold</button><button>BRRRR</button
+          ><button>Fix &amp; Flip</button>
+        </div>
+        <button class="fetch">
+          <svg class="ic"><use href="#i-refresh" /></svg>Fetch property + comps
+        </button>
+        <div class="two">
+          <div class="fld">
+            <div class="top"><label>Price</label></div>
+            <div class="inp">
+              <span class="pre">$</span><input value="275,000" />
+            </div>
+            <div class="conf">
+              <span class="stars"
+                ><svg class="ic"><use href="#i-star" /></svg
+                ><svg class="ic"><use href="#i-star" /></svg
+                ><svg class="ic"><use href="#i-star" /></svg
+                ><svg class="ic"><use href="#i-star" /></svg
+                ><svg class="ic"><use href="#i-star" /></svg></span
+              ><span>RentCast</span>
+            </div>
+          </div>
+          <div class="fld">
+            <div class="top"><label>Monthly rent</label></div>
+            <div class="inp">
+              <span class="pre">$</span><input value="1,940" />
+            </div>
+            <div class="conf">
+              <span class="stars"
+                ><svg class="ic"><use href="#i-star" /></svg
+                ><svg class="ic"><use href="#i-star" /></svg
+                ><svg class="ic"><use href="#i-star" /></svg
+                ><svg class="ic"><use href="#i-star" /></svg
+                ><svg class="ic"><use href="#i-star" /></svg></span
+              ><span>RentCast</span>
+            </div>
+          </div>
+        </div>
+        <div class="two">
+          <div class="fld">
+            <div class="top"><label>Tax / yr</label></div>
+            <div class="inp">
+              <span class="pre">$</span><input value="4,467" />
+            </div>
+            <div class="conf">
+              <span class="stars"
+                ><svg class="ic"><use href="#i-star" /></svg
+                ><svg class="ic"><use href="#i-star" /></svg
+                ><svg class="ic"><use href="#i-star" /></svg
+                ><svg class="ic"><use href="#i-star" /></svg
+                ><svg class="ic"><use href="#i-star" /></svg></span
+              ><span>2024 record</span>
+            </div>
+          </div>
+          <div class="fld">
+            <div class="top"><label>Insurance / yr</label></div>
+            <div class="inp">
+              <span class="pre">$</span><input value="1,513" />
+            </div>
+            <div class="conf">
+              <span class="stars low"
+                ><svg class="ic"><use href="#i-star" /></svg
+                ><svg class="ic off"><use href="#i-star" /></svg
+                ><svg class="ic off"><use href="#i-star" /></svg
+                ><svg class="ic off"><use href="#i-star" /></svg
+                ><svg class="ic off"><use href="#i-star" /></svg></span
+              ><span>Estimate</span>
+            </div>
+          </div>
+        </div>
+        <div class="fld">
+          <div class="top"><label>HOA / mo</label></div>
+          <div class="inp"><span class="pre">$</span><input value="0" /></div>
+          <div class="conf">
+            <span class="stars low"
+              ><svg class="ic"><use href="#i-star" /></svg
+              ><svg class="ic off"><use href="#i-star" /></svg
+              ><svg class="ic off"><use href="#i-star" /></svg
+              ><svg class="ic off"><use href="#i-star" /></svg
+              ><svg class="ic off"><use href="#i-star" /></svg></span
+            ><span>Estimate</span>
+          </div>
+        </div>
+        <div style="height: 1px; background: var(--line); margin: 18px 0"></div>
+        <div class="sl">
+          <div class="top">
+            <span class="lab">Down payment</span><span class="v">20.0%</span>
+          </div>
+          <div class="trk">
+            <span class="f" style="width: 20%"></span
+            ><span class="k" style="left: 20%"></span>
+          </div>
+        </div>
+        <div class="sl">
+          <div class="top">
+            <span class="lab">Interest rate</span><span class="v">7.10%</span>
+          </div>
+          <div class="trk">
+            <span class="f" style="width: 47%"></span
+            ><span class="k" style="left: 47%"></span>
+          </div>
+        </div>
+        <div class="sl" style="margin-bottom: 0">
+          <div class="top">
+            <span class="lab">Term</span><span class="v">30 yr</span>
+          </div>
+          <div class="trk">
+            <span class="f" style="width: 75%"></span
+            ><span class="k" style="left: 75%"></span>
+          </div>
+        </div>
+        <div class="cashline"><span>Initial cash</span><b>$63,250</b></div>
+      </div>
+    </div>
+  </aside>
+
+  <main style="min-width: 0">
+    <div class="card" style="margin-bottom: 16px">
+      <div class="jump">
+        <a class="jb on" href="#"
+          ><span class="tile" style="background: #b3261e"
+            ><svg class="ic"><use href="#i-alert" /></svg></span
+          >Verdict</a
+        >
+        <a class="jb" href="#"
+          ><span class="tile" style="background: #3949ab"
+            ><svg class="ic"><use href="#i-calc" /></svg></span
+          >Cash Flow</a
+        >
+        <a class="jb" href="#"
+          ><span class="tile" style="background: #7c4dff"
+            ><svg class="ic"><use href="#i-chart" /></svg></span
+          >Grading</a
+        >
+        <a class="jb" href="#"
+          ><span class="tile" style="background: #e07b00"
+            ><svg class="ic"><use href="#i-trend" /></svg></span
+          >Improve</a
+        >
+        <a class="jb" href="#"
+          ><span class="tile" style="background: #00838f"
+            ><svg class="ic"><use href="#i-map" /></svg></span
+          >Market</a
+        >
+      </div>
+    </div>
+
+    <div class="alert">
+      <div class="hd">
+        <svg class="ic"><use href="#i-alert" /></svg>
+        <h3>Auto-kill triggered</h3>
+        <button class="lnk">Edit criteria</button>
+      </div>
+      <ul>
+        <li>DSCR below 1.0 — the property cannot service its own debt.</li>
+        <li>
+          Negative pretax cash flow with no explicit appreciation-play
+          acknowledgment.
+        </li>
+      </ul>
+      <p class="fine">
+        This deal failed an auto-kill check. Override only if you understand the
+        risk.
+      </p>
+    </div>
+
+    <div class="card verdict">
+      <div class="gbadge">F</div>
+      <div>
+        <h2>Strong avoid</h2>
+        <p class="story">
+          Monthly cash flow is deeply negative at
+          <span class="n">−$386</span> and DSCR is <span class="n">0.74</span> —
+          rent covers only 74% of the mortgage payment, so you bleed cash from
+          day one. Cash-on-cash is <span class="n">−7.3%</span>: every dollar
+          invested loses seven cents a year. The single most powerful lever is
+          cutting the purchase price far enough to bring debt service under the
+          <span class="n">$1,940</span> rent; that alone flips cash flow
+          positive and lifts DSCR above 1.0. The 30-year projection reaches
+          <span class="n">$667,497</span> in equity, but that outcome leans
+          almost entirely on assumed rent growth and appreciation — without
+          those, the red ink dominates.
+        </p>
+        <div class="vchips">
+          <span class="vc">GPA <b>0.00 / 4.00</b></span
+          ><span class="vc">Market adj <b>+0.00</b></span>
+          <span class="vc">Graded against <b>Balanced</b></span
+          ><button
+            class="lnk"
+            style="border-color: var(--line); color: var(--body)"
+          >
+            Edit criteria
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mkt">
+      <div class="ring">
+        <svg width="60" height="60" viewBox="0 0 60 60">
+          <circle
+            cx="30"
+            cy="30"
+            r="25"
+            fill="none"
+            stroke="var(--line)"
+            stroke-width="6"
+          />
+          <circle
+            cx="30"
+            cy="30"
+            r="25"
+            fill="none"
+            stroke="#00C853"
+            stroke-width="6"
+            stroke-linecap="round"
+            stroke-dasharray="157.1"
+            stroke-dashoffset="39.3"
+          /></svg
+        ><b>75</b>
+      </div>
+      <div class="tx">
+        <h4>Bloomington, IL scores 75 — rising ↑</h4>
+        <p>
+          Confidence A · as of 2026-06-30 · 12-month range 68–93. Market
+          momentum is a tailwind here, but it cannot rescue a 0.74 DSCR.
+        </p>
+      </div>
+      <a class="go" href="#"
+        >Open market <svg class="ic"><use href="#i-arrow" /></svg
+      ></a>
+    </div>
+
+    <div class="rules">
+      <span class="rule warn"
+        ><svg class="ic"><use href="#i-minus" /></svg>1% rule ·
+        <span class="n">0.71%</span></span
+      >
+      <span class="rule warn"
+        ><svg class="ic"><use href="#i-minus" /></svg>GRM ·
+        <span class="n">11.8</span></span
+      >
+      <span class="rule ok"
+        ><svg class="ic"><use href="#i-check" /></svg>OpEx ratio ·
+        <span class="n">39%</span></span
+      >
+    </div>
+
+    <div class="kpis">
+      <div class="kpi" style="--ac: #b3261e; --vc: var(--red)">
+        <span class="lab">Monthly cash flow</span> <span class="v">−$386</span
+        ><span class="c">After debt service</span>
+      </div>
+      <div class="kpi" style="--ac: #b3261e; --vc: var(--red)">
+        <span class="lab">Cash-on-cash</span> <span class="v">−7.3%</span
+        ><span class="c">Annual CF / cash in</span>
+      </div>
+      <div class="kpi" style="--ac: #e07b00; --vc: var(--amber)">
+        <span class="lab">Cap rate</span> <span class="v">4.8%</span
+        ><span class="c">NOI / purchase price</span>
+      </div>
+      <div class="kpi" style="--ac: #b3261e; --vc: var(--red)">
+        <span class="lab">DSCR</span> <span class="v">0.74</span
+        ><span class="c">NOI / debt service</span>
+      </div>
+    </div>
+
+    <!-- ROW 1: two charts side by side -->
+    <div class="pair">
+      <div class="card">
+        <div class="sh">
+          <span
+            class="tile"
+            style="background: var(--indigo-soft); color: var(--indigo)"
+            ><svg class="ic"><use href="#i-calc" /></svg
+          ></span>
+          <h3>Where the rent goes</h3>
+          <span class="lab">Monthly</span>
+        </div>
+        <div class="wf">
+          <div class="wfhead">
+            <span class="lab">Monthly cash flow</span>
+            <div class="big">−$386</div>
+          </div>
+          <div class="chart">
+            <div class="zero"></div>
+            <div class="col">
+              <span
+                class="b"
+                style="background: #00c853; top: 0; height: 160px"
+              ></span>
+              <span class="cl"
+                >Gross rent<b style="color: var(--green)">+$1,940</b></span
+              >
+            </div>
+            <div class="col">
+              <span
+                class="b"
+                style="background: #b3261e; top: 0; height: 8px"
+              ></span>
+              <span class="cl"
+                >Vacancy<b style="color: var(--red)">−$97</b></span
+              >
+            </div>
+            <div class="col">
+              <span
+                class="b"
+                style="background: #b3261e; top: 8px; height: 62px"
+              ></span>
+              <span class="cl">OpEx<b style="color: var(--red)">−$751</b></span>
+            </div>
+            <div class="col">
+              <span
+                class="b"
+                style="background: #b3261e; top: 70px; height: 122px"
+              ></span>
+              <span class="cl"
+                >Debt svc<b style="color: var(--red)">−$1,478</b></span
+              >
+            </div>
+            <div class="col">
+              <span
+                class="b"
+                style="background: #3949ab; top: 160px; height: 32px"
+              ></span>
+              <span class="cl"
+                >Cash flow<b style="color: var(--indigo)">−$386</b></span
+              >
+            </div>
+          </div>
+        </div>
+        <div class="ai">
+          <svg class="ic"><use href="#i-bulb" /></svg>
+          <span
+            >Debt service of $1,478 consumes 76% of the $1,940 gross rent, well
+            over the 60% danger line, leaving nothing for cash flow.</span
+          >
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="sh">
+          <span
+            class="tile"
+            style="background: var(--green-soft); color: var(--green)"
+            ><svg class="ic"><use href="#i-target" /></svg
+          ></span>
+          <h3>30-year wealth projection</h3>
+        </div>
+        <div class="pj">
+          <div class="pjtop">
+            <div>
+              <span class="lab">Equity · year 30 · 2056</span>
+              <div class="big">$667,497</div>
+              <span class="up">▲ +$602K (+920.0%)</span>
+            </div>
+            <div class="rng">
+              <button>1Y</button><button>5Y</button><button>10Y</button
+              ><button class="on">30Y</button>
+            </div>
+          </div>
+          <svg
+            viewBox="0 0 400 178"
+            style="width: 100%; height: 178px; display: block"
+            preserveAspectRatio="none"
+            aria-label="Projection chart"
+          >
+            <line x1="0" y1="150" x2="400" y2="150" stroke="var(--line)" />
+            <line x1="0" y1="95" x2="400" y2="95" stroke="var(--soft)" />
+            <line x1="0" y1="40" x2="400" y2="40" stroke="var(--soft)" />
+            <polyline
+              fill="none"
+              stroke="#FF8F00"
+              stroke-width="2.5"
+              points="0,139 67,123 133,103 200,80 267,54 333,26 400,6"
+            />
+            <polyline
+              fill="none"
+              stroke="#3949AB"
+              stroke-width="2.5"
+              points="0,148 67,137 133,120 200,96 267,66 333,34 400,8"
+            />
+            <polyline
+              fill="none"
+              stroke="#B3261E"
+              stroke-width="2.5"
+              points="0,137 67,133 133,126 200,116 267,100 333,77 400,150"
+            />
+            <polyline
+              fill="none"
+              stroke="#00C853"
+              stroke-width="2.5"
+              points="0,152 67,153 133,153 200,151 267,145 333,134 400,116"
+            />
+          </svg>
+          <div class="leg" style="color: var(--muted)">
+            <span><i style="background: #3949ab"></i>Equity <b>$667K</b></span>
+            <span
+              ><i style="background: #ff8f00"></i>Property value
+              <b>$667K</b></span
+            >
+            <span><i style="background: #b3261e"></i>Mortgage <b>$0</b></span>
+            <span
+              ><i style="background: #00c853"></i>Cum. cash flow
+              <b>$113K</b></span
+            >
+          </div>
+        </div>
+        <div class="ai">
+          <svg class="ic"><use href="#i-bulb" /></svg>
+          <span
+            >Appreciation contributes the most at $392,497, followed by
+            principal paydown of $220,000 and cumulative cash flow of $113,408.
+            The outlook hinges almost entirely on price growth materialising as
+            modelled.</span
+          >
+        </div>
+      </div>
+    </div>
+
+    <!-- ROW 2: grading + levers side by side -->
+    <div class="pair">
+      <div class="card">
+        <div class="sh">
+          <span
+            class="tile"
+            style="background: var(--violet-soft); color: var(--violet)"
+            ><svg class="ic"><use href="#i-chart" /></svg
+          ></span>
+          <h3>How the grade is built</h3>
+          <span class="lab">Balanced</span>
+        </div>
+        <div style="overflow-x: auto">
+          <table>
+            <thead>
+              <tr>
+                <th>Metric</th>
+                <th>Deal</th>
+                <th>Grade</th>
+                <th>Wt</th>
+                <th>Contrib.</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Cash-on-cash</td>
+                <td>−7.3%</td>
+                <td><span class="gp">F</span></td>
+                <td>25%</td>
+                <td>0.00</td>
+              </tr>
+              <tr>
+                <td>DSCR</td>
+                <td>0.74</td>
+                <td><span class="gp">F</span></td>
+                <td>25%</td>
+                <td>0.00</td>
+              </tr>
+              <tr>
+                <td>Cash flow per door</td>
+                <td>−$386</td>
+                <td><span class="gp">F</span></td>
+                <td>20%</td>
+                <td>0.00</td>
+              </tr>
+              <tr>
+                <td>Cap rate</td>
+                <td>4.8%</td>
+                <td><span class="gp">F</span></td>
+                <td>15%</td>
+                <td>0.00</td>
+              </tr>
+              <tr>
+                <td>Break-even occupancy</td>
+                <td>114.9%</td>
+                <td><span class="gp">F</span></td>
+                <td>15%</td>
+                <td>0.00</td>
+              </tr>
+              <tr class="tot">
+                <td>Raw GPA</td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td>0.00</td>
+              </tr>
+              <tr class="warnrow">
+                <td>Market adjustment</td>
+                <td>75</td>
+                <td></td>
+                <td></td>
+                <td>+0.00</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="ai" style="background: var(--amber-soft)">
+          <svg class="ic" style="color: var(--amber)">
+            <use href="#i-alert" />
+          </svg>
+          <span style="font-style: normal"
+            >Market adjustment reads <span class="n">+0.00</span> because the
+            analyzer reports no score for this address — but Bloomington, IL is
+            scored <span class="n">75</span> at confidence A.</span
+          >
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="sh">
+          <span
+            class="tile"
+            style="background: var(--amber-soft); color: var(--amber)"
+            ><svg class="ic"><use href="#i-trend" /></svg
+          ></span>
+          <h3>What would lift the grade</h3>
+          <span class="lab">Single lever</span>
+        </div>
+
+        <div class="lev">
+          <div class="lv1">
+            <h4>Cash-on-cash</h4>
+            <span class="cur">−7.3%</span>
+            <span class="arrowg"
+              ><span class="gp sm">F</span
+              ><svg class="ic"><use href="#i-arrow" /></svg
+              ><span class="gp sm d">D</span></span
+            >
+          </div>
+          <p class="nolever">
+            No single lever within reasonable bounds lifts this to D. Combine
+            changes, or adjust the rubric.
+          </p>
+        </div>
+
+        <div class="lev">
+          <div class="lv1">
+            <h4>DSCR</h4>
+            <span class="cur">0.74</span>
+            <span class="arrowg"
+              ><span class="gp sm">F</span
+              ><svg class="ic"><use href="#i-arrow" /></svg
+              ><span class="gp sm d">D</span></span
+            >
+          </div>
+          <div class="lvbox">
+            <span
+              class="tile"
+              style="background: var(--amber-soft); color: var(--amber)"
+              ><svg class="ic"><use href="#i-wallet" /></svg
+            ></span>
+            <div>
+              <div class="t">
+                Increase down payment <span class="diff">Hard</span>
+              </div>
+              <div class="d">$55,000 → $133,643 <em>(+$78,643)</em></div>
+            </div>
+            <button class="apply">Apply to inputs</button>
+          </div>
+        </div>
+
+        <div class="lev">
+          <div class="lv1">
+            <h4>Cash flow per door</h4>
+            <span class="cur">−$386</span>
+            <span class="arrowg"
+              ><span class="gp sm">F</span
+              ><svg class="ic"><use href="#i-arrow" /></svg
+              ><span class="gp sm d">D</span></span
+            >
+          </div>
+          <div class="lvbox">
+            <span
+              class="tile"
+              style="background: var(--amber-soft); color: var(--amber)"
+              ><svg class="ic"><use href="#i-wallet" /></svg
+            ></span>
+            <div>
+              <div class="t">
+                Increase down payment <span class="diff">Hard</span>
+              </div>
+              <div class="d">$55,000 → $127,320 <em>(+$72,320)</em></div>
+            </div>
+            <button class="apply">Apply to inputs</button>
+          </div>
+        </div>
+
+        <div class="lev">
+          <div class="lv1">
+            <h4>Cap rate</h4>
+            <span class="cur">4.8%</span>
+            <span class="arrowg"
+              ><span class="gp sm">F</span
+              ><svg class="ic"><use href="#i-arrow" /></svg
+              ><span class="gp sm d">D</span></span
+            >
+          </div>
+          <div class="lvbox">
+            <span
+              class="tile"
+              style="background: var(--green-soft); color: var(--green)"
+              ><svg class="ic"><use href="#i-trend" /></svg
+            ></span>
+            <div>
+              <div class="t">
+                Raise rent — value-add <span class="diff easy">Easy</span>
+              </div>
+              <div class="d">$1,940/mo → $2,006/mo <em>(+$66/mo)</em></div>
+            </div>
+            <button class="apply">Apply to inputs</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<section class="notes">
+  <h2>Layout change</h2>
+  <ol>
+    <li>
+      <strong>Two-up rows.</strong> "Where the rent goes" now sits beside the
+      30-year projection, and "How the grade is built" beside "What would lift
+      the grade" — each at half width. They stack to full width below 1240px so
+      nothing gets crushed on a laptop.
+    </li>
+    <li>
+      <strong>Roughly 40% less scrolling</strong> to reach the improvement
+      levers, which is where you actually act on the analysis.
+    </li>
+    <li>
+      <strong>Compacted for the narrower column, not truncated.</strong>
+      Waterfall labels shortened to OpEx / Debt svc, table headers to Deal / Wt
+      / Contrib., the contribution bars dropped in favour of the numbers,
+      projection legend on a 2×2 grid, and <code>Apply to inputs</code> moved to
+      a full-width row under each lever. Every value and every feature is still
+      present.
+    </li>
+    <li>
+      <strong>Full-width items stay full width</strong> — auto-kill, verdict,
+      market strip, rule chips, and the KPI row read better across the whole
+      column.
+    </li>
+  </ol>
+</section>

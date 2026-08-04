@@ -1,0 +1,4329 @@
+<title>PropertyIQ — Reports</title>
+
+<style>
+  :root {
+    --canvas: #f5f6fa;
+    --white: #ffffff;
+    --line: #e4e7f2;
+    --soft: #edeff7;
+    --ink: #12141d;
+    --body: #5b6076;
+    --muted: #8b91a8;
+    --indigo: #3949ab;
+    --indigo-soft: #eef0fb;
+    --green: #00a84a;
+    --green-b: #00c853;
+    --green-soft: #e6f8ee;
+    --red: #b3261e;
+    --red-soft: #fdecea;
+    --amber: #e07b00;
+    --amber-soft: #fff3e0;
+    --violet: #7c4dff;
+    --violet-soft: #f1ecff;
+    --teal: #00838f;
+    --teal-soft: #e0f7fa;
+    --bar: #151828;
+    --bar-mute: #9aa1ba;
+    --bar-line: #272c40;
+    --sh: 0 1px 2px rgba(18, 20, 29, 0.05), 0 2px 8px rgba(18, 20, 29, 0.04);
+    --sans:
+      "Segoe UI Variable Display", -apple-system, BlinkMacSystemFont,
+      "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono:
+      "Roboto Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --serif:
+      "Source Serif 4", "Iowan Old Style", Georgia, "Times New Roman", serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --canvas: #0f1119;
+      --white: #1a1d29;
+      --line: #2a2f42;
+      --soft: #232838;
+      --ink: #edeff7;
+      --body: #a5abc2;
+      --muted: #797f96;
+      --indigo: #8c9ae8;
+      --indigo-soft: #232841;
+      --green: #3dd87a;
+      --green-soft: #17301f;
+      --red: #f2b8b5;
+      --red-soft: #33201f;
+      --amber: #ffb74d;
+      --amber-soft: #33280f;
+      --violet: #b39dff;
+      --violet-soft: #241f38;
+      --teal: #4dd0e1;
+      --teal-soft: #13292e;
+      --bar: #0a0c14;
+      --bar-line: #1e2333;
+      --sh: 0 1px 2px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+  }
+  :root[data-theme="dark"] {
+    --canvas: #0f1119;
+    --white: #1a1d29;
+    --line: #2a2f42;
+    --soft: #232838;
+    --ink: #edeff7;
+    --body: #a5abc2;
+    --muted: #797f96;
+    --indigo: #8c9ae8;
+    --indigo-soft: #232841;
+    --green: #3dd87a;
+    --green-soft: #17301f;
+    --red: #f2b8b5;
+    --red-soft: #33201f;
+    --amber: #ffb74d;
+    --amber-soft: #33280f;
+    --violet: #b39dff;
+    --violet-soft: #241f38;
+    --teal: #4dd0e1;
+    --teal-soft: #13292e;
+    --bar: #0a0c14;
+    --bar-line: #1e2333;
+    --sh: 0 1px 2px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+  :root[data-theme="light"] {
+    --canvas: #f5f6fa;
+    --white: #ffffff;
+    --line: #e4e7f2;
+    --soft: #edeff7;
+    --ink: #12141d;
+    --body: #5b6076;
+    --muted: #8b91a8;
+    --indigo: #3949ab;
+    --indigo-soft: #eef0fb;
+    --green: #00a84a;
+    --green-b: #00c853;
+    --green-soft: #e6f8ee;
+    --red: #b3261e;
+    --red-soft: #fdecea;
+    --amber: #e07b00;
+    --amber-soft: #fff3e0;
+    --violet: #7c4dff;
+    --violet-soft: #f1ecff;
+    --teal: #00838f;
+    --teal-soft: #e0f7fa;
+    --bar: #151828;
+    --bar-line: #272c40;
+    --sh: 0 1px 2px rgba(18, 20, 29, 0.05), 0 2px 8px rgba(18, 20, 29, 0.04);
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+    background: var(--canvas);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  svg.ic {
+    width: 1em;
+    height: 1em;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    flex: none;
+  }
+  .n {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+  .lab {
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  a {
+    color: var(--indigo);
+    text-decoration: none;
+  }
+  a:hover {
+    text-decoration: underline;
+  }
+
+  /* ---------- app bar ---------- */
+  .bar {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    background: var(--bar);
+    height: 57px;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 0 18px;
+    border-bottom: 1px solid var(--bar-line);
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-size: 15.5px;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: -0.01em;
+  }
+  .logo .sq {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: #3949ab;
+    display: grid;
+    place-items: center;
+    font-size: 15px;
+    font-weight: 800;
+    color: #fff;
+  }
+  .logo .iq {
+    color: #8c9ae8;
+  }
+  .nav {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    margin-left: 8px;
+  }
+  .pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 11px;
+    border-radius: 999px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--bar-mute);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .pill:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: #dfe3f2;
+  }
+  .pill .t {
+    width: 18px;
+    height: 18px;
+    border-radius: 5px;
+    display: grid;
+    place-items: center;
+    font-size: 11px;
+    color: #fff;
+  }
+  .pill.on {
+    background: var(--indigo);
+    color: #fff;
+  }
+  .pill.on .t {
+    background: rgba(255, 255, 255, 0.25) !important;
+  }
+  .bar .right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .prochip {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: #fff;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 5px 11px;
+    border-radius: 999px;
+  }
+  .iconbtn {
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+    display: grid;
+    place-items: center;
+    color: var(--bar-mute);
+    font-size: 17px;
+    cursor: pointer;
+  }
+  .iconbtn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+  }
+  @media (max-width: 1150px) {
+    .lb {
+      display: none;
+    }
+    .pill {
+      padding: 6px 8px;
+    }
+  }
+
+  /* ---------- control bar ---------- */
+  .ctl {
+    position: sticky;
+    top: 57px;
+    z-index: 35;
+    background: var(--white);
+    border-bottom: 1px solid var(--line);
+    padding: 11px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .ctl .who {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding-right: 12px;
+    border-right: 1px solid var(--line);
+  }
+  .ctl .who .t {
+    width: 25px;
+    height: 25px;
+    border-radius: 7px;
+    background: var(--green-soft);
+    color: var(--green);
+    display: grid;
+    place-items: center;
+    font-size: 14px;
+  }
+  .ctl .who b {
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .ctl .who span {
+    font-size: 11.5px;
+    color: var(--muted);
+  }
+  .srch {
+    flex: 1 1 260px;
+    max-width: 440px;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    background: var(--canvas);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 8px 15px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .srch svg {
+    font-size: 15px;
+  }
+  .meter {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11.5px;
+    color: var(--body);
+    white-space: nowrap;
+  }
+  .meter .dots {
+    display: flex;
+    gap: 3px;
+  }
+  .meter .dots i {
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+    background: var(--soft);
+    border: 1px solid var(--line);
+  }
+  .meter .dots i.f {
+    background: var(--indigo);
+    border-color: var(--indigo);
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 14px;
+    border-radius: 10px;
+    background: var(--white);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    font-size: 12.5px;
+    font-weight: 600;
+    font-family: var(--sans);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .btn:hover {
+    border-color: var(--indigo);
+    color: var(--indigo);
+  }
+  .btn-p {
+    background: var(--indigo);
+    border-color: var(--indigo);
+    color: #fff;
+  }
+  .btn-p:hover {
+    color: #fff;
+    filter: brightness(1.08);
+  }
+  .btn-sm {
+    padding: 6px 11px;
+    font-size: 12px;
+  }
+  .ctl .end {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* ---------- layout ---------- */
+  .wrap {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 22px 20px 60px;
+  }
+  .sec {
+    margin-bottom: 34px;
+  }
+  .sechead {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin: 0 0 14px;
+    flex-wrap: wrap;
+  }
+  .sechead h2 {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+  }
+  .sechead p {
+    margin: 0;
+    font-size: 12.5px;
+    color: var(--muted);
+  }
+  .rule {
+    height: 1px;
+    background: var(--line);
+    margin: 30px 0;
+  }
+
+  .card {
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    box-shadow: var(--sh);
+  }
+  .ch {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--line);
+  }
+  .ch .t {
+    width: 25px;
+    height: 25px;
+    border-radius: 7px;
+    display: grid;
+    place-items: center;
+    font-size: 14px;
+    flex: none;
+  }
+  .ch h3 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .ch .sub {
+    font-size: 11.5px;
+    color: var(--muted);
+    font-weight: 400;
+  }
+  .ch .r {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .cb {
+    padding: 15px 16px;
+  }
+
+  .two {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  @media (min-width: 1240px) {
+    .two {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  .builder {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+    align-items: start;
+  }
+  @media (min-width: 1040px) {
+    .builder {
+      grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+    }
+  }
+
+  /* ---------- chips ---------- */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--white);
+    color: var(--ink);
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 5px 12px 5px 6px;
+    cursor: pointer;
+  }
+  .chip .t {
+    width: 22px;
+    height: 22px;
+    border-radius: 999px;
+    display: grid;
+    place-items: center;
+    font-size: 12px;
+    flex: none;
+  }
+  .chip.pad {
+    padding-left: 12px;
+  }
+  .chip.sel {
+    border-color: var(--indigo);
+    background: var(--indigo-soft);
+    color: var(--indigo);
+  }
+  .chip .rm {
+    color: var(--muted);
+    font-size: 13px;
+    margin-left: 2px;
+  }
+  .chip.dash {
+    border-style: dashed;
+    color: var(--body);
+  }
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 999px;
+  }
+
+  /* ---------- kpi ---------- */
+  .kpigrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+  }
+  .kpi {
+    border-left: 3px solid var(--indigo);
+    background: var(--white);
+    border-radius: 0 10px 10px 0;
+    padding: 11px 13px;
+    border-top: 1px solid var(--line);
+    border-right: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+  }
+  .kpi .v {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.03em;
+    font-size: 24px;
+    font-weight: 600;
+    margin: 5px 0 2px;
+    line-height: 1.05;
+  }
+  .kpi .c {
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.35;
+  }
+
+  /* ---------- market picker ---------- */
+  .picker {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .picker .hd {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 9px 13px;
+    background: var(--canvas);
+    border-bottom: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .res {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 9px 13px;
+    border-bottom: 1px solid var(--soft);
+    cursor: pointer;
+  }
+  .res:last-child {
+    border-bottom: 0;
+  }
+  .res:hover {
+    background: var(--indigo-soft);
+  }
+  .res .t {
+    width: 26px;
+    height: 26px;
+    border-radius: 7px;
+    background: var(--soft);
+    color: var(--body);
+    display: grid;
+    place-items: center;
+    font-size: 14px;
+    flex: none;
+  }
+  .res .nm {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--indigo);
+  }
+  .res .mt {
+    font-size: 11.5px;
+    color: var(--muted);
+  }
+  .res .add {
+    margin-left: auto;
+    font-size: 15px;
+    color: var(--muted);
+  }
+  .res:hover .add {
+    color: var(--indigo);
+  }
+  .lvl {
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: var(--soft);
+    color: var(--muted);
+    margin-left: 8px;
+  }
+
+  /* ---------- priorities ---------- */
+  .prio {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(158px, 1fr));
+    gap: 10px;
+  }
+  .prio button {
+    text-align: left;
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 11px 12px;
+    cursor: pointer;
+    font-family: var(--sans);
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .prio button:hover {
+    border-color: var(--indigo);
+  }
+  .prio button.on {
+    border-color: var(--indigo);
+    background: var(--indigo-soft);
+  }
+  .prio .t {
+    width: 24px;
+    height: 24px;
+    border-radius: 7px;
+    display: grid;
+    place-items: center;
+    font-size: 13px;
+    flex: none;
+  }
+  .prio b {
+    display: block;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .prio span {
+    display: block;
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.35;
+    margin-top: 1px;
+  }
+
+  .fields {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 13px;
+  }
+  .fld label {
+    display: block;
+  }
+  .fld .in {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-top: 5px;
+    background: var(--canvas);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 9px 12px;
+  }
+  .fld .in .cur {
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .fld .in .ph {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    color: var(--muted);
+    font-size: 13.5px;
+  }
+  .fld .in .suf {
+    margin-left: auto;
+    font-size: 11.5px;
+    color: var(--muted);
+  }
+  .fld .hint {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 4px;
+    display: block;
+  }
+
+  /* ---------- recent reports ---------- */
+  .rr {
+    display: flex;
+    gap: 12px;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--soft);
+    cursor: pointer;
+  }
+  .rr:last-child {
+    border-bottom: 0;
+  }
+  .rr:hover {
+    background: var(--indigo-soft);
+  }
+  .rr .t {
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+    display: grid;
+    place-items: center;
+    font-size: 15px;
+    flex: none;
+  }
+  .rr .ttl {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ink);
+    line-height: 1.3;
+  }
+  .rr .meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 5px;
+    font-size: 11.5px;
+    color: var(--muted);
+  }
+  .rr .meta .dot {
+    width: 3px;
+    height: 3px;
+    border-radius: 999px;
+    background: var(--muted);
+  }
+  .rr .go {
+    margin-left: auto;
+    align-self: center;
+    color: var(--muted);
+    font-size: 15px;
+  }
+  .rr:hover .go {
+    color: var(--indigo);
+  }
+  .vers {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--body);
+    background: var(--soft);
+    border-radius: 999px;
+    padding: 2px 8px;
+  }
+
+  /* ---------- promo ---------- */
+  .promo {
+    background: linear-gradient(140deg, var(--indigo-soft), var(--violet-soft));
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 17px;
+  }
+  .promo h3 {
+    margin: 10px 0 5px;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+  }
+  .promo p {
+    margin: 0 0 13px;
+    font-size: 12.5px;
+    color: var(--body);
+    line-height: 1.5;
+  }
+  .promo .t {
+    width: 38px;
+    height: 38px;
+    border-radius: 11px;
+    background: var(--white);
+    color: var(--indigo);
+    display: grid;
+    place-items: center;
+    font-size: 19px;
+    box-shadow: var(--sh);
+  }
+
+  /* ---------- report shell ---------- */
+  .doc {
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    box-shadow: var(--sh);
+    overflow: hidden;
+  }
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 16px;
+    border-bottom: 1px solid var(--line);
+    background: var(--canvas);
+    flex-wrap: wrap;
+  }
+  .toolbar .end {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .dochead {
+    padding: 20px 24px 18px;
+    border-bottom: 1px solid var(--line);
+  }
+  .dochead h1 {
+    margin: 9px 0 8px;
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    line-height: 1.16;
+  }
+  .dochead .meta {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .dochead .meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .docbody {
+    padding: 20px 24px 24px;
+  }
+  @media (max-width: 640px) {
+    .dochead,
+    .docbody {
+      padding-left: 15px;
+      padding-right: 15px;
+    }
+    .dochead h1 {
+      font-size: 21px;
+    }
+  }
+
+  .toc {
+    display: flex;
+    gap: 7px;
+    flex-wrap: wrap;
+  }
+  .toc a {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--white);
+    color: var(--body);
+  }
+  .toc a:hover {
+    border-color: var(--indigo);
+    color: var(--indigo);
+    text-decoration: none;
+  }
+  .toc .t {
+    width: 20px;
+    height: 20px;
+    border-radius: 6px;
+    display: grid;
+    place-items: center;
+    font-size: 11px;
+    flex: none;
+  }
+
+  .block {
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+  .block > .cb {
+    padding: 16px 18px 18px;
+  }
+  .prose {
+    font-family: var(--serif);
+    font-size: 15.2px;
+    line-height: 1.68;
+    color: var(--body);
+    max-width: 68ch;
+  }
+  .prose p {
+    margin: 0 0 14px;
+  }
+  .prose p:last-child {
+    margin-bottom: 0;
+  }
+  .prose strong {
+    color: var(--ink);
+  }
+  .ai {
+    background: var(--indigo-soft);
+    border-radius: 12px;
+    padding: 15px 17px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .ai .t {
+    color: var(--indigo);
+    font-size: 17px;
+    margin-top: 2px;
+  }
+  .ai .txt {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 15px;
+    line-height: 1.65;
+    color: var(--ink);
+  }
+  .subh {
+    font-size: 12.5px;
+    font-weight: 700;
+    letter-spacing: -0.005em;
+    color: var(--ink);
+    margin: 20px 0 9px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .subh::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--line);
+  }
+
+  /* ---------- score cards ---------- */
+  .scores {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
+    gap: 12px;
+  }
+  .sc {
+    border: 1px solid var(--line);
+    border-radius: 13px;
+    padding: 13px 14px;
+    background: var(--white);
+    border-left-width: 3px;
+    border-left-style: solid;
+    position: relative;
+  }
+  .sc .top {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 7px;
+  }
+  .sc .nm {
+    font-size: 12.5px;
+    font-weight: 700;
+  }
+  .sc .row {
+    display: flex;
+    align-items: baseline;
+    gap: 9px;
+  }
+  .sc .v {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 34px;
+    font-weight: 600;
+    letter-spacing: -0.04em;
+    line-height: 1;
+  }
+  .sc .gr {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 6px;
+  }
+  .sc .mo {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 8px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .sc .of {
+    font-size: 11px;
+    color: var(--muted);
+    font-family: var(--mono);
+  }
+
+  /* ---------- tables ---------- */
+  .scroller {
+    overflow-x: auto;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+    min-width: 560px;
+  }
+  th,
+  td {
+    padding: 9px 10px;
+  }
+  thead th {
+    text-align: right;
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+  }
+  thead th:first-child {
+    text-align: left;
+  }
+  tbody td {
+    text-align: right;
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+    border-bottom: 1px solid var(--soft);
+    white-space: nowrap;
+  }
+  tbody td:first-child {
+    text-align: left;
+    font-family: var(--sans);
+    color: var(--body);
+    font-variant-numeric: normal;
+    letter-spacing: 0;
+    white-space: normal;
+  }
+  tbody tr:last-child td {
+    border-bottom: 0;
+  }
+  .best {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: var(--green-soft);
+    color: var(--green);
+    border-radius: 7px;
+    padding: 3px 8px;
+    font-weight: 700;
+  }
+  .pri {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--indigo);
+    margin-left: 5px;
+  }
+  .neg {
+    color: var(--red);
+  }
+  .pos {
+    color: var(--green);
+  }
+  .fnote {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 9px;
+    display: flex;
+    gap: 7px;
+    align-items: flex-start;
+    line-height: 1.45;
+  }
+
+  /* ---------- actions ---------- */
+  .act {
+    display: flex;
+    gap: 13px;
+    border: 1px solid var(--line);
+    border-radius: 13px;
+    padding: 13px 15px;
+    margin-bottom: 10px;
+  }
+  .act .no {
+    width: 24px;
+    height: 24px;
+    border-radius: 999px;
+    background: var(--indigo);
+    color: #fff;
+    display: grid;
+    place-items: center;
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 700;
+    flex: none;
+  }
+  .act .mk {
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .act .hd {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--ink);
+    margin: 3px 0 5px;
+    line-height: 1.4;
+  }
+  .act .wh {
+    font-size: 12.5px;
+    color: var(--body);
+    line-height: 1.5;
+  }
+  .act .tm {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 8px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 3px 9px;
+    border-radius: 999px;
+  }
+
+  /* ---------- news ---------- */
+  .newsgrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(215px, 1fr));
+    gap: 12px;
+  }
+  .nc {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px 13px;
+  }
+  .nc h4 {
+    margin: 0 0 9px;
+    font-size: 12.5px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .nc ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .nc li {
+    padding: 7px 0;
+    border-top: 1px solid var(--soft);
+    font-size: 12.5px;
+    line-height: 1.4;
+  }
+  .nc li:first-child {
+    border-top: 0;
+    padding-top: 0;
+  }
+  .nc .src {
+    display: block;
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  /* ---------- sentiment ---------- */
+  .sent {
+    background: var(--amber-soft);
+    border-radius: 12px;
+    padding: 14px 16px;
+  }
+  .sent .row {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin: 6px 0 10px;
+  }
+  .sent .st {
+    width: 11px;
+    height: 11px;
+    border-radius: 999px;
+    background: var(--amber);
+    box-shadow: 0 0 0 3px rgba(224, 123, 0, 0.18);
+  }
+  .sent .v {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--amber);
+  }
+  .track {
+    height: 7px;
+    border-radius: 999px;
+    background: rgba(139, 145, 168, 0.22);
+    overflow: hidden;
+  }
+  .track i {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--amber), var(--amber));
+  }
+  .scale {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 6px;
+    font-size: 10px;
+    color: var(--muted);
+  }
+
+  /* ---------- segmented ---------- */
+  .seg {
+    display: inline-flex;
+    background: var(--canvas);
+    padding: 3px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    gap: 2px;
+  }
+  .seg button {
+    border: 0;
+    background: transparent;
+    font-family: var(--sans);
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--body);
+    padding: 6px 13px;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .seg button.on {
+    background: var(--white);
+    color: var(--indigo);
+    box-shadow: var(--sh);
+  }
+
+  /* ---------- ask ai drawer ---------- */
+  .drawer {
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    overflow: hidden;
+    background: var(--white);
+  }
+  .drawer .hd {
+    padding: 13px 15px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    gap: 9px;
+  }
+  .drawer .bd {
+    padding: 14px 15px;
+  }
+  .sug {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: var(--indigo-soft);
+    border: 0;
+    border-radius: 10px;
+    padding: 10px 13px;
+    margin-bottom: 8px;
+    font-family: var(--sans);
+    font-size: 12.5px;
+    color: var(--indigo);
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .sug:hover {
+    filter: brightness(0.97);
+  }
+  .askin {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    background: var(--canvas);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 8px 8px 8px 15px;
+    margin-top: 12px;
+  }
+  .askin .ph {
+    flex: 1;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .askin .go {
+    width: 30px;
+    height: 30px;
+    border-radius: 999px;
+    background: var(--indigo);
+    color: #fff;
+    display: grid;
+    place-items: center;
+    font-size: 14px;
+  }
+
+  /* ---------- flags ---------- */
+  .flag {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    border-radius: 11px;
+    padding: 11px 13px;
+    font-size: 12.5px;
+    line-height: 1.5;
+    margin-bottom: 12px;
+  }
+  .flag.warn {
+    background: var(--amber-soft);
+    color: var(--ink);
+  }
+  .flag.warn .t {
+    color: var(--amber);
+    font-size: 15px;
+    margin-top: 1px;
+  }
+  .flag.info {
+    background: var(--indigo-soft);
+    color: var(--ink);
+  }
+  .flag.info .t {
+    color: var(--indigo);
+    font-size: 15px;
+    margin-top: 1px;
+  }
+  .flag b {
+    font-weight: 700;
+  }
+
+  /* ---------- notes ---------- */
+  .notes {
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 20px 24px;
+    box-shadow: var(--sh);
+  }
+  .notes h2 {
+    margin: 0 0 4px;
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+  }
+  .notes .lede {
+    font-size: 12.5px;
+    color: var(--muted);
+    margin: 0 0 16px;
+  }
+  .notes ol {
+    margin: 0;
+    padding-left: 22px;
+  }
+  .notes li {
+    margin-bottom: 11px;
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--body);
+  }
+  .notes li b {
+    color: var(--ink);
+  }
+  .notes li em {
+    font-style: normal;
+    color: var(--muted);
+  }
+
+  .footnote {
+    text-align: center;
+    font-size: 11.5px;
+    color: var(--muted);
+    padding: 22px 0 0;
+    line-height: 1.6;
+  }
+</style>
+
+<svg width="0" height="0" style="position: absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-dash" viewBox="0 0 24 24">
+      <rect width="7" height="9" x="3" y="3" rx="1" />
+      <rect width="7" height="5" x="14" y="3" rx="1" />
+      <rect width="7" height="9" x="14" y="12" rx="1" />
+      <rect width="7" height="5" x="3" y="16" rx="1" />
+    </symbol>
+    <symbol id="i-map" viewBox="0 0 24 24">
+      <path
+        d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z"
+      />
+      <path d="M15 5.764V20" />
+      <path d="M9 3.236v15" />
+    </symbol>
+    <symbol id="i-calc" viewBox="0 0 24 24">
+      <rect width="16" height="20" x="4" y="2" rx="2" />
+      <path d="M8 6h8" />
+      <path d="M16 14v4" />
+      <path d="M16 10h.01" />
+      <path d="M12 10h.01" />
+      <path d="M8 10h.01" />
+      <path d="M12 14h.01" />
+      <path d="M8 14h.01" />
+      <path d="M12 18h.01" />
+      <path d="M8 18h.01" />
+    </symbol>
+    <symbol id="i-sliders" viewBox="0 0 24 24">
+      <path d="M21 4h-7" />
+      <path d="M10 4H3" />
+      <path d="M21 12h-9" />
+      <path d="M8 12H3" />
+      <path d="M21 20h-5" />
+      <path d="M12 20H3" />
+      <path d="M14 2v4" />
+      <path d="M8 10v4" />
+      <path d="M16 18v4" />
+    </symbol>
+    <symbol id="i-file" viewBox="0 0 24 24">
+      <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+      <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+      <path d="M10 9H8" />
+      <path d="M16 13H8" />
+      <path d="M16 17H8" />
+    </symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24">
+      <path d="M10.268 21a2 2 0 0 0 3.464 0" />
+      <path
+        d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"
+      />
+    </symbol>
+    <symbol id="i-user" viewBox="0 0 24 24">
+      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+      <circle cx="12" cy="7" r="4" />
+    </symbol>
+    <symbol id="i-search" viewBox="0 0 24 24">
+      <circle cx="11" cy="11" r="8" />
+      <path d="m21 21-4.3-4.3" />
+    </symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24">
+      <path d="M5 12h14" />
+      <path d="M12 5v14" />
+    </symbol>
+    <symbol id="i-x" viewBox="0 0 24 24">
+      <path d="M18 6 6 18" />
+      <path d="m6 6 12 12" />
+    </symbol>
+    <symbol id="i-cr" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6" /></symbol>
+    <symbol id="i-cd" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" /></symbol>
+    <symbol id="i-cu" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6" /></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24">
+      <path
+        d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"
+      />
+      <circle cx="12" cy="10" r="3" />
+    </symbol>
+    <symbol id="i-cal" viewBox="0 0 24 24">
+      <path d="M8 2v4" />
+      <path d="M16 2v4" />
+      <rect width="18" height="18" x="3" y="4" rx="2" />
+      <path d="M3 10h18" />
+    </symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24">
+      <path
+        d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"
+      />
+    </symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24">
+      <path d="M3 3v16a2 2 0 0 0 2 2h16" />
+      <path d="M18 17V9" />
+      <path d="M13 17V5" />
+      <path d="M8 17v-3" />
+    </symbol>
+    <symbol id="i-users" viewBox="0 0 24 24">
+      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </symbol>
+    <symbol id="i-target" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="10" />
+      <circle cx="12" cy="12" r="6" />
+      <circle cx="12" cy="12" r="2" />
+    </symbol>
+    <symbol id="i-pulse" viewBox="0 0 24 24">
+      <path
+        d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"
+      />
+    </symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 6v6l4 2" />
+    </symbol>
+    <symbol id="i-dl" viewBox="0 0 24 24">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <path d="m7 10 5 5 5-5" />
+      <path d="M12 15V3" />
+    </symbol>
+    <symbol id="i-share" viewBox="0 0 24 24">
+      <circle cx="18" cy="5" r="3" />
+      <circle cx="6" cy="12" r="3" />
+      <circle cx="18" cy="19" r="3" />
+      <path d="M8.59 13.51l6.83 3.98" />
+      <path d="M15.41 6.51L8.59 10.49" />
+    </symbol>
+    <symbol id="i-msg" viewBox="0 0 24 24">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    </symbol>
+    <symbol id="i-bulb" viewBox="0 0 24 24">
+      <path
+        d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"
+      />
+      <path d="M9 18h6" />
+      <path d="M10 22h4" />
+    </symbol>
+    <symbol id="i-info" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 16v-4" />
+      <path d="M12 8h.01" />
+    </symbol>
+    <symbol id="i-warn" viewBox="0 0 24 24">
+      <path
+        d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"
+      />
+      <path d="M12 9v4" />
+      <path d="M12 17h.01" />
+    </symbol>
+    <symbol id="i-check" viewBox="0 0 24 24">
+      <path d="M20 6 9 17l-5-5" />
+    </symbol>
+    <symbol id="i-news" viewBox="0 0 24 24">
+      <path d="M15 18h-5" />
+      <path d="M18 14h-8" />
+      <path
+        d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0v-9a2 2 0 0 1 2-2h2"
+      />
+    </symbol>
+    <symbol id="i-tu" viewBox="0 0 24 24">
+      <path d="M16 7h6v6" />
+      <path d="m22 7-8.5 8.5-5-5L2 17" />
+    </symbol>
+    <symbol id="i-td" viewBox="0 0 24 24">
+      <path d="M16 17h6v-6" />
+      <path d="m22 17-8.5-8.5-5 5L2 7" />
+    </symbol>
+    <symbol id="i-case" viewBox="0 0 24 24">
+      <path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+      <rect width="20" height="14" x="2" y="6" rx="2" />
+    </symbol>
+    <symbol id="i-heart" viewBox="0 0 24 24">
+      <path
+        d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"
+      />
+    </symbol>
+    <symbol id="i-dollar" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="10" />
+      <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8" />
+      <path d="M12 18V6" />
+    </symbol>
+    <symbol id="i-gauge" viewBox="0 0 24 24">
+      <path d="m12 14 4-4" />
+      <path d="M3.34 19a10 10 0 1 1 17.32 0" />
+    </symbol>
+    <symbol id="i-layers" viewBox="0 0 24 24">
+      <path
+        d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"
+      />
+      <path d="m2 12.5 9.17 4.16a2 2 0 0 0 1.66 0L22 12.5" />
+      <path d="m2 17.5 9.17 4.16a2 2 0 0 0 1.66 0L22 17.5" />
+    </symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24">
+      <rect x="14" y="4" width="4" height="16" rx="1" />
+      <rect x="6" y="4" width="4" height="16" rx="1" />
+    </symbol>
+    <symbol id="i-star" viewBox="0 0 24 24">
+      <path
+        d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"
+      />
+    </symbol>
+    <symbol id="i-trophy" viewBox="0 0 24 24">
+      <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
+      <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
+      <path d="M4 22h16" />
+      <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" />
+      <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" />
+      <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
+    </symbol>
+    <symbol id="i-au" viewBox="0 0 24 24">
+      <path d="m5 12 7-7 7 7" />
+      <path d="M12 19V5" />
+    </symbol>
+    <symbol id="i-ad" viewBox="0 0 24 24">
+      <path d="M12 5v14" />
+      <path d="m19 12-7 7-7-7" />
+    </symbol>
+    <symbol id="i-al" viewBox="0 0 24 24">
+      <path d="m12 19-7-7 7-7" />
+      <path d="M19 12H5" />
+    </symbol>
+    <symbol id="i-ar" viewBox="0 0 24 24">
+      <path d="M5 12h14" />
+      <path d="m12 5 7 7-7 7" />
+    </symbol>
+    <symbol id="i-send" viewBox="0 0 24 24">
+      <path
+        d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"
+      />
+      <path d="m21.854 2.147-10.94 10.939" />
+    </symbol>
+    <symbol id="i-bldg" viewBox="0 0 24 24">
+      <rect width="16" height="20" x="4" y="2" rx="2" />
+      <path d="M9 22v-4h6v4" />
+      <path d="M8 6h.01" />
+      <path d="M16 6h.01" />
+      <path d="M12 6h.01" />
+      <path d="M12 10h.01" />
+      <path d="M12 14h.01" />
+      <path d="M16 10h.01" />
+      <path d="M16 14h.01" />
+      <path d="M8 10h.01" />
+      <path d="M8 14h.01" />
+    </symbol>
+    <symbol id="i-hist" viewBox="0 0 24 24">
+      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+      <path d="M3 3v5h5" />
+      <path d="M12 7v5l4 2" />
+    </symbol>
+    <symbol id="i-cols" viewBox="0 0 24 24">
+      <rect width="18" height="18" x="3" y="3" rx="2" />
+      <path d="M9 3v18" />
+      <path d="M15 3v18" />
+    </symbol>
+    <symbol id="i-mail" viewBox="0 0 24 24">
+      <rect width="20" height="16" x="2" y="4" rx="2" />
+      <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+    </symbol>
+  </defs>
+</svg>
+
+<!-- ══════════════════ APP BAR ══════════════════ -->
+<header class="bar">
+  <div class="logo">
+    <span class="sq">P</span><span>Property<span class="iq">IQ</span></span>
+  </div>
+  <nav class="nav">
+    <div class="pill">
+      <span class="t" style="background: #3949ab"
+        ><svg class="ic"><use href="#i-dash" /></svg></span
+      ><span class="lb">Dashboard</span>
+    </div>
+    <div class="pill">
+      <span class="t" style="background: #00838f"
+        ><svg class="ic"><use href="#i-map" /></svg></span
+      ><span class="lb">Map</span>
+    </div>
+    <div class="pill">
+      <span class="t" style="background: #3949ab"
+        ><svg class="ic"><use href="#i-calc" /></svg></span
+      ><span class="lb">Analyzer</span>
+    </div>
+    <div class="pill">
+      <span class="t" style="background: #7c4dff"
+        ><svg class="ic"><use href="#i-sliders" /></svg></span
+      ><span class="lb">Screener</span>
+    </div>
+    <div class="pill on">
+      <span class="t" style="background: #00c853"
+        ><svg class="ic"><use href="#i-file" /></svg></span
+      ><span class="lb">Reports</span>
+    </div>
+  </nav>
+  <div class="right">
+    <span class="prochip">Pro</span>
+    <div class="iconbtn">
+      <svg class="ic"><use href="#i-bell" /></svg>
+    </div>
+    <div class="iconbtn">
+      <svg class="ic"><use href="#i-user" /></svg>
+    </div>
+  </div>
+</header>
+
+<!-- ══════════════════ CONTROL BAR ══════════════════ -->
+<div class="ctl">
+  <div class="who">
+    <span class="t"
+      ><svg class="ic"><use href="#i-file" /></svg
+    ></span>
+    <div>
+      <b>PropertyIQ Report</b><br /><span>Powered by PropertyIQ Score</span>
+    </div>
+  </div>
+  <div class="srch">
+    <svg class="ic"><use href="#i-search" /></svg>
+    <span>Search for a city, metro, ZIP, or county…</span>
+  </div>
+  <div class="meter">
+    <span class="dots"><i class="f"></i><i></i><i></i><i></i><i></i></span>
+    <span><b class="n">1</b> of <b class="n">5</b> markets</span>
+  </div>
+  <div class="end">
+    <button class="btn">
+      <svg class="ic"><use href="#i-sliders" /></svg> Personalize
+    </button>
+    <button class="btn btn-p">
+      <svg class="ic"><use href="#i-spark" /></svg> Generate report
+    </button>
+  </div>
+</div>
+
+<div class="wrap">
+  <!-- ══════════════════ 1. BUILDER ══════════════════ -->
+  <section class="sec">
+    <div class="sechead">
+      <h2>Build a report</h2>
+      <p>
+        Pick one market for a deep dive, or up to five for a side-by-side
+        comparison.
+      </p>
+    </div>
+
+    <div class="builder">
+      <!-- LEFT -->
+      <div>
+        <div class="card" style="margin-bottom: 16px">
+          <div class="ch">
+            <span
+              class="t"
+              style="background: var(--indigo-soft); color: var(--indigo)"
+              ><svg class="ic"><use href="#i-pin" /></svg
+            ></span>
+            <h3>Select your market(s)</h3>
+            <div class="r"><span class="lab">Up to 5</span></div>
+          </div>
+          <div class="cb">
+            <div
+              style="
+                display: flex;
+                gap: 8px;
+                flex-wrap: wrap;
+                margin-bottom: 13px;
+              "
+            >
+              <span class="chip sel">
+                <span class="t" style="background: var(--indigo); color: #fff"
+                  ><svg class="ic"><use href="#i-pin" /></svg
+                ></span>
+                Frederick County, MD
+                <span
+                  class="tag"
+                  style="
+                    background: var(--white);
+                    color: var(--indigo);
+                    margin-left: 2px;
+                  "
+                  >Primary</span
+                >
+                <svg class="ic rm"><use href="#i-x" /></svg>
+              </span>
+              <span class="chip dash pad"
+                ><svg class="ic"><use href="#i-plus" /></svg> Add market</span
+              >
+            </div>
+
+            <div class="picker">
+              <div class="hd">
+                <svg class="ic"><use href="#i-search" /></svg>
+                <span style="color: var(--ink); font-weight: 600"
+                  >Frederick</span
+                >
+                <span class="lab" style="margin-left: auto">5 matches</span>
+              </div>
+              <div class="res">
+                <span class="t"
+                  ><svg class="ic"><use href="#i-bldg" /></svg
+                ></span>
+                <div>
+                  <div class="nm">
+                    Frederick County, MD <span class="lvl">County</span>
+                  </div>
+                  <div class="mt">
+                    Washington-Arlington-Alexandria, DC-VA-MD-WV
+                  </div>
+                </div>
+                <svg class="ic add"><use href="#i-check" /></svg>
+              </div>
+              <div class="res">
+                <span class="t"
+                  ><svg class="ic"><use href="#i-bldg" /></svg
+                ></span>
+                <div>
+                  <div class="nm">
+                    Frederick County, VA <span class="lvl">County</span>
+                  </div>
+                  <div class="mt">Winchester, VA-WV</div>
+                </div>
+                <svg class="ic add"><use href="#i-plus" /></svg>
+              </div>
+              <div class="res">
+                <span class="t"
+                  ><svg class="ic"><use href="#i-bldg" /></svg
+                ></span>
+                <div>
+                  <div class="nm">
+                    Fredericksburg city, VA <span class="lvl">County</span>
+                  </div>
+                  <div class="mt">
+                    Washington-Arlington-Alexandria, DC-VA-MD-WV
+                  </div>
+                </div>
+                <svg class="ic add"><use href="#i-plus" /></svg>
+              </div>
+              <div class="res">
+                <span class="t"
+                  ><svg class="ic"><use href="#i-bldg" /></svg
+                ></span>
+                <div>
+                  <div class="nm">
+                    Fredericksburg, TX <span class="lvl">Metro</span>
+                  </div>
+                  <div class="mt">Metropolitan Statistical Area</div>
+                </div>
+                <svg class="ic add"><use href="#i-plus" /></svg>
+              </div>
+              <div class="res">
+                <span class="t"
+                  ><svg class="ic"><use href="#i-case" /></svg
+                ></span>
+                <div>
+                  <div class="nm">
+                    Frederick, CO 80530 <span class="lvl">Zip</span>
+                  </div>
+                  <div class="mt">Zip</div>
+                </div>
+                <svg class="ic add"><use href="#i-plus" /></svg>
+              </div>
+            </div>
+
+            <div class="flag info" style="margin: 13px 0 0">
+              <svg class="ic t"><use href="#i-info" /></svg>
+              <div>
+                Add another market to see a side-by-side comparison — momentum,
+                price, market conditions and economy are scored column by
+                column.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="ch">
+            <span
+              class="t"
+              style="background: var(--violet-soft); color: var(--violet)"
+              ><svg class="ic"><use href="#i-sliders" /></svg
+            ></span>
+            <h3>
+              Personalize your report
+              <span class="sub">· Optional — get tailored insights</span>
+            </h3>
+            <div class="r">
+              <svg class="ic" style="font-size: 16px; color: var(--muted)">
+                <use href="#i-cu" />
+              </svg>
+            </div>
+          </div>
+          <div class="cb">
+            <div class="lab" style="margin-bottom: 9px">
+              What matters most to you? (Pick your top 3)
+            </div>
+            <div class="prio">
+              <button>
+                <span
+                  class="t"
+                  style="background: var(--green-soft); color: var(--green)"
+                  ><svg class="ic"><use href="#i-dollar" /></svg></span
+                ><span
+                  ><b>Affordability</b
+                  ><span>Can I afford to buy here?</span></span
+                >
+              </button>
+              <button>
+                <span
+                  class="t"
+                  style="background: var(--indigo-soft); color: var(--indigo)"
+                  ><svg class="ic"><use href="#i-tu" /></svg></span
+                ><span
+                  ><b>Appreciation</b
+                  ><span>Will my home grow in value?</span></span
+                >
+              </button>
+              <button>
+                <span
+                  class="t"
+                  style="background: var(--teal-soft); color: var(--teal)"
+                  ><svg class="ic"><use href="#i-case" /></svg></span
+                ><span
+                  ><b>Job Market</b><span>Employment opportunities</span></span
+                >
+              </button>
+              <button>
+                <span
+                  class="t"
+                  style="background: var(--amber-soft); color: var(--amber)"
+                  ><svg class="ic"><use href="#i-clock" /></svg></span
+                ><span
+                  ><b>Market Timing</b
+                  ><span>Is it a good time to buy?</span></span
+                >
+              </button>
+              <button>
+                <span
+                  class="t"
+                  style="background: var(--violet-soft); color: var(--violet)"
+                  ><svg class="ic"><use href="#i-heart" /></svg></span
+                ><span><b>Lifestyle</b><span>Quality of life</span></span>
+              </button>
+            </div>
+            <div
+              style="font-size: 11px; color: var(--muted); margin: 9px 0 18px"
+            >
+              Select up to 3 priorities that matter most to you
+            </div>
+
+            <div class="fields">
+              <div class="fld">
+                <span class="lab">Household income</span>
+                <div class="in">
+                  <span class="cur">$</span><span class="ph">85,000</span>
+                </div>
+                <span class="hint">We'll calculate what you can afford</span>
+              </div>
+              <div class="fld">
+                <span class="lab">Down payment</span>
+                <div class="in">
+                  <span class="cur">$</span><span class="ph">50,000</span>
+                </div>
+                <span class="hint">Savings available for purchase</span>
+              </div>
+              <div class="fld">
+                <span class="lab">Purchase price</span>
+                <div class="in">
+                  <span class="cur">$</span><span class="ph">450,000</span>
+                </div>
+                <span class="hint">Leave blank for median price</span>
+              </div>
+              <div class="fld">
+                <span class="lab">Expected rent</span>
+                <div class="in">
+                  <span class="cur">$</span><span class="ph">2,500</span
+                  ><span class="suf">/mo</span>
+                </div>
+                <span class="hint">Leave blank for market rent</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT RAIL -->
+      <div>
+        <div class="promo" style="margin-bottom: 16px">
+          <div class="t">
+            <svg class="ic"><use href="#i-file" /></svg>
+          </div>
+          <h3>Custom Research</h3>
+          <p>
+            Ask any real estate question. Get an AI-powered research brief
+            backed by PropertyIQ data.
+          </p>
+          <div style="display: flex; align-items: center; gap: 9px">
+            <span
+              class="chip pad"
+              style="
+                background: var(--white);
+                border-color: transparent;
+                color: var(--indigo);
+              "
+              ><svg class="ic"><use href="#i-spark" /></svg> AI Research
+              Agent</span
+            >
+            <span
+              style="
+                margin-left: auto;
+                width: 36px;
+                height: 36px;
+                border-radius: 999px;
+                background: var(--indigo);
+                color: #fff;
+                display: grid;
+                place-items: center;
+                font-size: 16px;
+              "
+              ><svg class="ic"><use href="#i-ar" /></svg
+            ></span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="ch">
+            <span class="t" style="background: var(--soft); color: var(--body)"
+              ><svg class="ic"><use href="#i-hist" /></svg
+            ></span>
+            <h3>Recent Reports</h3>
+            <div class="r"><span class="lab">6 saved · 4 markets</span></div>
+          </div>
+          <div>
+            <div class="rr">
+              <span
+                class="t"
+                style="background: var(--indigo-soft); color: var(--indigo)"
+                ><svg class="ic"><use href="#i-chart" /></svg
+              ></span>
+              <div style="min-width: 0">
+                <div class="ttl">Frederick County, MD — PropertyIQ Report</div>
+                <div class="meta">
+                  <span
+                    class="tag"
+                    style="background: var(--indigo-soft); color: var(--indigo)"
+                    >PropertyIQ Report</span
+                  >
+                  <span class="dot"></span
+                  ><svg class="ic"><use href="#i-pin" /></svg> Frederick County,
+                  MD <span class="dot"></span><span class="n">7/12/2026</span>
+                  <span class="vers">2 versions</span>
+                </div>
+              </div>
+              <svg class="ic go"><use href="#i-cr" /></svg>
+            </div>
+
+            <div class="rr">
+              <span
+                class="t"
+                style="background: var(--violet-soft); color: var(--violet)"
+                ><svg class="ic"><use href="#i-cols" /></svg
+              ></span>
+              <div style="min-width: 0">
+                <div class="ttl">
+                  Tampa-St. Petersburg-Clearwater — Market Comparison
+                </div>
+                <div class="meta">
+                  <span
+                    class="tag"
+                    style="background: var(--violet-soft); color: var(--violet)"
+                    >Comparison · 4 markets</span
+                  >
+                  <span class="dot"></span>Tampa · Chicago · New Orleans ·
+                  Rochester <span class="dot"></span
+                  ><span class="n">6/29/2026</span>
+                </div>
+              </div>
+              <svg class="ic go"><use href="#i-cr" /></svg>
+            </div>
+
+            <div class="rr">
+              <span
+                class="t"
+                style="background: var(--indigo-soft); color: var(--indigo)"
+                ><svg class="ic"><use href="#i-chart" /></svg
+              ></span>
+              <div style="min-width: 0">
+                <div class="ttl">
+                  Shermans Dale, PA 17090 — PropertyIQ Report
+                </div>
+                <div class="meta">
+                  <span
+                    class="tag"
+                    style="background: var(--indigo-soft); color: var(--indigo)"
+                    >PropertyIQ Report</span
+                  >
+                  <span class="dot"></span
+                  ><svg class="ic"><use href="#i-pin" /></svg> Shermans Dale, PA
+                  17090 <span class="dot"></span
+                  ><span class="n">6/13/2026</span>
+                  <span class="vers">2 versions</span>
+                </div>
+              </div>
+              <svg class="ic go"><use href="#i-cr" /></svg>
+            </div>
+
+            <div class="rr">
+              <span
+                class="t"
+                style="background: var(--indigo-soft); color: var(--indigo)"
+                ><svg class="ic"><use href="#i-chart" /></svg
+              ></span>
+              <div style="min-width: 0">
+                <div class="ttl">Bloomington, IL — PropertyIQ Report</div>
+                <div class="meta">
+                  <span
+                    class="tag"
+                    style="background: var(--indigo-soft); color: var(--indigo)"
+                    >PropertyIQ Report</span
+                  >
+                  <span class="dot"></span
+                  ><svg class="ic"><use href="#i-pin" /></svg> Bloomington, IL
+                  <span class="dot"></span><span class="n">6/13/2026</span>
+                </div>
+              </div>
+              <svg class="ic go"><use href="#i-cr" /></svg>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="rule"></div>
+
+  <!-- ══════════════════ 2. SINGLE-MARKET REPORT ══════════════════ -->
+  <section class="sec">
+    <div class="sechead">
+      <h2>Report view — single market</h2>
+      <p>
+        What opens when you click a "PropertyIQ Report" entry in Recent Reports.
+      </p>
+    </div>
+
+    <div class="doc">
+      <div class="toolbar">
+        <button class="btn btn-sm">
+          <svg class="ic"><use href="#i-al" /></svg> Back to Reports
+        </button>
+        <div class="end">
+          <button class="btn btn-sm">
+            <svg class="ic"><use href="#i-msg" /></svg> Ask AI
+          </button>
+          <button class="btn btn-sm">
+            <svg class="ic"><use href="#i-share" /></svg> Share
+          </button>
+          <button class="btn btn-sm btn-p">
+            <svg class="ic"><use href="#i-dl" /></svg> Download
+          </button>
+        </div>
+      </div>
+
+      <!-- personalize this report -->
+      <div
+        style="
+          padding: 14px 24px;
+          border-bottom: 1px solid var(--line);
+          background: var(--canvas);
+        "
+      >
+        <div
+          style="
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            margin-bottom: 13px;
+          "
+        >
+          <svg class="ic" style="font-size: 15px; color: var(--indigo)">
+            <use href="#i-sliders" />
+          </svg>
+          <b style="font-size: 13px">Personalize This Report</b>
+          <svg
+            class="ic"
+            style="margin-left: auto; font-size: 15px; color: var(--muted)"
+          >
+            <use href="#i-cu" />
+          </svg>
+        </div>
+        <div class="two">
+          <div>
+            <div
+              class="lab"
+              style="
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                margin-bottom: 8px;
+              "
+            >
+              <svg class="ic" style="font-size: 12px">
+                <use href="#i-star" />
+              </svg>
+              Your priorities (pick up to 3)
+            </div>
+            <div style="display: flex; gap: 7px; flex-wrap: wrap">
+              <span class="chip pad">Affordability</span>
+              <span class="chip pad">Growth Potential</span>
+              <span class="chip pad">Market Timing</span>
+              <span class="chip pad">Stability</span>
+              <span class="chip pad">Value</span>
+            </div>
+          </div>
+          <div class="fields">
+            <div class="fld">
+              <span class="lab">Annual income</span>
+              <div class="in" style="background: var(--white)">
+                <span class="cur">$</span><span class="ph">85,000</span>
+              </div>
+            </div>
+            <div class="fld">
+              <span class="lab">Down payment</span>
+              <div class="in" style="background: var(--white)">
+                <span class="cur">$</span><span class="ph">100,000</span>
+              </div>
+            </div>
+            <div class="fld" style="grid-column: 1/-1">
+              <span
+                class="lab"
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 6px;
+                  margin-bottom: 7px;
+                "
+                ><svg class="ic" style="font-size: 12px">
+                  <use href="#i-cal" />
+                </svg>
+                Purchase timeline</span
+              >
+              <div class="seg" style="background: var(--white)">
+                <button class="on">3 months</button><button>6 months</button
+                ><button>1 year</button><button>2+ years</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dochead">
+        <div
+          style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap"
+        >
+          <span
+            class="tag"
+            style="background: var(--green-soft); color: var(--green)"
+            >PropertyIQ Report</span
+          >
+          <span style="font-size: 11.5px; color: var(--muted)"
+            >Generated <span class="n">7/12/2026</span></span
+          >
+        </div>
+        <h1>Frederick County, MD — PropertyIQ Report</h1>
+        <div class="meta">
+          <span
+            ><svg class="ic"><use href="#i-pin" /></svg> Frederick County,
+            MD</span
+          >
+          <span
+            ><svg class="ic"><use href="#i-cal" /></svg> Data as of
+            <span class="n">2026-07-12</span></span
+          >
+          <span
+            ><svg class="ic"><use href="#i-spark" /></svg> Drafted by AI</span
+          >
+        </div>
+        <div style="margin-top: 15px">
+          <div class="lab" style="margin-bottom: 8px">
+            In this report · 3 sections
+          </div>
+          <div class="toc">
+            <a href="#"
+              ><span
+                class="t"
+                style="background: var(--indigo-soft); color: var(--indigo)"
+                ><svg class="ic"><use href="#i-spark" /></svg
+              ></span>
+              Executive Verdict</a
+            >
+            <a href="#"
+              ><span
+                class="t"
+                style="background: var(--teal-soft); color: var(--teal)"
+                ><svg class="ic"><use href="#i-users" /></svg
+              ></span>
+              Your Situation</a
+            >
+            <a href="#"
+              ><span
+                class="t"
+                style="background: var(--amber-soft); color: var(--amber)"
+                ><svg class="ic"><use href="#i-pulse" /></svg
+              ></span>
+              Market Pulse</a
+            >
+          </div>
+        </div>
+      </div>
+
+      <div class="docbody">
+        <div class="flag warn">
+          <svg class="ic t"><use href="#i-warn" /></svg>
+          <div>
+            <b>Three sections did not generate for this report.</b> Market Deep
+            Dive, Verdict &amp; Actions and What to Watch were requested but
+            returned empty. On the live page they still appear in the table of
+            contents as links that scroll nowhere — here they are excluded from
+            the contents and reported instead.
+          </div>
+        </div>
+
+        <!-- Executive Verdict -->
+        <div class="block">
+          <div class="ch">
+            <span
+              class="t"
+              style="background: var(--indigo-soft); color: var(--indigo)"
+              ><svg class="ic"><use href="#i-spark" /></svg
+            ></span>
+            <h3>Executive Verdict</h3>
+            <div class="r">
+              <span
+                class="tag"
+                style="background: var(--red-soft); color: var(--red)"
+                ><svg class="ic"><use href="#i-ad" /></svg> Score 38 ·
+                Easing</span
+              >
+            </div>
+          </div>
+          <div class="cb">
+            <div class="ai">
+              <svg class="ic t"><use href="#i-bulb" /></svg>
+              <div class="txt">
+                Frederick County scores 38 out of 100 — a below-average market
+                that puts buyers in a weak position, yet you're still forced to
+                negotiate in a seller's market where sellers hold the cards.
+                Your $2,562 monthly payment at 6.5% with 20% down consumes just
+                26% of median income, making the deal pencil out on paper, but
+                appreciation has already decelerated to 0.9% annually on that
+                $553,500 price tag. This is not a market you enter expecting
+                near-term equity gains — it's a gamble that you can outlast a
+                correction.
+              </div>
+            </div>
+            <div class="kpigrid" style="margin-top: 14px">
+              <div class="kpi" style="border-left-color: var(--red)">
+                <div class="lab">PropertyIQ Score</div>
+                <div class="v">38</div>
+                <div class="c">Demand momentum, not a quality grade</div>
+              </div>
+              <div class="kpi" style="border-left-color: var(--indigo)">
+                <div class="lab">Median home value</div>
+                <div class="v">$553,500</div>
+                <div class="c">Typical home value for the county</div>
+              </div>
+              <div class="kpi" style="border-left-color: var(--teal)">
+                <div class="lab">Monthly payment</div>
+                <div class="v">$2,562</div>
+                <div class="c">20% down at 6.5% — 26% of median income</div>
+              </div>
+              <div class="kpi" style="border-left-color: var(--amber)">
+                <div class="lab">Appreciation</div>
+                <div class="v">0.9%</div>
+                <div class="c">Annual pace, already decelerating</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Your Situation -->
+        <div class="block">
+          <div class="ch">
+            <span
+              class="t"
+              style="background: var(--teal-soft); color: var(--teal)"
+              ><svg class="ic"><use href="#i-users" /></svg
+            ></span>
+            <h3>Your Situation</h3>
+            <div class="r"><span class="lab">Drafted by AI</span></div>
+          </div>
+          <div class="cb">
+            <div class="prose">
+              <p>
+                Your monthly mortgage payment in Frederick County would land at
+                $2,562 with 20% down on the median $553,500 home, assuming a
+                6.5% rate. That is a clean, conventional-loan-friendly figure,
+                and at 26% DTI it suggests you earn roughly $118,000 a year,
+                well above the area median household income of approximately
+                $107,000. On paper, you qualify. What the numbers do not reveal
+                is that you will be buying at a 38/100 score, which means nearly
+                two-thirds of comparable markets in the U.S. offer better
+                conditions for a homebuyer than Frederick County does right now.
+                A 38 is not a disaster, but it is a specific warning: the
+                financial cushion you think you have will erode faster here than
+                in a market scoring 55 or 70, and the $2,562 monthly obligation
+                will feel heavier if appreciation stalls or prices correct even
+                modestly.
+              </p>
+              <p>
+                At $553,500, you need to understand exactly what income tier
+                keeps you safe. A household earning $110,000 to $125,000 can
+                make the payment work on paper, but the real risk is that this
+                market remains in late expansion, a seller's market where only 1
+                in 474 sellers is cutting their price. You will not have
+                meaningful negotiation leverage. If your household income is
+                below $105,000, you will likely be pushed into older inventory,
+                longer commutes into the Route 15 corridor, or townhomes rather
+                than detached single-family homes, because the median-price home
+                in a seller's market will attract multiple offers and close near
+                or above asking. The low unemployment rate of 2.4 percent and
+                the Kite Pharma expansion are legitimately bullish forces
+                propping up demand among well-compensated biotech workers, so
+                you are competing against buyers with similar or higher incomes
+                who are less rate-sensitive than the typical first-timer.
+              </p>
+              <p>
+                The rent-versus-buy calculation here is unusually tight and
+                deserves your full attention. With the Zillow Observed Rent
+                Index at $2,167 and your monthly ownership cost at $2,562, you
+                are paying a $395 monthly premium to own, not counting
+                maintenance, insurance, and property taxes beyond what is
+                already baked into that $2,562 estimate. Over five years, that
+                is roughly $23,700 in additional cash outflow before factoring
+                in any appreciation. If Frederick County appreciates at a modest
+                2 percent annually, your $110,700 down payment would generate
+                roughly $55,000 in equity from price growth alone over five
+                years, easily surpassing the rent premium. But the 38 score and
+                recent news about rising homeowners insurance premiums in
+                Maryland introduce a specific fragility: if insurance costs rise
+                faster than expected or if the market transitions from late
+                expansion to early contraction, your monthly premium over
+                renting widens and your equity accumulation slows. The math
+                works if you hold for five years and avoid a near-term
+                correction. It fails if you sell in three years into a softening
+                market.
+              </p>
+              <p>
+                Your timing dilemma is acute because of the $388 monthly
+                appreciation cost if you wait. That number, derived from current
+                price momentum in a late-expansion seller's market, says that a
+                six-month delay could add roughly $23,000 to the purchase price
+                of the same home. But that figure assumes the market's current
+                trajectory holds, and a 38 score is a structural indictment that
+                says it may not. The bullish signals, tight inventory and strong
+                suburban single-family demand, are real but potentially
+                transient. Inventory can loosen overnight if rate cuts
+                accelerate enough to unlock move-up sellers. The bearish signal,
+                reflected in the poor overall score and the shift toward rental
+                demand in downtown Frederick, suggests that the price floor is
+                softer than it looks. If you buy now, you lock in a known
+                payment and avoid the appreciation penalty, but you accept the
+                risk that you are buying near a cyclical peak. If you wait six
+                months, you bet that rising inventory or softening demand gives
+                you more negotiation power, but you risk paying the appreciation
+                tax and possibly facing the same or higher mortgage rates if
+                inflation proves sticky.
+              </p>
+              <p>
+                For the universal buyer, the tradeoff comes down to property
+                type and location strategy. A first-time buyer with a 5 to 10
+                percent down payment should focus on townhomes in the southern
+                part of the county, where school capacity expansions signal
+                long-term family demand and where new zoning along the Route 15
+                corridor may eventually add supply but also improve
+                infrastructure and amenity values. An experienced buyer with 20
+                percent down and a five-year horizon can justify a single-family
+                home in the Urbana or Frederick city submarkets, but only if
+                they negotiate hard on inspection contingencies and refuse to
+                waive appraisal gaps, because overpaying by even 5 percent, or
+                roughly $27,700, in a 38-score market can take years to recover.
+                The insurance premium increases flagged in the news are not
+                trivial: budget for a 10 to 15 percent annual increase in your
+                homeowners line item, which could add $50 to $75 per month
+                within two years and further compress the ownership premium over
+                renting. The non-obvious play is to target homes that have sat
+                on the market beyond the 28-day median, because in a seller's
+                market with only 1 in 474 sellers cutting prices, any listing
+                past 21 days signals either a pricing error or a motivated
+                seller, and that is where your thin leverage actually exists.
+              </p>
+            </div>
+
+            <div class="subh">Your numbers at a glance</div>
+            <div class="kpigrid">
+              <div class="kpi" style="border-left-color: var(--teal)">
+                <div class="lab">Rent (ZORI)</div>
+                <div class="v">$2,167</div>
+                <div class="c">Zillow Observed Rent Index</div>
+              </div>
+              <div class="kpi" style="border-left-color: var(--amber)">
+                <div class="lab">Own-vs-rent premium</div>
+                <div class="v">$395</div>
+                <div class="c">Extra per month to own, before upkeep</div>
+              </div>
+              <div class="kpi" style="border-left-color: var(--red)">
+                <div class="lab">Cost of waiting</div>
+                <div class="v">$388</div>
+                <div class="c">Monthly appreciation cost if you delay</div>
+              </div>
+              <div class="kpi" style="border-left-color: var(--indigo)">
+                <div class="lab">Median days on market</div>
+                <div class="v">28</div>
+                <div class="c">Listings past 21 days are your leverage</div>
+              </div>
+              <div class="kpi" style="border-left-color: var(--violet)">
+                <div class="lab">Sellers cutting price</div>
+                <div class="v">1 in 474</div>
+                <div class="c">Near-zero — sellers hold the cards</div>
+              </div>
+              <div class="kpi" style="border-left-color: var(--green)">
+                <div class="lab">Down payment</div>
+                <div class="v">$110,700</div>
+                <div class="c">20% of the median $553,500 home</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Market Pulse -->
+        <div class="block">
+          <div class="ch">
+            <span
+              class="t"
+              style="background: var(--amber-soft); color: var(--amber)"
+              ><svg class="ic"><use href="#i-pulse" /></svg
+            ></span>
+            <h3>Market Pulse</h3>
+            <div class="r">
+              <span class="lab">Sentiment · news · economy</span>
+            </div>
+          </div>
+          <div class="cb">
+            <div class="sent">
+              <div class="lab" style="color: var(--amber)">
+                Market sentiment
+              </div>
+              <div class="row">
+                <span class="st"></span><span class="v">Mixed</span>
+              </div>
+              <div class="track"><i style="width: 50%"></i></div>
+              <div class="scale">
+                <span>Bearish</span><span>Mixed</span><span>Bullish</span>
+              </div>
+            </div>
+
+            <div class="subh">
+              <svg class="ic" style="font-size: 14px; color: var(--muted)">
+                <use href="#i-news" />
+              </svg>
+              Recent news
+            </div>
+            <div class="nc" style="border: 0; padding: 0">
+              <ul>
+                <li>
+                  <a href="#"
+                    >Frederick County Council approves major zoning updates for
+                    North Frederick Corridor</a
+                  ><span class="src">Frederick News-Post</span>
+                </li>
+                <li>
+                  <a href="#"
+                    >Kite Pharma continues expansion at Urbana Corporate
+                    Center</a
+                  ><span class="src">Maryland Department of Commerce</span>
+                </li>
+                <li>
+                  <a href="#"
+                    >Maryland state housing initiative targets 'missing middle'
+                    housing</a
+                  ><span class="src">The Baltimore Sun</span>
+                </li>
+                <li>
+                  <a href="#"
+                    >Frederick County Public Schools enrollment growth
+                    continues</a
+                  ><span class="src">Frederick County Public Schools</span>
+                </li>
+              </ul>
+            </div>
+
+            <div class="subh">
+              <svg class="ic" style="font-size: 14px; color: var(--muted)">
+                <use href="#i-chart" />
+              </svg>
+              Economic indicators
+            </div>
+            <div class="kpigrid">
+              <div class="kpi" style="border-left-color: var(--green)">
+                <div class="lab">Median income</div>
+                <div class="v">$120K</div>
+                <div class="c">Area median household income</div>
+              </div>
+              <div class="kpi" style="border-left-color: var(--amber)">
+                <div class="lab">Unemployment</div>
+                <div class="v">+3.4%</div>
+                <div class="c">Reported as published — see note below</div>
+              </div>
+              <div class="kpi" style="border-left-color: var(--teal)">
+                <div class="lab">Population growth</div>
+                <div class="v">+2.4%</div>
+                <div class="c">Year over year</div>
+              </div>
+              <div class="kpi" style="border-left-color: var(--indigo)">
+                <div class="lab">County unemployment rate</div>
+                <div class="v">2.4%</div>
+                <div class="c">Frederick County, current level</div>
+              </div>
+              <div class="kpi" style="border-left-color: var(--violet)">
+                <div class="lab">Mortgage rate</div>
+                <div class="v">6.1%</div>
+                <div class="c">National 30-year fixed</div>
+              </div>
+            </div>
+            <div class="fnote">
+              <svg
+                class="ic"
+                style="font-size: 13px; color: var(--amber); margin-top: 1px"
+              >
+                <use href="#i-warn" />
+              </svg>
+              <div>
+                Two different unemployment figures ship in this same card —
+                "Unemployment +3.4%" and "Frederick County Unemployment Rate
+                2.4%" — and the narrative above quotes 2.4%. The "+" prefix also
+                formats a level as if it were a change. Both are shown verbatim
+                rather than silently reconciled. Median income here ($120K) also
+                disagrees with the ~$107,000 the narrative cites.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ask AI -->
+        <div class="two">
+          <div class="drawer">
+            <div class="hd">
+              <span
+                class="ch-t"
+                style="
+                  width: 25px;
+                  height: 25px;
+                  border-radius: 7px;
+                  background: var(--indigo-soft);
+                  color: var(--indigo);
+                  display: grid;
+                  place-items: center;
+                  font-size: 14px;
+                "
+                ><svg class="ic"><use href="#i-msg" /></svg
+              ></span>
+              <div>
+                <b style="font-size: 13px">Ask AI</b>
+                <div style="font-size: 11.5px; color: var(--muted)">
+                  Frederick County, MD — PropertyIQ Report
+                </div>
+              </div>
+              <svg
+                class="ic"
+                style="margin-left: auto; font-size: 15px; color: var(--muted)"
+              >
+                <use href="#i-x" />
+              </svg>
+            </div>
+            <div class="bd">
+              <div
+                style="
+                  font-size: 12.5px;
+                  color: var(--body);
+                  margin-bottom: 11px;
+                "
+              >
+                Ask me anything about this market report.
+              </div>
+              <button class="sug">What does this score mean for me?</button>
+              <button class="sug">Is now a good time to buy?</button>
+              <button class="sug">What are the main risks?</button>
+              <button class="sug">
+                How does this compare to national averages?
+              </button>
+              <div class="askin">
+                <span class="ph">Ask about this market…</span
+                ><span class="go"
+                  ><svg class="ic"><use href="#i-send" /></svg
+                ></span>
+              </div>
+              <div
+                style="
+                  text-align: center;
+                  font-size: 10.5px;
+                  color: var(--muted);
+                  margin-top: 9px;
+                "
+              >
+                Powered by Claude AI
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="ch">
+              <span
+                class="t"
+                style="background: var(--soft); color: var(--body)"
+                ><svg class="ic"><use href="#i-file" /></svg
+              ></span>
+              <h3>Report footer</h3>
+            </div>
+            <div class="cb" style="text-align: center; padding: 26px 16px">
+              <div
+                style="
+                  width: 40px;
+                  height: 40px;
+                  border-radius: 11px;
+                  background: var(--indigo);
+                  color: #fff;
+                  display: grid;
+                  place-items: center;
+                  margin: 0 auto 10px;
+                  font-size: 19px;
+                "
+              >
+                <svg class="ic"><use href="#i-file" /></svg>
+              </div>
+              <b style="font-size: 15px">PropertyIQ</b>
+              <div
+                style="font-size: 12.5px; color: var(--body); margin-top: 4px"
+              >
+                AI-powered real estate market intelligence
+              </div>
+              <div
+                style="font-size: 11.5px; color: var(--muted); margin-top: 8px"
+              >
+                Report generated on <span class="n">7/12/2026</span> · Data as
+                of <span class="n">2026-07-12</span>
+              </div>
+              <div
+                style="
+                  display: flex;
+                  gap: 14px;
+                  justify-content: center;
+                  margin-top: 14px;
+                  font-size: 12px;
+                "
+              >
+                <a href="#">Methodology</a><a href="#">Data Sources</a
+                ><a href="#">About</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="rule"></div>
+
+  <!-- ══════════════════ 3. COMPARISON REPORT ══════════════════ -->
+  <section class="sec">
+    <div class="sechead">
+      <h2>Report view — market comparison</h2>
+      <p>
+        What opens when you click a comparison entry. Same shell, four markets
+        scored column by column.
+      </p>
+    </div>
+
+    <div class="doc">
+      <div class="toolbar">
+        <button class="btn btn-sm">
+          <svg class="ic"><use href="#i-al" /></svg> Back to Reports
+        </button>
+        <div class="end">
+          <button class="btn btn-sm">
+            <svg class="ic"><use href="#i-msg" /></svg> Ask AI
+          </button>
+          <button class="btn btn-sm">
+            <svg class="ic"><use href="#i-share" /></svg> Share
+          </button>
+          <button class="btn btn-sm">
+            <svg class="ic"><use href="#i-sliders" /></svg> Personalize
+          </button>
+          <button class="btn btn-sm btn-p">
+            <svg class="ic"><use href="#i-dl" /></svg> Download
+          </button>
+        </div>
+      </div>
+
+      <div class="dochead">
+        <div
+          style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap"
+        >
+          <span
+            class="tag"
+            style="background: var(--violet-soft); color: var(--violet)"
+            >Market Comparison · 4 markets</span
+          >
+          <span style="font-size: 11.5px; color: var(--muted)"
+            >Generated <span class="n">6/29/2026</span></span
+          >
+        </div>
+        <h1>Tampa vs Chicago vs New Orleans vs Rochester</h1>
+        <div class="meta">
+          <span
+            ><svg class="ic"><use href="#i-cal" /></svg> Data as of
+            <span class="n">2026-06-29</span></span
+          >
+          <span
+            ><svg class="ic"><use href="#i-spark" /></svg> Drafted by AI</span
+          >
+        </div>
+        <div class="flag info" style="margin: 14px 0 0">
+          <svg class="ic t"><use href="#i-info" /></svg>
+          <div>
+            Momentum &amp; timing signal — the market's current demand trend,
+            not a quality grade.
+          </div>
+        </div>
+        <div style="margin-top: 15px">
+          <div class="lab" style="margin-bottom: 8px">
+            In this report · 8 sections
+          </div>
+          <div class="toc">
+            <a href="#"
+              ><span
+                class="t"
+                style="background: var(--indigo-soft); color: var(--indigo)"
+                ><svg class="ic"><use href="#i-spark" /></svg
+              ></span>
+              Executive Verdict</a
+            >
+            <a href="#"
+              ><span
+                class="t"
+                style="background: var(--teal-soft); color: var(--teal)"
+                ><svg class="ic"><use href="#i-cols" /></svg
+              ></span>
+              Head to Head</a
+            >
+            <a href="#"
+              ><span
+                class="t"
+                style="background: var(--violet-soft); color: var(--violet)"
+                ><svg class="ic"><use href="#i-layers" /></svg
+              ></span>
+              Scenario Analysis</a
+            >
+            <a href="#"
+              ><span
+                class="t"
+                style="background: var(--amber-soft); color: var(--amber)"
+                ><svg class="ic"><use href="#i-target" /></svg
+              ></span>
+              Verdict &amp; Actions</a
+            >
+            <a href="#"
+              ><span
+                class="t"
+                style="background: var(--green-soft); color: var(--green)"
+                ><svg class="ic"><use href="#i-pulse" /></svg
+              ></span>
+              What's driving the scores</a
+            >
+            <a href="#"
+              ><span
+                class="t"
+                style="background: var(--indigo-soft); color: var(--indigo)"
+                ><svg class="ic"><use href="#i-tu" /></svg
+              ></span>
+              Price &amp; Value</a
+            >
+            <a href="#"
+              ><span
+                class="t"
+                style="background: var(--teal-soft); color: var(--teal)"
+                ><svg class="ic"><use href="#i-gauge" /></svg
+              ></span>
+              Market Conditions</a
+            >
+            <a href="#"
+              ><span
+                class="t"
+                style="background: var(--amber-soft); color: var(--amber)"
+                ><svg class="ic"><use href="#i-case" /></svg
+              ></span>
+              Economy &amp; Affordability</a
+            >
+          </div>
+        </div>
+      </div>
+
+      <div class="docbody">
+        <!-- score cards -->
+        <div class="scores" style="margin-bottom: 18px">
+          <div class="sc" style="border-left-color: var(--red)">
+            <div class="top">
+              <span class="nm">Tampa</span
+              ><span
+                class="tag"
+                style="background: var(--indigo-soft); color: var(--indigo)"
+                >Primary</span
+              >
+            </div>
+            <div class="row">
+              <span class="v" style="color: var(--red)">4</span
+              ><span class="of">/100</span
+              ><span
+                class="gr"
+                style="background: var(--red-soft); color: var(--red)"
+                >F</span
+              >
+            </div>
+            <div class="mo" style="color: var(--red)">
+              <svg class="ic"><use href="#i-ad" /></svg> Very weak
+            </div>
+          </div>
+          <div class="sc" style="border-left-color: var(--green)">
+            <div class="top"><span class="nm">Chicago</span></div>
+            <div class="row">
+              <span class="v" style="color: var(--green)">87</span
+              ><span class="of">/100</span
+              ><span
+                class="gr"
+                style="background: var(--green-soft); color: var(--green)"
+                >B+</span
+              >
+            </div>
+            <div class="mo" style="color: var(--green)">
+              <svg class="ic"><use href="#i-au" /></svg> Strong
+            </div>
+          </div>
+          <div class="sc" style="border-left-color: var(--red)">
+            <div class="top"><span class="nm">New Orleans</span></div>
+            <div class="row">
+              <span class="v" style="color: var(--red)">17</span
+              ><span class="of">/100</span
+              ><span
+                class="gr"
+                style="background: var(--red-soft); color: var(--red)"
+                >F</span
+              >
+            </div>
+            <div class="mo" style="color: var(--red)">
+              <svg class="ic"><use href="#i-ad" /></svg> Very weak
+            </div>
+          </div>
+          <div
+            class="sc"
+            style="
+              border-left-color: var(--green-b);
+              background: var(--green-soft);
+            "
+          >
+            <div class="top">
+              <span class="nm">Rochester</span
+              ><span
+                class="tag"
+                style="background: var(--white); color: var(--green)"
+                ><svg class="ic"><use href="#i-trophy" /></svg> Top</span
+              >
+            </div>
+            <div class="row">
+              <span class="v" style="color: var(--green)">99</span
+              ><span class="of">/100</span
+              ><span
+                class="gr"
+                style="background: var(--white); color: var(--green)"
+                >A+</span
+              >
+            </div>
+            <div class="mo" style="color: var(--green)">
+              <svg class="ic"><use href="#i-au" /></svg> Very strong
+            </div>
+          </div>
+        </div>
+
+        <!-- Executive Verdict -->
+        <div class="block">
+          <div class="ch">
+            <span
+              class="t"
+              style="background: var(--indigo-soft); color: var(--indigo)"
+              ><svg class="ic"><use href="#i-spark" /></svg
+            ></span>
+            <h3>Executive Verdict</h3>
+            <div class="r">
+              <span
+                class="tag"
+                style="background: var(--green-soft); color: var(--green)"
+                ><svg class="ic"><use href="#i-trophy" /></svg> Rochester
+                wins</span
+              >
+            </div>
+          </div>
+          <div class="cb">
+            <div class="ai">
+              <svg class="ic t"><use href="#i-bulb" /></svg>
+              <div class="txt">
+                Rochester is the clear winner among these four metro areas, and
+                the margin is not close. Rochester's PropertyIQ score of 99/100
+                (A+) versus Tampa's 4/100 (F) tells you everything you need to
+                know about which market preserves wealth versus destroys it.
+                With home prices in Rochester appreciating at 10% annually while
+                Tampa's median price has already dropped 3.7% year-over-year,
+                the city offers the rare combination of strong growth and
+                genuine affordability that no other market here can match.
+                Chicago's 87/100 score is solid, but it still trails Rochester
+                substantially on both affordability and appreciation trajectory.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Head to Head -->
+        <div class="block">
+          <div class="ch">
+            <span
+              class="t"
+              style="background: var(--teal-soft); color: var(--teal)"
+              ><svg class="ic"><use href="#i-cols" /></svg
+            ></span>
+            <h3>Head to Head</h3>
+            <div class="r"><span class="lab">Drafted by AI</span></div>
+          </div>
+          <div class="cb">
+            <div class="prose">
+              <p>
+                The gap between Tampa-St. Petersburg-Clearwater and its
+                comparison markets is not subtle — it is a chasm defined by a
+                PropertyIQ score of 4 out of 100, an unambiguous F rating that
+                signals one of the worst homebuying environments in the country.
+                Contrast that with Rochester, New York which earns a 99/100 (A+)
+                or Chicago at 87/100 (B+), and the decision framework becomes
+                stark: you are comparing a market where nearly every fundamental
+                metric is deteriorating against markets where prices are rising,
+                inventory is moving, and the economic base is strengthening.
+                Even New Orleans, which also scores an F at 17/100, offers a
+                median home price of $261,414 versus Tampa's $360,738, while
+                carrying a similar insurance crisis but without the same
+                magnitude of price erosion risk. The first thing you need to
+                understand is that Tampa's low score is not a temporary dip — it
+                is a structural problem driven by negative annual appreciation
+                of 4.2%, a three-year compound annual growth rate of negative
+                1.0%, and a rental market that is flat year-over-year at $2,018
+                per month despite robust in-migration. The other markets in this
+                comparison are not perfect, but they do not require you to
+                accept a losing proposition from the moment you sign the
+                purchase contract.
+              </p>
+              <p>
+                On affordability and value, Tampa looks deceptively reasonable
+                on the surface with a $360,738 median ZHVI and a monthly payment
+                of $1,824 at 6.5% with 20% down, consuming 31% of the median
+                $71,254 income. Rochester offers a lower median price of
+                $285,034 with a higher income of $74,438, meaning your monthly
+                payment would be roughly $1,440 and your debt-to-income ratio
+                would drop to around 23% — a far healthier position. Chicago's
+                median price of $353,998 is nearly identical to Tampa's, but the
+                median income there is $88,850, so your DTI would be
+                approximately 25% instead of Tampa's 31%. What the raw numbers
+                do not capture is the hidden cost explosion in Tampa: property
+                insurance premiums rising over 30% annually, with some carriers
+                abandoning the market entirely. Add $500 to $800 per month in
+                insurance costs that do not exist in Rochester or Chicago, and
+                your effective monthly housing cost in Tampa soars past $2,300,
+                pushing your true DTI above 38%. That is not affordable — it is
+                a liability that grows more expensive every renewal cycle.
+              </p>
+              <p>
+                Market dynamics reveal a similar divergence between who holds
+                the leverage. In Rochester, homes spend an average of 24 days on
+                market, and with a 10% year-over-year price gain and an 8.6%
+                three-year CAGR, this is a seller's market where you need to
+                move fast and be prepared to compete. In Chicago, 33 days on
+                market reflects moderate demand, but the 2.4% annual
+                appreciation and 10% rent growth show a healthy, balanced market
+                with room for negotiation. Tampa sits at 67 days on market, the
+                same as New Orleans, which is a clear indicator of a buyer's
+                market — except that the only reason you have leverage is that
+                other buyers are walking away. Price cuts in Tampa are a
+                microscopic 0.2%, which suggests sellers are stubbornly holding
+                on to pandemic-era valuations rather than adjusting to the new
+                reality of a 4.2% price decline. This creates a stalemate:
+                sellers waiting for buyers who are increasingly priced out by
+                insurance and taxes, and buyers who can afford the purchase
+                price but cannot stomach the total monthly cost. The result is a
+                market that is not just slow but functionally broken for both
+                sides, as the Raymond James expansion and Westshore Marina
+                development add supply while insurance costs suppress demand.
+              </p>
+              <p>
+                The economic foundations tell a story of two Floridas colliding.
+                Tampa's unemployment rate of 3.1% is the lowest among these four
+                metros, and population growth of 1.4% proves that people are
+                still moving there. The Raymond James expansion adding 1,000
+                high-paying jobs and the $1.3 billion Rays stadium project are
+                real economic catalysts that would normally support a strong
+                housing market. But Chicago counters with the Google Thompson
+                Center opening and transit-oriented zoning reforms that add
+                housing supply precisely where demand is concentrated, and
+                Rochester has L3Harris adding 500 defense-sector jobs plus a $25
+                billion New York state housing budget. The critical difference
+                is that Tampa's job growth is being neutralized by a housing
+                cost structure that makes it impossible for those new workers to
+                buy in. When a market adds 1,000 financial services jobs but the
+                median-income buyer cannot afford the monthly payment on a
+                median-priced home after insurance, the job growth becomes a
+                demand driver for rentals only — which is why Tampa's rental
+                market is flat at $2,018 while Chicago's rents are climbing 10%
+                annually to $2,266. New Orleans, meanwhile, is suffering a
+                catastrophic population decline of 21.8% and an unemployment
+                uptick to 4.1%, making it the only market here that is genuinely
+                shrinking rather than just repricing.
+              </p>
+              <p>
+                Risk profile is where Tampa's 4/100 score becomes viscerally
+                real. A 4.2% annual price decline combined with a three-year
+                negative CAGR means that if you bought a median-priced home in
+                Tampa two years ago for roughly $370,000, you would be looking
+                at $9,000 to $15,000 in lost equity today. With insurance costs
+                rising 30% and no sign of stabilization, the carrying costs are
+                rising faster than any plausible appreciation scenario.
+                Rochester offers the opposite: 10% annual appreciation, 8.6%
+                three-year growth, and a 3.8% unemployment rate that is falling
+                further. Even Chicago, despite its higher unemployment and
+                population loss of 2.2%, provides 6.3% three-year growth and
+                rents that are surging, indicating strong underlying demand. The
+                risk in Tampa is not just that you might overpay — it is that
+                the asset itself may be structurally impaired by climate-linked
+                insurance costs that make it uninsurable at a reasonable price
+                for the long term. This is not a cyclical downturn; it is a
+                recalibration of what coastal Florida homes are actually worth
+                when you account for total cost of ownership. New Orleans faces
+                the same insurance crisis but at a lower entry price, so the
+                downside risk in dollar terms is smaller.
+              </p>
+              <p>
+                When evaluating investment returns, the picture is equally
+                unbalanced. Tampa's gross rental yield at the median is about
+                6.7% ($2,018 monthly rent divided by $360,738 price), which is
+                competitive on paper, but that yield is not growing — ZORI is
+                flat year-over-year — and your expenses are exploding. Chicago
+                yields 7.7% at $2,266 rent on $353,998 price, with 10% rent
+                growth, giving you a rapidly improving cash flow position.
+                Rochester yields 6.7% as well, but with 8.9% rent growth and 10%
+                price appreciation, the total return trajectory is dramatically
+                better. Even New Orleans yields 7.5% on its $261,414 median
+                price, with modest rent growth of 2.8% but at a much lower entry
+                cost that reduces your capital at risk. The contrarian insight
+                that matters most here is that Tampa's traditional "buy and
+                hold" thesis has been inverted by the insurance crisis.
+                Historically, you could count on Florida appreciation to outpace
+                rising costs. But with negative price growth and costs that are
+                climbing faster than any reasonable inflation projection,
+                renting in Tampa may actually preserve more wealth than owning.
+                The monthly difference between a $1,824 mortgage payment and
+                $2,018 in rent is only $194, but when you add $500+ in extra
+                insurance costs that renters do not pay, renting becomes $300+
+                per month cheaper — and you avoid the risk of negative equity.
+              </p>
+              <p>
+                The final verdict is decisive. Rochester scores 99/100 because
+                it offers strong appreciation, low unemployment, a growing job
+                base, and affordable entry prices relative to income. Chicago at
+                87/100 gives you a stable, diversified economy with high incomes
+                and zoning reforms that support long-term supply balance. Even
+                New Orleans at 17/100, while deeply troubled, at least offers a
+                lower entry price and a functioning rental market. Tampa at
+                4/100 is in a category of its own — a market where the headline
+                numbers look okay but the underlying structure is failing. The
+                mixed market signals (strong migration versus rising insurance
+                costs) are not a sign of balance; they are a sign of a market in
+                transition where the pretax, pre-insurance affordability is
+                being exposed as an illusion. If you are considering a home
+                purchase here, the data demands that you calculate your true
+                monthly payment including insurance at current market rates,
+                stress-test it against another 10% to 20% premium increase, and
+                ask yourself whether you are buying an appreciating asset or a
+                liability with a mortgage attached. In Rochester or Chicago,
+                that same diligence will yield a far more reassuring answer.
+              </p>
+            </div>
+            <div class="fnote">
+              <svg
+                class="ic"
+                style="font-size: 13px; color: var(--amber); margin-top: 1px"
+              >
+                <use href="#i-warn" />
+              </svg>
+              <div>
+                This narrative puts Tampa's unemployment at 3.1%; the Economy
+                &amp; Affordability table below reports 4.7% from BLS. Both are
+                shown as published.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Scenario Analysis -->
+        <div class="block">
+          <div class="ch">
+            <span
+              class="t"
+              style="background: var(--violet-soft); color: var(--violet)"
+              ><svg class="ic"><use href="#i-layers" /></svg
+            ></span>
+            <h3>Scenario Analysis</h3>
+            <div class="r">
+              <span class="lab">Base 60% · Bull 20% · Bear 20%</span>
+            </div>
+          </div>
+          <div class="cb">
+            <div class="prose">
+              <p>
+                Let us start with Tampa-St. Petersburg-Clearwater, a market that
+                earns a 4/100 PropertyIQ score for very clear reasons. In the
+                base case, which carries a 60% probability over the next twelve
+                months, the current trajectory of falling home prices and rising
+                carrying costs continues without a violent crash. The median
+                home sale price is already down 3.7% year-over-year to $395,000,
+                and the ZHVI shows a similar −4.2% decline, so this is not a new
+                trend. The forecast for a 1.5% appreciation over the coming year
+                suggests the market may find a floor, but that floor is built on
+                sand: homeowners are still reeling from the 30% average increase
+                in property insurance premiums, and mortgage rates near 6.5%
+                make monthly payments sting. Inventory is up 20% year-over-year,
+                giving buyers more choices but also signaling that sellers are
+                struggling to exit. In this base case, prices drift another 2–3%
+                lower as insurance costs continue to climb and affordability
+                crushes demand, especially in coastal zones. The bull case, at
+                20% probability, requires a combination of falling mortgage
+                rates toward 5.5% and a stabilization of the insurance market,
+                perhaps through state intervention. If that happens, the strong
+                migration inflows from U-Haul and Census data could reignite
+                demand, pushing prices up modestly, maybe 3–5% over the year.
+                But this is unlikely given the structural nature of the
+                insurance crisis and the national economic uncertainty. The bear
+                case, also at 20%, is the one that keeps real estate analysts
+                awake. If unemployment rises two percentage points to 6.7%,
+                which is plausible given the slowing job growth rate of 2.1% and
+                the national economic softening, the model suggests an 8–12%
+                price correction. That would push the median price below
+                $360,000, and many recent buyers who stretched their budgets
+                would find themselves underwater, especially those who bought at
+                the peak 18 months ago. In this scenario, days on market
+                lengthen significantly beyond the current already-sluggish pace,
+                and negative equity becomes a widespread problem. The bottom
+                line for Tampa: the base case is already painful, and the
+                downside risks are so severe that even the bull case only
+                provides a temporary reprieve.
+              </p>
+              <p>
+                Now turn to Chicago-Naperville-Elgin, scoring a strong 87/100,
+                and the contrast with Tampa is immediate. In the base case with
+                60% probability, Chicago continues its steady recovery. The ZHVI
+                is up 2.4% year-over-year, and while that is modest compared to
+                some markets, it is organic and sustainable because it is driven
+                by actual demand from job growth and urban revitalization rather
+                than speculative migration. The rental market is even more
+                telling: year-over-year rent growth of 10.2% shows that
+                households are forming and willing to pay for housing in the
+                metro. The Google Thompson Center opening is already bringing
+                tech workers downtown, and the city's new transit-oriented
+                zoning reform will eventually add supply, but for now, inventory
+                is constrained with only 33 days on market, suggesting sellers
+                still have leverage. In this base case, home prices appreciate
+                another 3–4% as the economy holds steady and mortgage rates
+                drift down to 6.0% by year-end. The bull case, at 20%, emerges
+                if the Fed accelerates rate cuts and if the city's tax climate
+                improves or at least stabilizes. In that scenario, the tech
+                hiring wave amplifies, pushing price appreciation to 6–7%, and
+                the rental yield for investors improves as rents continue to
+                climb. The bear case, also at 20%, hinges on the property tax
+                issue. Cook County triennial reassessments are already hitting
+                homeowners with higher bills, and if that trend escalates or if
+                the Illinois state budget faces a crisis, affordability could
+                tighten enough to slow price growth to zero or even cause a 2–3%
+                dip. However, that dip would be shallow because the underlying
+                demand is real and the rental market provides a strong floor.
+                Chicago is not a market where you fear a major correction; it is
+                a market where you anticipate moderate, steady gains.
+              </p>
+              <p>
+                New Orleans-Metairie, with a 17/100 score, presents a different
+                kind of trouble compared to Tampa. The base case here is one of
+                continued price erosion, as the median home sale price has
+                already fallen 1.7% year-over-year and the ZHVI has dropped a
+                staggering 8%. With 67 days on market, homes are sitting twice
+                as long as in Chicago, and the insurance crisis is arguably
+                worse than in Tampa because more carriers have completely exited
+                Louisiana. In the base case, prices fall another 3–5% over the
+                next year as the insurance market struggles to stabilize and the
+                local unemployment rate ticks up from 4.1%. The bull case, at
+                20%, depends on the Port of New Orleans's $1.8 billion container
+                terminal project generating the anticipated jobs and economic
+                activity, potentially creating enough demand to stop the price
+                decline and maybe eke out a 1–2% gain. But that is a long shot
+                given the scale of the insurance headwinds. The bear case, also
+                at 20%, is dire: if the insurance crisis worsens to the point
+                where even the state's insurer of last resort becomes
+                unsustainable, property values could fall another 10–15% as many
+                homes become effectively uninsurable. In that scenario, the
+                market would resemble a distressed sale environment, with
+                motivated sellers slashing prices and cash buyers demanding
+                steep discounts. New Orleans is a market where the risk of
+                catastrophic loss is real, and the potential upside does not
+                justify it.
+              </p>
+              <p>
+                Finally, Rochester, New York, earns a 99/100 PropertyIQ score,
+                and the data backs that up unambiguously. In the base case, this
+                market continues to fire on all cylinders. The ZHVI is up 10%
+                year-over-year, days on market are a blistering 24, and rent
+                growth is 8.9% annually. The L3Harris expansion adding 500
+                high-tech jobs, combined with the $200 million mixed-use
+                development on the Inner Loop and New York State's $25 billion
+                housing budget, creates a powerful demand-supply dynamic that
+                favors price appreciation. In this base case, prices rise
+                another 8–10% over the next twelve months, and the rental market
+                tightens further as new amenity-rich units attract
+                professionals. The bull case, at 20%, would see an acceleration
+                if national mortgage rates fall faster and state housing funds
+                unlock even more development, pushing appreciation to 12–15% as
+                the city's resurgence attracts more out-of-state buyers looking
+                for affordability and quality of life. The bear case, at 20%, is
+                mild by comparison: if the state budget does not flow down
+                quickly or if a national recession tempers job growth,
+                appreciation could slow to a still-respectable 4–5%. There is no
+                plausible scenario for a price decline in Rochester over the
+                next year given the current momentum and the structural factors
+                at play. The key risk is that rapid appreciation could
+                eventually price out some first-time buyers, but that is a
+                problem for later, not for the current investment horizon.
+              </p>
+              <p>
+                If I had to deploy capital in exactly one of these markets
+                today, it would be Rochester because it offers the highest
+                probability of strong, sustained appreciation with the lowest
+                downside risk among the four. Chicago is also excellent and more
+                liquid, but Rochester's combination of 10% year-over-year price
+                growth, a 24-day time-on-market that indicates fierce
+                competition, and a pipeline of high-quality job and development
+                catalysts gives it a clearer near-term edge. Tampa and New
+                Orleans carry existential risks from the insurance collapse and
+                potential price corrections that could wipe out equity for
+                years, and no expected return compensates for that danger.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Verdict & Actions -->
+        <div class="block">
+          <div class="ch">
+            <span
+              class="t"
+              style="background: var(--amber-soft); color: var(--amber)"
+              ><svg class="ic"><use href="#i-target" /></svg
+            ></span>
+            <h3>Verdict &amp; Actions</h3>
+            <div class="r">
+              <span
+                class="tag"
+                style="background: var(--red-soft); color: var(--red)"
+                ><svg class="ic"><use href="#i-pause" /></svg> Wait and
+                Watch</span
+              >
+            </div>
+          </div>
+          <div class="cb">
+            <div class="subh">Final verdict</div>
+            <div class="prose">
+              <p>
+                The winner is Rochester, New York, and the margin is not close.
+                With a PropertyIQ score of 99/100 against Chicago's 87/100, New
+                Orleans' 17/100, and Tampa's catastrophic 4/100, Rochester
+                dominates on every axis that matters for a homebuyer:
+                affordability, stability, and upside without existential risk.
+                The median home value in Rochester is $285,034, which is
+                actually lower than the median in Tampa despite Tampa's
+                collapsing market, and the median rent is just $1,597 — the
+                lowest of all four metros. That combination means your monthly
+                housing cost in Rochester is the most manageable by a wide
+                margin, and the economic news confirms the trajectory is
+                strengthening, not deteriorating. The L3Harris expansion adding
+                500 high-tech jobs, the $200 million Inner Loop development
+                adding 600 housing units, and New York State's $25 billion
+                housing investment pipeline all point to a market that is adding
+                supply and demand in balance. You are not walking into an
+                insurance crisis, a climate threat, or a price bubble. You are
+                buying into a market where the fundamentals are aligned for
+                long-term value growth and where your monthly payment will not
+                be subject to the shocks that are plaguing Sun Belt and Gulf
+                Coast metros.
+              </p>
+              <p>
+                Chicago is the clear runner-up, and the gap between its 87 and
+                Rochester's 99 is not trivial — it reflects real trade-offs.
+                Chicago offers a larger employment base, world-class amenities,
+                and the Google Thompson Center opening signals downtown
+                revitalization. But to win, Chicago would need to fix its
+                property tax problem, which is the single largest drag on
+                affordability. The Cook County reassessments are driving up tax
+                bills, and that erodes the cost advantage that a $353,998 median
+                home price would otherwise offer. If Chicago could stabilize or
+                reduce property tax growth, it would be a legitimate contender —
+                but today, Rochester's combination of lower taxes, lower home
+                prices, and rapid job growth gives it the edge. Tampa and New
+                Orleans are non-starters for any buyer who values wealth
+                preservation. Tampa's 4/100 score is not a rounding error; it
+                reflects an insurance market in freefall, a median price that
+                has already dropped 3.7% year-over-year offer where the true
+                cost of ownership is much higher than the $360,738 figure
+                suggests once you layer in insurance and special assessments.
+                New Orleans is only slightly less dangerous at 17/100, with the
+                same insurance crisis and a 1.7% price decline. Do not let the
+                lower sticker price of $261,414 fool you — the carrying costs in
+                New Orleans will crush your budget just as fast.
+              </p>
+            </div>
+
+            <div class="subh">Recommended actions</div>
+            <div class="act">
+              <span class="no">1</span>
+              <div>
+                <div class="mk">Rochester, NY</div>
+                <div class="hd">
+                  Begin active home search immediately, focusing on suburbs near
+                  the L3Harris facility in the southeast corridor and the Inner
+                  Loop development area for future appreciation.
+                </div>
+                <div class="wh">
+                  The job expansion and development pipeline mean housing demand
+                  will increase before supply catches up. Lock in current prices
+                  before the L3Harris hiring wave pushes values higher.
+                </div>
+                <span
+                  class="tm"
+                  style="background: var(--green-soft); color: var(--green)"
+                  ><svg class="ic"><use href="#i-clock" /></svg> Now</span
+                >
+              </div>
+            </div>
+            <div class="act">
+              <span class="no">2</span>
+              <div>
+                <div class="mk">Chicago-Naperville-Elgin, IL-IN</div>
+                <div class="hd">
+                  Target properties in areas with lower property tax exposure
+                  such as suburbs in DuPage or Lake County, and verify tax caps
+                  or exemptions before making an offer.
+                </div>
+                <div class="wh">
+                  The Cook County reassessments are increasing tax burdens
+                  unpredictably. Avoid properties where tax escalation could
+                  consume 30% of your monthly housing payment. Focus on
+                  transit-adjacent areas to capture value from the new zoning
+                  reforms.
+                </div>
+                <span
+                  class="tm"
+                  style="background: var(--amber-soft); color: var(--amber)"
+                  ><svg class="ic"><use href="#i-clock" /></svg> Soon</span
+                >
+              </div>
+            </div>
+            <div class="act">
+              <span class="no">3</span>
+              <div>
+                <div class="mk">Tampa-St. Petersburg-Clearwater, FL</div>
+                <div class="hd">
+                  Do not purchase until you can verify a realistic insurance
+                  quote from a carrier still writing new policies, and calculate
+                  your total monthly cost with a 30% insurance premium buffer.
+                </div>
+                <div class="wh">
+                  The 4/100 score means you are entering a market where negative
+                  equity and cash-flow strain are highly probable. If you must
+                  buy, negotiate a contingency allowing cancellation if
+                  insurance costs exceed a threshold. Otherwise, consider
+                  renting for 12–24 months to let the market correct further.
+                </div>
+                <span
+                  class="tm"
+                  style="background: var(--red-soft); color: var(--red)"
+                  ><svg class="ic"><use href="#i-clock" /></svg> Now</span
+                >
+              </div>
+            </div>
+            <div class="act" style="margin-bottom: 0">
+              <span class="no">4</span>
+              <div>
+                <div class="mk">New Orleans-Metairie, LA</div>
+                <div class="hd">
+                  Wait for the insurance market to stabilize or for the
+                  Louisiana Insurance Department to provide a state-backed
+                  option; do not buy under current conditions.
+                </div>
+                <div class="wh">
+                  Carriers are exiting and premiums are soaring. The $295,000
+                  median price will likely decline further as carrying costs
+                  push buyers out. Renting is the financially safer option until
+                  at least mid-2026.
+                </div>
+                <span
+                  class="tm"
+                  style="background: var(--red-soft); color: var(--red)"
+                  ><svg class="ic"><use href="#i-clock" /></svg> Now</span
+                >
+              </div>
+            </div>
+            <div class="fnote">
+              <svg
+                class="ic"
+                style="font-size: 13px; color: var(--amber); margin-top: 1px"
+              >
+                <use href="#i-warn" />
+              </svg>
+              <div>
+                Action 4 quotes a $295,000 New Orleans median; the Price &amp;
+                Value table reports $261K. Shown as published.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- What's driving the scores -->
+        <div class="block">
+          <div class="ch">
+            <span
+              class="t"
+              style="background: var(--green-soft); color: var(--green)"
+              ><svg class="ic"><use href="#i-pulse" /></svg
+            ></span>
+            <h3>What's driving the scores</h3>
+            <div class="r">
+              <span class="lab">3 of 4 signals published</span>
+            </div>
+          </div>
+          <div class="cb">
+            <p style="margin: 0 0 13px; font-size: 12.5px; color: var(--body)">
+              The four demand signals behind each PropertyIQ score — rising
+              values and fast sales push a score up; long days on market and
+              frequent price cuts pull it down.
+            </p>
+            <div class="scroller">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Signal</th>
+                    <th>Tampa<span class="pri">PRIMARY</span></th>
+                    <th>Chicago</th>
+                    <th>New Orleans</th>
+                    <th>Rochester</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>
+                      Home Value Momentum, 12-mo
+                      <em style="font-style: normal; color: var(--muted)"
+                        >(Zillow)</em
+                      >
+                    </td>
+                    <td class="neg">−4.2%</td>
+                    <td class="pos">+2.4%</td>
+                    <td class="neg">−8.0%</td>
+                    <td>
+                      <span class="best"
+                        ><svg class="ic"><use href="#i-check" /></svg>
+                        +10.0%</span
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      Days on Market
+                      <em style="font-style: normal; color: var(--muted)"
+                        >(Realtor)</em
+                      >
+                    </td>
+                    <td>67 days</td>
+                    <td>33 days</td>
+                    <td>67 days</td>
+                    <td>
+                      <span class="best"
+                        ><svg class="ic"><use href="#i-check" /></svg> 24
+                        days</span
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      Listings with Price Cuts
+                      <em style="font-style: normal; color: var(--muted)"
+                        >(Realtor)</em
+                      >
+                    </td>
+                    <td>0.2%</td>
+                    <td>0.1%</td>
+                    <td>0.2%</td>
+                    <td>
+                      <span class="best"
+                        ><svg class="ic"><use href="#i-check" /></svg>
+                        0.0%</span
+                      >
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="fnote">
+              <svg
+                class="ic"
+                style="font-size: 13px; color: var(--muted); margin-top: 1px"
+              >
+                <use href="#i-info" />
+              </svg>
+              <div>
+                The heading promises four demand signals; three rows are
+                published. The fourth (3-month home-value momentum) is not in
+                this report's payload.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Price & Value -->
+        <div class="block">
+          <div class="ch">
+            <span
+              class="t"
+              style="background: var(--indigo-soft); color: var(--indigo)"
+              ><svg class="ic"><use href="#i-tu" /></svg
+            ></span>
+            <h3>Price &amp; Value</h3>
+          </div>
+          <div class="cb">
+            <div class="scroller">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Metric</th>
+                    <th>Tampa<span class="pri">PRIMARY</span></th>
+                    <th>Chicago</th>
+                    <th>New Orleans</th>
+                    <th>Rochester</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>
+                      Typical Home Value
+                      <em style="font-style: normal; color: var(--muted)"
+                        >(Zillow)</em
+                      >
+                    </td>
+                    <td>$361K</td>
+                    <td>$354K</td>
+                    <td>$261K</td>
+                    <td>$285K</td>
+                  </tr>
+                  <tr>
+                    <td>
+                      Home Value Change, YoY
+                      <em style="font-style: normal; color: var(--muted)"
+                        >(Zillow)</em
+                      >
+                    </td>
+                    <td class="neg">−4.2%</td>
+                    <td class="pos">+2.4%</td>
+                    <td class="neg">−8.0%</td>
+                    <td>
+                      <span class="best"
+                        ><svg class="ic"><use href="#i-check" /></svg>
+                        +10.0%</span
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      Typical Rent
+                      <em style="font-style: normal; color: var(--muted)"
+                        >(Zillow)</em
+                      >
+                    </td>
+                    <td>$2,018</td>
+                    <td>$2,266</td>
+                    <td>$2K<sup style="color: var(--amber)">†</sup></td>
+                    <td>$1,597</td>
+                  </tr>
+                  <tr>
+                    <td>
+                      Rent Change, YoY
+                      <em style="font-style: normal; color: var(--muted)"
+                        >(Zillow)</em
+                      >
+                    </td>
+                    <td>0.0%</td>
+                    <td>
+                      <span class="best"
+                        ><svg class="ic"><use href="#i-check" /></svg>
+                        +10.2%</span
+                      >
+                    </td>
+                    <td class="pos">+2.8%</td>
+                    <td class="pos">+8.9%</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="fnote">
+              <svg
+                class="ic"
+                style="font-size: 13px; color: var(--amber); margin-top: 1px"
+              >
+                <use href="#i-warn" />
+              </svg>
+              <div>
+                <b>†</b> The live table rounds every rent to "$2K", so all four
+                markets look identical when they span $1,597 to $2,266. Tampa,
+                Chicago and Rochester are shown here at the exact figures this
+                same report states in prose. New Orleans is only ever published
+                rounded, so it stays "$2K" rather than being invented.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Market Conditions -->
+        <div class="block">
+          <div class="ch">
+            <span
+              class="t"
+              style="background: var(--teal-soft); color: var(--teal)"
+              ><svg class="ic"><use href="#i-gauge" /></svg
+            ></span>
+            <h3>Market Conditions</h3>
+            <div class="r">
+              <span class="sub"
+                >How fast homes sell and how much leverage buyers have.</span
+              >
+            </div>
+          </div>
+          <div class="cb">
+            <div class="scroller">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Metric</th>
+                    <th>Tampa<span class="pri">PRIMARY</span></th>
+                    <th>Chicago</th>
+                    <th>New Orleans</th>
+                    <th>Rochester</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>
+                      Days on Market
+                      <em style="font-style: normal; color: var(--muted)"
+                        >(Realtor)</em
+                      >
+                    </td>
+                    <td>67 days</td>
+                    <td>33 days</td>
+                    <td>67 days</td>
+                    <td>
+                      <span class="best"
+                        ><svg class="ic"><use href="#i-check" /></svg> 24
+                        days</span
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      Active Listings
+                      <em style="font-style: normal; color: var(--muted)"
+                        >(Realtor)</em
+                      >
+                    </td>
+                    <td>17,967</td>
+                    <td>12,574</td>
+                    <td>4,065</td>
+                    <td>952</td>
+                  </tr>
+                  <tr>
+                    <td>
+                      Pending-to-Active Ratio
+                      <em style="font-style: normal; color: var(--muted)"
+                        >(Realtor)</em
+                      >
+                    </td>
+                    <td>0.4%</td>
+                    <td>1.1%</td>
+                    <td>0.3%</td>
+                    <td>
+                      <span class="best"
+                        ><svg class="ic"><use href="#i-check" /></svg>
+                        2.1%</span
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      Market Hotness
+                      <em style="font-style: normal; color: var(--muted)"
+                        >(Realtor)</em
+                      >
+                    </td>
+                    <td>25</td>
+                    <td>76</td>
+                    <td>21</td>
+                    <td>
+                      <span class="best"
+                        ><svg class="ic"><use href="#i-check" /></svg> 96</span
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      Listings with Price Cuts
+                      <em style="font-style: normal; color: var(--muted)"
+                        >(Realtor)</em
+                      >
+                    </td>
+                    <td>0.2%</td>
+                    <td>0.1%</td>
+                    <td>0.2%</td>
+                    <td>
+                      <span class="best"
+                        ><svg class="ic"><use href="#i-check" /></svg>
+                        0.0%</span
+                      >
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Economy & Affordability -->
+        <div class="block">
+          <div class="ch">
+            <span
+              class="t"
+              style="background: var(--amber-soft); color: var(--amber)"
+              ><svg class="ic"><use href="#i-case" /></svg
+            ></span>
+            <h3>Economy &amp; Affordability</h3>
+          </div>
+          <div class="cb">
+            <div class="scroller">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Metric</th>
+                    <th>Tampa<span class="pri">PRIMARY</span></th>
+                    <th>Chicago</th>
+                    <th>New Orleans</th>
+                    <th>Rochester</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>
+                      Median Household Income
+                      <em style="font-style: normal; color: var(--muted)"
+                        >(Census)</em
+                      >
+                    </td>
+                    <td>$71K</td>
+                    <td>$89K</td>
+                    <td>$62K</td>
+                    <td>$74K</td>
+                  </tr>
+                  <tr>
+                    <td>
+                      Unemployment Rate
+                      <em style="font-style: normal; color: var(--muted)"
+                        >(BLS)</em
+                      >
+                    </td>
+                    <td>4.7%</td>
+                    <td>4.9%</td>
+                    <td>4.2%</td>
+                    <td>
+                      <span class="best"
+                        ><svg class="ic"><use href="#i-check" /></svg>
+                        3.8%</span
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      Population Growth, YoY
+                      <em style="font-style: normal; color: var(--muted)"
+                        >(Census)</em
+                      >
+                    </td>
+                    <td>
+                      <span class="best"
+                        ><svg class="ic"><use href="#i-check" /></svg>
+                        +1.4%</span
+                      >
+                    </td>
+                    <td class="neg">−2.2%</td>
+                    <td class="neg">−21.8%</td>
+                    <td class="neg">−2.6%</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- News -->
+        <div class="block">
+          <div class="ch">
+            <span
+              class="t"
+              style="background: var(--violet-soft); color: var(--violet)"
+              ><svg class="ic"><use href="#i-news" /></svg
+            ></span>
+            <h3>Recent news across markets</h3>
+            <div class="r">
+              <span class="sub"
+                >The latest signals for each market being compared.</span
+              >
+            </div>
+          </div>
+          <div class="cb">
+            <div class="newsgrid">
+              <div class="nc">
+                <h4>
+                  <span
+                    style="
+                      width: 8px;
+                      height: 8px;
+                      border-radius: 999px;
+                      background: var(--red);
+                    "
+                  ></span>
+                  Tampa
+                </h4>
+                <ul>
+                  <li>
+                    <a href="#"
+                      >Raymond James to expand St. Petersburg headquarters,
+                      adding 1,000 jobs</a
+                    ><span class="src">Tampa Bay Times</span>
+                  </li>
+                  <li>
+                    <a href="#"
+                      >Massive mixed-use development 'Westshore Marina District'
+                      breaks ground in Tampa</a
+                    ><span class="src">Tampa Bay Business Journal</span>
+                  </li>
+                  <li>
+                    <a href="#"
+                      >Florida property insurance rates continue to soar,
+                      impacting homebuyers</a
+                    ><span class="src">Miami Herald</span>
+                  </li>
+                </ul>
+              </div>
+              <div class="nc">
+                <h4>
+                  <span
+                    style="
+                      width: 8px;
+                      height: 8px;
+                      border-radius: 999px;
+                      background: var(--green);
+                    "
+                  ></span>
+                  Chicago
+                </h4>
+                <ul>
+                  <li>
+                    <a href="#"
+                      >Google officially opens Thompson Center headquarters in
+                      Chicago</a
+                    ><span class="src">Chicago Tribune</span>
+                  </li>
+                  <li>
+                    <a href="#"
+                      >Chicago City Council approves major zoning reform for
+                      transit-oriented development</a
+                    ><span class="src">Chicago Sun-Times</span>
+                  </li>
+                  <li>
+                    <a href="#"
+                      >Illinois property tax assessments continue to climb in
+                      Cook County</a
+                    ><span class="src">Crain's Chicago Business</span>
+                  </li>
+                </ul>
+              </div>
+              <div class="nc">
+                <h4>
+                  <span
+                    style="
+                      width: 8px;
+                      height: 8px;
+                      border-radius: 999px;
+                      background: var(--red);
+                    "
+                  ></span>
+                  New Orleans
+                </h4>
+                <ul>
+                  <li>
+                    <a href="#"
+                      >Louisiana insurance crisis worsens as more carriers exit
+                      market</a
+                    ><span class="src">The Times-Picayune</span>
+                  </li>
+                  <li>
+                    <a href="#"
+                      >Port of New Orleans invests $1.8 billion in new container
+                      terminal</a
+                    ><span class="src">NOLA.com</span>
+                  </li>
+                  <li>
+                    <a href="#"
+                      >New Orleans City Council tightens short-term rental
+                      regulations</a
+                    ><span class="src">Louisiana Illuminator</span>
+                  </li>
+                </ul>
+              </div>
+              <div class="nc">
+                <h4>
+                  <span
+                    style="
+                      width: 8px;
+                      height: 8px;
+                      border-radius: 999px;
+                      background: var(--green);
+                    "
+                  ></span>
+                  Rochester
+                </h4>
+                <ul>
+                  <li>
+                    <a href="#"
+                      >L3Harris Technologies to Add 500 High-Tech Jobs at
+                      Rochester Facility</a
+                    ><span class="src">Rochester Business Journal</span>
+                  </li>
+                  <li>
+                    <a href="#"
+                      >$200M Mixed-Use Development Approved for Inner Loop
+                      Land</a
+                    ><span class="src">Democrat and Chronicle</span>
+                  </li>
+                  <li>
+                    <a href="#"
+                      >New York State Budget Includes $25B for Housing
+                      Initiatives</a
+                    ><span class="src">Spectrum News Rochester</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- per-market accordion -->
+        <div class="block" style="margin-bottom: 0">
+          <div class="ch">
+            <span
+              class="t"
+              style="background: var(--indigo-soft); color: var(--indigo)"
+              ><svg class="ic"><use href="#i-file" /></svg
+            ></span>
+            <h3>
+              Read each market's full report
+              <span class="sub"
+                >· The complete single-market write-up for Tampa, Chicago, New
+                Orleans, Rochester.</span
+              >
+            </h3>
+            <div class="r">
+              <svg class="ic" style="font-size: 16px; color: var(--muted)">
+                <use href="#i-cu" />
+              </svg>
+            </div>
+          </div>
+          <div class="cb">
+            <div class="seg" style="margin-bottom: 14px">
+              <button class="on">Tampa</button><button>Chicago</button
+              ><button>New Orleans</button><button>Rochester</button>
+            </div>
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                gap: 14px;
+                background: var(--indigo-soft);
+                border-radius: 12px;
+                padding: 14px 16px;
+              "
+            >
+              <span
+                class="n"
+                style="
+                  font-size: 32px;
+                  font-weight: 600;
+                  color: var(--red);
+                  letter-spacing: -0.04em;
+                "
+                >4</span
+              >
+              <span
+                class="gr"
+                style="
+                  font-family: var(--mono);
+                  font-size: 11px;
+                  font-weight: 700;
+                  padding: 2px 7px;
+                  border-radius: 6px;
+                  background: var(--red-soft);
+                  color: var(--red);
+                "
+                >F</span
+              >
+              <div>
+                <b style="font-size: 14px">Tampa — full report</b>
+                <div
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    margin-top: 3px;
+                    font-size: 10.5px;
+                    font-weight: 700;
+                    letter-spacing: 0.08em;
+                    text-transform: uppercase;
+                    color: var(--red);
+                  "
+                >
+                  <svg class="ic"><use href="#i-ad" /></svg> Very weak
+                  <span
+                    style="
+                      color: var(--muted);
+                      font-weight: 400;
+                      letter-spacing: 0;
+                      text-transform: none;
+                    "
+                    >· PropertyIQ momentum</span
+                  >
+                </div>
+              </div>
+              <button class="btn btn-sm" style="margin-left: auto">
+                Open <svg class="ic"><use href="#i-cr" /></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="rule"></div>
+
+  <!-- ══════════════════ NOTES ══════════════════ -->
+  <section class="notes">
+    <h2>What changed, and why</h2>
+    <p class="lede">
+      Restyle only — every control, section and value from the live
+      <span class="n">/reports</span> page and both report types is preserved.
+      Each item below cites the specific thing observed on the live page.
+    </p>
+    <ol>
+      <li>
+        <b>Killed the empty gradient band.</b> The live page opens with a ~110px
+        indigo gradient strip holding only "PropertyIQ Report / Powered by
+        PropertyIQ Score", then a second breadcrumb row above it — roughly 180px
+        of chrome before any content. Both are folded into the single light
+        control bar, which now carries the title, the market search, the
+        capacity meter and the CTA.
+      </li>
+      <li>
+        <b>Moved "Generate Report" out of the dead zone.</b> On the live page
+        the CTA sits at the bottom of a mostly empty left column, greyed out,
+        with "Select at least one market to continue" under it — you scroll past
+        ~400px of nothing to reach a button you cannot press. It now lives in
+        the sticky control bar, always visible, next to a five-dot meter showing
+        <span class="n">1 of 5</span> markets used.
+      </li>
+      <li>
+        <b>Filled the builder's dead space with the picker itself.</b> The live
+        search only renders results while the field is focused, so the column is
+        blank the rest of the time. The result list is now a persistent panel
+        showing the real matches observed (Frederick County MD, Frederick County
+        VA, Fredericksburg city VA, Fredericksburg TX, Frederick CO 80530) with
+        their parent metros and a geography-level tag, so the column always
+        carries content.
+      </li>
+      <li>
+        <b>Recent Reports titles no longer truncate mid-word.</b> Live rows clip
+        to "Frederick County, M…", "Tampa-St. Petersbu…", "Shermans Dale, PA …"
+        — the ellipsis lands inside the state abbreviation. Titles now wrap to
+        two lines with no clipping.
+      </li>
+      <li>
+        <b>Repeated entries are distinguishable.</b> Six live rows collapse to
+        four real reports: "Frederick County, MD" appears twice on the same date
+        and "Shermans Dale, PA 17090" twice on the same date, with nothing to
+        tell them apart. Same-title, same-date entries now stack under a "2
+        versions" chip, and every row carries a type badge —
+        <em>PropertyIQ Report</em> vs <em>Comparison · 4 markets</em>.
+      </li>
+      <li>
+        <b>The comparison entry now names its markets.</b> Live it reads
+        "Tampa-St. Petersburg-Clearwater — Market Comparison / Tampa-St.
+        Petersburg-Clearwater, FL", which hides that the report actually
+        compares Tampa, Chicago, New Orleans and Rochester. Those four are now
+        listed on the row.
+      </li>
+      <li>
+        <b>Contents lists only sections that exist.</b> The Frederick report's
+        "IN THIS REPORT" advertises six sections — Executive Verdict, Market
+        Deep Dive, Your Situation, Verdict &amp; Actions, What to Watch, Market
+        Pulse — but only three render; the other three are links that scroll
+        nowhere. The contents now lists three and an amber banner reports the
+        three that failed to generate.
+      </li>
+      <li>
+        <b
+          >Gave the long report a contents list; the short one had one and the
+          long one didn't.</b
+        >
+        The four-market comparison is the far bigger document (eight sections
+        plus four tables) and ships with no navigation at all. It now gets the
+        same contents pattern.
+      </li>
+      <li>
+        <b>Removed the leaked prompt scaffold.</b> The comparison report renders
+        the literal string "PART 1: Final Verdict (2-3 paragraphs)" as a heading
+        — an instruction to the model that shipped to the reader. It is now a
+        normal "Final verdict" section heading.
+      </li>
+      <li>
+        <b>Un-collapsed the rent row.</b> "Typical Rent (Zillow)" shows
+        <span class="n">$2K</span> for all four markets, making the row useless
+        when the actual spread is $1,597 to $2,266. Tampa, Chicago and Rochester
+        now show the exact figures this same report states in prose; New Orleans
+        is only ever published rounded, so it keeps "$2K" with a footnote rather
+        than a fabricated value.
+      </li>
+      <li>
+        <b>Surfaced the contradictory figures instead of hiding them.</b>
+        Frederick's Economic Indicators card publishes "Unemployment +3.4%" and
+        "Frederick County Unemployment Rate 2.4%" side by side (and prefixes a
+        level with "+"), and its "$120K" median income disagrees with the
+        "$107,000" in the narrative. The comparison report puts Tampa
+        unemployment at 3.1% in prose and 4.7% in the BLS table, and the New
+        Orleans median at $295,000 in an action and $261K in the table. Every
+        value is shown as published, with a flag — nothing was silently
+        reconciled or dropped.
+      </li>
+      <li>
+        <b>Replaced the emoji sentiment marker and rebuilt the meter.</b> Market
+        Pulse renders a literal yellow-circle emoji character next to "Mixed",
+        above an unlabelled orange bar. It is now a coloured state dot plus a
+        bearish/mixed/bullish scale so the bar's 50% fill means something.
+      </li>
+      <li>
+        <b>Made comparison tables readable and safe at any width.</b> All four
+        tables use tabular mono figures with a true minus sign, red/green only
+        for direction, a green check pill on the best cell in each row, and
+        their own horizontal scroll container so the page body never scrolls
+        sideways.
+      </li>
+      <li>
+        <b>Set long AI prose in a measured reading column.</b> "Your Situation"
+        and "Head to Head" run five to seven dense paragraphs at full container
+        width on the live page. They now sit in a 68-character serif column,
+        while the short Executive Verdict keeps the indigo AI-narrative
+        treatment — the two were visually identical before.
+      </li>
+      <li>
+        <b>Kept every feature intact.</b> Market selection with the five-market
+        cap and Primary badge, "Add another market to see a side-by-side
+        comparison", both Personalize panels (note the builder offers
+        Affordability / Appreciation / Job Market / Market Timing / Lifestyle
+        while the in-report panel offers Affordability / Growth Potential /
+        Market Timing / Stability / Value — a genuine inconsistency, reproduced
+        verbatim), all four numeric inputs with their hints, Custom Research and
+        the AI Research Agent, Recent Reports, Back / Ask AI / Share / Download,
+        the Ask AI drawer with its four suggested questions and "Powered by
+        Claude AI", scenario probabilities, all four recommended actions with
+        timing, per-market news with sources, the per-market accordion, and the
+        report footer with Methodology / Data Sources / About.
+      </li>
+    </ol>
+  </section>
+
+  <div class="footnote">
+    Mockup built from the live
+    <span class="n">propertyiq.app/reports</span> page, the Frederick County, MD
+    report (<span class="n">7/12/2026</span>) and the Tampa vs Chicago vs New
+    Orleans vs Rochester comparison (<span class="n">6/29/2026</span>).<br />
+    Data is provided for informational purposes only. All values are reproduced
+    as observed; none were invented.
+  </div>
+</div>

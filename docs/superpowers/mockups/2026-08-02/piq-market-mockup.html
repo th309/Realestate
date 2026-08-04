@@ -1,0 +1,3359 @@
+<title>Market Explorer &mdash; PropertyIQ</title>
+<style>
+  :root {
+    --canvas: #f5f6fa;
+    --white: #ffffff;
+    --line: #e4e7f2;
+    --soft: #edeff7;
+    --ink: #12141d;
+    --body: #5b6076;
+    --muted: #8b91a8;
+    --indigo: #3949ab;
+    --indigo-soft: #eef0fb;
+    --green: #00a84a;
+    --green-b: #00c853;
+    --green-soft: #e6f8ee;
+    --red: #b3261e;
+    --red-soft: #fdecea;
+    --amber: #e07b00;
+    --amber-soft: #fff3e0;
+    --violet: #7c4dff;
+    --violet-soft: #f1ecff;
+    --teal: #00838f;
+    --teal-soft: #e0f7fa;
+    --bar: #151828;
+    --bar-mute: #9aa1ba;
+    --bar-line: #272c40;
+    --sh: 0 1px 2px rgba(18, 20, 29, 0.05), 0 2px 8px rgba(18, 20, 29, 0.04);
+    --sans:
+      "Segoe UI Variable Display", -apple-system, BlinkMacSystemFont,
+      "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono:
+      "Roboto Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --canvas: #0f1119;
+      --white: #1a1d29;
+      --line: #2a2f42;
+      --soft: #232838;
+      --ink: #edeff7;
+      --body: #a5abc2;
+      --muted: #797f96;
+      --indigo: #8c9ae8;
+      --indigo-soft: #232841;
+      --green: #3dd87a;
+      --green-soft: #17301f;
+      --red: #f2b8b5;
+      --red-soft: #33201f;
+      --amber: #ffb74d;
+      --amber-soft: #33280f;
+      --violet: #b39dff;
+      --violet-soft: #241f38;
+      --teal: #4dd0e1;
+      --teal-soft: #13292e;
+      --bar: #0a0c14;
+      --bar-line: #1e2333;
+      --sh: 0 1px 2px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+  }
+  :root[data-theme="dark"] {
+    --canvas: #0f1119;
+    --white: #1a1d29;
+    --line: #2a2f42;
+    --soft: #232838;
+    --ink: #edeff7;
+    --body: #a5abc2;
+    --muted: #797f96;
+    --indigo: #8c9ae8;
+    --indigo-soft: #232841;
+    --green: #3dd87a;
+    --green-soft: #17301f;
+    --red: #f2b8b5;
+    --red-soft: #33201f;
+    --amber: #ffb74d;
+    --amber-soft: #33280f;
+    --violet: #b39dff;
+    --violet-soft: #241f38;
+    --teal: #4dd0e1;
+    --teal-soft: #13292e;
+    --bar: #0a0c14;
+    --bar-line: #1e2333;
+    --sh: 0 1px 2px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+  :root[data-theme="light"] {
+    --canvas: #f5f6fa;
+    --white: #ffffff;
+    --line: #e4e7f2;
+    --soft: #edeff7;
+    --ink: #12141d;
+    --body: #5b6076;
+    --muted: #8b91a8;
+    --indigo: #3949ab;
+    --indigo-soft: #eef0fb;
+    --green: #00a84a;
+    --green-b: #00c853;
+    --green-soft: #e6f8ee;
+    --red: #b3261e;
+    --red-soft: #fdecea;
+    --amber: #e07b00;
+    --amber-soft: #fff3e0;
+    --violet: #7c4dff;
+    --violet-soft: #f1ecff;
+    --teal: #00838f;
+    --teal-soft: #e0f7fa;
+    --bar: #151828;
+    --bar-mute: #9aa1ba;
+    --bar-line: #272c40;
+    --sh: 0 1px 2px rgba(18, 20, 29, 0.05), 0 2px 8px rgba(18, 20, 29, 0.04);
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+    background: var(--canvas);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    margin: 0;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+  }
+  a {
+    color: var(--indigo);
+    text-decoration: none;
+  }
+  svg {
+    display: block;
+  }
+  .n {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+  .lab {
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .wrap {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 0 20px;
+  }
+
+  /* ---------- app bar ---------- */
+  .appbar {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: var(--bar);
+    height: 57px;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 0 20px;
+    border-bottom: 1px solid var(--bar-line);
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-size: 15.5px;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: -0.02em;
+  }
+  .brand .mk {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: #3949ab;
+    display: grid;
+    place-items: center;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 800;
+  }
+  .brand em {
+    font-style: normal;
+    color: #8c9ae8;
+  }
+  .nav {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 8px;
+  }
+  .pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 11px;
+    border-radius: 999px;
+    color: var(--bar-mute);
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    background: none;
+    font-family: inherit;
+  }
+  .pill:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: #fff;
+  }
+  .pill .tile {
+    width: 18px;
+    height: 18px;
+    border-radius: 5px;
+    display: grid;
+    place-items: center;
+    flex: none;
+  }
+  .pill .tile svg {
+    width: 11px;
+    height: 11px;
+    stroke: #fff;
+  }
+  .pill.on {
+    background: #3949ab;
+    color: #fff;
+  }
+  .pill.on .tile {
+    background: rgba(255, 255, 255, 0.25) !important;
+  }
+  .spacer {
+    flex: 1;
+  }
+  .chip-pro {
+    padding: 4px 11px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+  }
+  .ib {
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+    display: grid;
+    place-items: center;
+    background: none;
+    border: none;
+    cursor: pointer;
+  }
+  .ib:hover {
+    background: rgba(255, 255, 255, 0.08);
+  }
+  .ib svg {
+    width: 16px;
+    height: 16px;
+    stroke: var(--bar-mute);
+  }
+  .ib:hover svg {
+    stroke: #fff;
+  }
+  @media (max-width: 1150px) {
+    .lb {
+      display: none;
+    }
+  }
+
+  /* ---------- control bar ---------- */
+  .ctl {
+    background: var(--white);
+    border-bottom: 1px solid var(--line);
+    padding: 11px 20px;
+    position: sticky;
+    top: 57px;
+    z-index: 40;
+  }
+  .ctl-in {
+    max-width: 1440px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .grp {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .crumbs {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .cchip {
+    padding: 4.5px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--white);
+    color: var(--body);
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .cchip.on {
+    background: var(--indigo);
+    border-color: var(--indigo);
+    color: #fff;
+  }
+  .crumbs svg {
+    width: 12px;
+    height: 12px;
+    stroke: var(--muted);
+  }
+  .sep {
+    width: 1px;
+    height: 22px;
+    background: var(--line);
+  }
+  .mchips {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+  }
+  .mchip {
+    padding: 5px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--white);
+    color: var(--body);
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    white-space: nowrap;
+  }
+  .mchip:hover {
+    border-color: var(--indigo);
+    color: var(--indigo);
+  }
+  .mchip.on {
+    background: var(--indigo);
+    border-color: var(--indigo);
+    color: #fff;
+  }
+  @media (prefers-color-scheme: dark) {
+    .mchip.on,
+    .cchip.on {
+      color: #12141d;
+    }
+  }
+  :root[data-theme="dark"] .mchip.on,
+  :root[data-theme="dark"] .cchip.on {
+    color: #12141d;
+  }
+  :root[data-theme="light"] .mchip.on,
+  :root[data-theme="light"] .cchip.on {
+    color: #fff;
+  }
+  .mchip[disabled] {
+    opacity: 0.38;
+    cursor: not-allowed;
+  }
+  .seg {
+    display: flex;
+    background: var(--canvas);
+    padding: 3px;
+    border-radius: 10px;
+    gap: 2px;
+  }
+  .seg button {
+    border: none;
+    background: none;
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--body);
+    padding: 5px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .seg button svg {
+    width: 12px;
+    height: 12px;
+    stroke: currentColor;
+  }
+  .seg button.on {
+    background: var(--white);
+    box-shadow: var(--sh);
+    color: var(--indigo);
+  }
+  .seg button[disabled] {
+    opacity: 0.38;
+    cursor: not-allowed;
+  }
+
+  /* ---------- page ---------- */
+  main {
+    padding: 22px 0 40px;
+  }
+  .phead {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+  }
+  .phead h1 {
+    font-size: 27px;
+    letter-spacing: -0.03em;
+  }
+  .phead p {
+    margin: 5px 0 0;
+    color: var(--body);
+    font-size: 13.5px;
+    max-width: 640px;
+  }
+  .scopeline {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 13px;
+    border-radius: 999px;
+    background: var(--indigo-soft);
+    color: var(--indigo);
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .scopeline svg {
+    width: 13px;
+    height: 13px;
+    stroke: var(--indigo);
+  }
+
+  .card {
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    box-shadow: var(--sh);
+  }
+  .chead {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--line);
+    flex-wrap: wrap;
+  }
+  .ct {
+    width: 25px;
+    height: 25px;
+    border-radius: 7px;
+    display: grid;
+    place-items: center;
+    flex: none;
+  }
+  .ct svg {
+    width: 14px;
+    height: 14px;
+    stroke: #fff;
+  }
+  .chead h3 {
+    font-size: 14px;
+  }
+  .chead .r {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  /* KPI row */
+  .kpis {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+  @media (max-width: 1180px) {
+    .kpis {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  @media (max-width: 620px) {
+    .kpis {
+      grid-template-columns: 1fr;
+    }
+  }
+  .kpi {
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--indigo);
+    border-radius: 14px;
+    box-shadow: var(--sh);
+    padding: 13px 15px 12px;
+  }
+  .kpi .top {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .kpi .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex: none;
+  }
+  .kpi .v {
+    display: flex;
+    align-items: baseline;
+    gap: 9px;
+    margin-top: 7px;
+    flex-wrap: wrap;
+  }
+  .kpi .v b {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.03em;
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .kpi .cap {
+    margin-top: 6px;
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.35;
+  }
+  .kpi .spark {
+    margin-top: 9px;
+  }
+  .d {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 7px;
+    border-radius: 999px;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .d svg {
+    width: 10px;
+    height: 10px;
+    stroke-width: 2.6;
+  }
+  .d-up {
+    background: var(--green-soft);
+    color: var(--green);
+  }
+  .d-up svg {
+    stroke: var(--green);
+  }
+  .d-dn {
+    background: var(--red-soft);
+    color: var(--red);
+  }
+  .d-dn svg {
+    stroke: var(--red);
+  }
+  .d-n {
+    background: var(--soft);
+    color: var(--body);
+  }
+  .d-n svg {
+    stroke: var(--body);
+  }
+
+  /* main two-col */
+  .split {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 330px;
+    gap: 16px;
+    align-items: start;
+  }
+  @media (max-width: 1240px) {
+    .split {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .plotnote {
+    position: absolute;
+    top: 12px;
+    right: 14px;
+    max-width: 250px;
+    text-align: right;
+    line-height: 1.4;
+    text-transform: none;
+    letter-spacing: 0.01em;
+    font-size: 9.5px;
+    font-weight: 600;
+    color: var(--muted);
+  }
+  .plotwrap {
+    position: relative;
+    padding: 6px 8px 0;
+  }
+  .legend-gr {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .legend-gr .bar {
+    width: 88px;
+    height: 8px;
+    border-radius: 999px;
+    background: linear-gradient(
+      90deg,
+      #b3261e,
+      #e07b00,
+      #facc15,
+      #7ac943,
+      #00c853
+    );
+  }
+  .subcap {
+    padding: 0 16px 10px;
+    font-size: 11.5px;
+    color: var(--muted);
+  }
+
+  .timeline {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    padding: 12px 16px;
+    border-top: 1px solid var(--line);
+  }
+  .playb {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: var(--indigo);
+    border: none;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    flex: none;
+  }
+  .playb svg {
+    width: 14px;
+    height: 14px;
+    stroke: #fff;
+    fill: #fff;
+  }
+  .track {
+    flex: 1;
+    position: relative;
+    height: 34px;
+  }
+  .track .rail {
+    position: absolute;
+    top: 8px;
+    left: 0;
+    right: 0;
+    height: 5px;
+    border-radius: 999px;
+    background: var(--soft);
+  }
+  .track .fill {
+    position: absolute;
+    top: 8px;
+    left: 0;
+    width: 100%;
+    height: 5px;
+    border-radius: 999px;
+    background: var(--indigo);
+  }
+  .track .knob {
+    position: absolute;
+    top: 4px;
+    left: calc(100% - 13px);
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    background: var(--indigo);
+    border: 2.5px solid var(--white);
+    box-shadow: var(--sh);
+  }
+  .track .marks {
+    position: absolute;
+    top: 20px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--muted);
+  }
+  .tnow {
+    font-family: var(--mono);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--ink);
+    letter-spacing: -0.02em;
+    flex: none;
+  }
+
+  /* inspector */
+  .insp {
+    padding: 15px 16px 16px;
+  }
+  .insp .ihead {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .insp h3 {
+    font-size: 16.5px;
+    color: var(--indigo);
+  }
+  .insp .meta {
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .btn {
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 13px;
+    border: 1px solid var(--line);
+    background: var(--white);
+    color: var(--body);
+  }
+  .btn svg {
+    width: 13px;
+    height: 13px;
+    stroke: currentColor;
+  }
+  .btn:hover {
+    border-color: var(--indigo);
+    color: var(--indigo);
+  }
+  .btn-p {
+    background: var(--indigo);
+    border-color: var(--indigo);
+    color: #fff;
+  }
+  @media (prefers-color-scheme: dark) {
+    .btn-p,
+    .btn-p:hover {
+      color: #12141d;
+    }
+    .playb svg {
+      stroke: #12141d;
+      fill: #12141d;
+    }
+  }
+  :root[data-theme="dark"] .btn-p,
+  :root[data-theme="dark"] .btn-p:hover {
+    color: #12141d;
+  }
+  :root[data-theme="dark"] .playb svg {
+    stroke: #12141d;
+    fill: #12141d;
+  }
+  :root[data-theme="light"] .btn-p,
+  :root[data-theme="light"] .btn-p:hover {
+    color: #fff;
+  }
+  :root[data-theme="light"] .playb svg {
+    stroke: #fff;
+    fill: #fff;
+  }
+  .btn-p:hover {
+    color: #fff;
+    filter: brightness(1.08);
+  }
+  .btn-s {
+    background: var(--indigo-soft);
+    border-color: transparent;
+    color: var(--indigo);
+  }
+  .btn-pin {
+    background: var(--green-soft);
+    border-color: transparent;
+    color: var(--green);
+  }
+  .btn-sm {
+    padding: 5px 10px;
+    font-size: 11.5px;
+    border-radius: 999px;
+  }
+  .btn-w {
+    width: 100%;
+  }
+
+  .ringwrap {
+    display: grid;
+    place-items: center;
+    margin: 16px 0 6px;
+  }
+  .ring {
+    width: 134px;
+    height: 134px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    position: relative;
+  }
+  .ring::after {
+    content: "";
+    position: absolute;
+    inset: 13px;
+    border-radius: 50%;
+    background: var(--white);
+  }
+  .ring .rv {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+  }
+  .ring .rv b {
+    display: block;
+    font-family: var(--mono);
+    font-size: 38px;
+    font-weight: 600;
+    letter-spacing: -0.04em;
+    color: var(--indigo);
+    line-height: 1;
+  }
+  .ring .rv span {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-family: var(--mono);
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    color: var(--body);
+    margin-top: 3px;
+  }
+  .ring .rv span svg {
+    width: 9px;
+    height: 9px;
+    stroke-width: 3;
+  }
+  .ring-sm {
+    width: 104px;
+    height: 104px;
+  }
+  .ring-sm::after {
+    inset: 11px;
+  }
+  .ring-sm .rv b {
+    font-size: 30px;
+  }
+
+  .conf {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 13px;
+  }
+  .stars {
+    display: flex;
+    gap: 2px;
+  }
+  .stars svg {
+    width: 12px;
+    height: 12px;
+    fill: var(--green-b);
+    stroke: var(--green-b);
+  }
+  .gradechip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: var(--green-soft);
+    color: var(--green);
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+  }
+  .confcap {
+    text-align: center;
+    font-size: 10.5px;
+    color: var(--muted);
+    margin: -8px 0 13px;
+  }
+
+  .mgrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 9px;
+  }
+  .mtile {
+    border: 1px solid var(--line);
+    border-radius: 11px;
+    padding: 8px 11px;
+    background: var(--white);
+  }
+  .mtile b {
+    display: block;
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    margin-top: 3px;
+  }
+  .pos {
+    color: var(--green);
+  }
+  .trendbox {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
+  }
+  .trendbox .th {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .trendbox .th b {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--indigo);
+  }
+
+  /* three-up */
+  .three {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-top: 16px;
+  }
+  @media (max-width: 1100px) {
+    .three {
+      grid-template-columns: 1fr;
+    }
+  }
+  .pad {
+    padding: 14px 16px;
+  }
+  .dlegend {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    margin-top: 12px;
+  }
+  .dlegend div {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12.5px;
+    color: var(--body);
+  }
+  .dlegend .sw {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex: none;
+  }
+  .dlegend b {
+    margin-left: auto;
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .chlegend {
+    display: flex;
+    gap: 14px;
+    font-size: 11.5px;
+    color: var(--body);
+    margin-bottom: 10px;
+  }
+  .chlegend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .chlegend i {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    display: block;
+  }
+
+  .mover {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--soft);
+  }
+  .mover:last-child {
+    border-bottom: none;
+  }
+  .mover .ar {
+    width: 18px;
+    height: 18px;
+    border-radius: 5px;
+    display: grid;
+    place-items: center;
+    flex: none;
+  }
+  .mover .ar svg {
+    width: 11px;
+    height: 11px;
+    stroke: #fff;
+    stroke-width: 3;
+  }
+  .mover .nm {
+    min-width: 0;
+  }
+  .mover .nm a {
+    font-size: 12.5px;
+    font-weight: 600;
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .mover .nm em {
+    font-style: normal;
+    font-size: 10.5px;
+    color: var(--muted);
+  }
+  .mover .dv {
+    margin-left: auto;
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .sbadge {
+    min-width: 30px;
+    text-align: center;
+    padding: 2px 7px;
+    border-radius: 999px;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .s-hi {
+    background: var(--green-soft);
+    color: var(--green);
+  }
+  .s-mid {
+    background: var(--amber-soft);
+    color: var(--amber);
+  }
+  .s-lo {
+    background: var(--red-soft);
+    color: var(--red);
+  }
+  .s-tl {
+    background: var(--teal-soft);
+    color: var(--teal);
+  }
+
+  /* compare */
+  .cmpgrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 12px;
+    padding: 14px 16px;
+  }
+  .cmpcard {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px 13px;
+  }
+  .cmpcard .h {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .cmpcard .h b {
+    font-size: 13.5px;
+  }
+  .cmpcard .h em {
+    font-style: normal;
+    display: block;
+    font-size: 10.5px;
+    color: var(--muted);
+  }
+  .cmpcard .h .sv {
+    margin-left: auto;
+    font-family: var(--mono);
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: -0.03em;
+  }
+  .cmprow {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    padding: 4px 0;
+    border-top: 1px solid var(--soft);
+    color: var(--body);
+  }
+  .cmprow:first-of-type {
+    border-top: none;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--soft);
+  }
+  .cmprow b {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .xb {
+    width: 20px;
+    height: 20px;
+    border-radius: 6px;
+    border: none;
+    background: none;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    flex: none;
+  }
+  .xb svg {
+    width: 12px;
+    height: 12px;
+    stroke: var(--muted);
+  }
+  .xb:hover {
+    background: var(--soft);
+  }
+
+  /* rankings table */
+  .tscroll {
+    overflow-x: auto;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+    min-width: 660px;
+  }
+  th {
+    text-align: left;
+    padding: 9px 16px;
+    border-bottom: 1px solid var(--line);
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  th.r,
+  td.r {
+    text-align: right;
+  }
+  td {
+    padding: 9px 16px;
+    border-bottom: 1px solid var(--soft);
+    vertical-align: middle;
+  }
+  tbody tr:last-child td {
+    border-bottom: none;
+  }
+  tbody tr:hover {
+    background: var(--soft);
+  }
+  td.rk {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--muted);
+    width: 44px;
+  }
+  td.mk a {
+    font-weight: 600;
+    font-size: 13px;
+  }
+  td.mk em {
+    font-style: normal;
+    display: block;
+    font-size: 10.5px;
+    color: var(--muted);
+    font-family: var(--mono);
+  }
+  td.lbl {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    white-space: nowrap;
+  }
+  .g {
+    color: var(--green);
+  }
+  .a {
+    color: var(--amber);
+  }
+  .rd {
+    color: var(--red);
+  }
+  .tl {
+    color: var(--teal);
+  }
+
+  /* AI narrative */
+  .ai {
+    background: var(--indigo-soft);
+    border-radius: 12px;
+    padding: 14px 16px;
+    display: flex;
+    gap: 12px;
+  }
+  .ai .bulb {
+    width: 26px;
+    height: 26px;
+    border-radius: 8px;
+    background: var(--indigo);
+    display: grid;
+    place-items: center;
+    flex: none;
+  }
+  .ai .bulb svg {
+    width: 14px;
+    height: 14px;
+    stroke: #fff;
+  }
+  .ai h4 {
+    font-size: 15px;
+    margin-bottom: 5px;
+    color: var(--ink);
+  }
+  .ai p {
+    margin: 0;
+    font-style: italic;
+    color: var(--body);
+    font-size: 13px;
+    line-height: 1.55;
+  }
+
+  /* detail section */
+  .dsec {
+    margin-top: 34px;
+  }
+  .dbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 13px 16px;
+    box-shadow: var(--sh);
+    flex-wrap: wrap;
+  }
+  .dbar h2 {
+    font-size: 19px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .dbar h2 svg {
+    width: 16px;
+    height: 16px;
+    stroke: var(--indigo);
+  }
+  .dbar .sub {
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 1px;
+  }
+  .dbar .ib2 {
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+    border: 1px solid var(--line);
+    background: var(--white);
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+  }
+  .dbar .ib2 svg {
+    width: 15px;
+    height: 15px;
+    stroke: var(--body);
+  }
+  .dbar .ib2:hover {
+    border-color: var(--indigo);
+  }
+  .dbar .ib2:hover svg {
+    stroke: var(--indigo);
+  }
+  .mrow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid var(--line);
+    border-radius: 11px;
+    padding: 9px 12px;
+    margin-bottom: 8px;
+  }
+  .mrow.hi {
+    border-color: var(--indigo);
+  }
+  .mrow .lb2 {
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .mrow .vv {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .mrow .vv b {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 13.5px;
+    font-weight: 600;
+  }
+  .mrow svg.ic {
+    width: 12px;
+    height: 12px;
+    stroke: var(--muted);
+    flex: none;
+  }
+  .crumbrow {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+  .crumbrow svg {
+    width: 12px;
+    height: 12px;
+    stroke: var(--muted);
+  }
+  .crumbrow b {
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  /* footer */
+  footer {
+    border-top: 1px solid var(--line);
+    background: var(--white);
+    margin-top: 34px;
+    padding: 20px;
+  }
+  footer .lnks {
+    display: flex;
+    gap: 18px;
+    justify-content: center;
+    font-size: 12.5px;
+  }
+  footer p {
+    text-align: center;
+    color: var(--muted);
+    font-size: 11.5px;
+    margin: 9px 0 0;
+  }
+
+  /* notes */
+  .notes {
+    max-width: 1440px;
+    margin: 34px auto 0;
+    padding: 24px 22px;
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    box-shadow: var(--sh);
+  }
+  .notes h2 {
+    font-size: 16px;
+    margin-bottom: 14px;
+  }
+  @media (max-width: 1000px) {
+    .two {
+      grid-template-columns: 1fr !important;
+    }
+  }
+  .notes ol {
+    margin: 0;
+    padding-left: 20px;
+    color: var(--body);
+    font-size: 13px;
+    line-height: 1.65;
+  }
+  .notes li {
+    margin-bottom: 9px;
+  }
+  .notes b {
+    color: var(--ink);
+  }
+</style>
+
+<svg width="0" height="0" style="position: absolute" aria-hidden="true">
+  <defs>
+    <symbol
+      id="i-grid"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <rect x="3" y="3" width="7" height="7" />
+      <rect x="14" y="3" width="7" height="7" />
+      <rect x="14" y="14" width="7" height="7" />
+      <rect x="3" y="14" width="7" height="7" />
+    </symbol>
+    <symbol
+      id="i-map"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path
+        d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z"
+      />
+      <path d="M15 5.764v15" />
+      <path d="M9 3.236v15" />
+    </symbol>
+    <symbol
+      id="i-calc"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <rect x="4" y="2" width="16" height="20" rx="2" />
+      <line x1="8" x2="16" y1="6" y2="6" />
+      <line x1="16" x2="16" y1="14" y2="18" />
+      <path
+        d="M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M8 18h.01M12 18h.01"
+      />
+    </symbol>
+    <symbol
+      id="i-filter"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+    </symbol>
+    <symbol
+      id="i-file"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+      <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+      <path d="M10 9H8" />
+      <path d="M16 13H8" />
+      <path d="M16 17H8" />
+    </symbol>
+    <symbol
+      id="i-bell"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="M10.268 21a2 2 0 0 0 3.464 0" />
+      <path
+        d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"
+      />
+    </symbol>
+    <symbol
+      id="i-user"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+      <circle cx="12" cy="7" r="4" />
+    </symbol>
+    <symbol
+      id="i-chevr"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="m9 18 6-6-6-6" />
+    </symbol>
+    <symbol
+      id="i-home"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8" />
+      <path
+        d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"
+      />
+    </symbol>
+    <symbol
+      id="i-globe"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
+      <path d="M2 12h20" />
+    </symbol>
+    <symbol
+      id="i-bubbles"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <circle cx="7.5" cy="14.5" r="3.5" />
+      <circle cx="16" cy="8" r="4" />
+      <circle cx="18" cy="17.5" r="2.5" />
+    </symbol>
+    <symbol
+      id="i-scatter"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="M3 3v16a2 2 0 0 0 2 2h16" />
+      <circle cx="9" cy="9" r="1.5" />
+      <circle cx="14" cy="14" r="1.5" />
+      <circle cx="18" cy="7" r="1.5" />
+      <circle cx="8" cy="16" r="1.5" />
+    </symbol>
+    <symbol
+      id="i-play"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <polygon points="6 3 20 12 6 21 6 3" />
+    </symbol>
+    <symbol
+      id="i-up"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="m5 12 7-7 7 7" />
+      <path d="M12 19V5" />
+    </symbol>
+    <symbol
+      id="i-down"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="M12 5v14" />
+      <path d="m19 12-7 7-7-7" />
+    </symbol>
+    <symbol
+      id="i-right"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="M5 12h14" />
+      <path d="m12 5 7 7-7 7" />
+    </symbol>
+    <symbol
+      id="i-trup"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
+      <polyline points="16 7 22 7 22 13" />
+    </symbol>
+    <symbol
+      id="i-trdn"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <polyline points="22 17 13.5 8.5 8.5 13.5 2 7" />
+      <polyline points="16 17 22 17 22 11" />
+    </symbol>
+    <symbol
+      id="i-plus"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="M5 12h14" />
+      <path d="M12 5v14" />
+    </symbol>
+    <symbol
+      id="i-check"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="M20 6 9 17l-5-5" />
+    </symbol>
+    <symbol
+      id="i-x"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="M18 6 6 18" />
+      <path d="m6 6 12 12" />
+    </symbol>
+    <symbol
+      id="i-bulb"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path
+        d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"
+      />
+      <path d="M9 18h6" />
+      <path d="M10 22h4" />
+    </symbol>
+    <symbol
+      id="i-info"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 16v-4" />
+      <path d="M12 8h.01" />
+    </symbol>
+    <symbol
+      id="i-refresh"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+      <path d="M21 3v5h-5" />
+      <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+      <path d="M8 16H3v5" />
+    </symbol>
+    <symbol
+      id="i-share"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <circle cx="18" cy="5" r="3" />
+      <circle cx="6" cy="12" r="3" />
+      <circle cx="18" cy="19" r="3" />
+      <line x1="8.59" x2="15.42" y1="13.51" y2="17.49" />
+      <line x1="15.41" x2="8.59" y1="6.51" y2="10.49" />
+    </symbol>
+    <symbol
+      id="i-dl"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="7 10 12 15 17 10" />
+      <line x1="12" x2="12" y1="15" y2="3" />
+    </symbol>
+    <symbol
+      id="i-pie"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="M21.21 15.89A10 10 0 1 1 8 2.83" />
+      <path d="M22 12A10 10 0 0 0 12 2v10z" />
+    </symbol>
+    <symbol
+      id="i-bars"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="M3 3v16a2 2 0 0 0 2 2h16" />
+      <rect x="7" y="12" width="3" height="5" />
+      <rect x="13" y="8" width="3" height="9" />
+      <rect x="19" y="5" width="0" height="0" />
+    </symbol>
+    <symbol
+      id="i-list"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="M10 6h11" />
+      <path d="M10 12h11" />
+      <path d="M10 18h11" />
+      <path d="M4 6h1v4" />
+      <path d="M4 10h2" />
+      <path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1" />
+    </symbol>
+    <symbol
+      id="i-layers"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path
+        d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"
+      />
+      <path
+        d="M2 12.18a1 1 0 0 0 .6.91l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 .6-.92"
+      />
+      <path
+        d="M2 17.18a1 1 0 0 0 .6.91l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 .6-.92"
+      />
+    </symbol>
+    <symbol
+      id="i-gauge"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="m12 14 4-4" />
+      <path d="M3.34 19a10 10 0 1 1 17.32 0" />
+    </symbol>
+    <symbol
+      id="i-pin"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path
+        d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"
+      />
+      <circle cx="12" cy="10" r="3" />
+    </symbol>
+    <symbol
+      id="i-star"
+      viewBox="0 0 24 24"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <polygon
+        points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
+      />
+    </symbol>
+    <symbol
+      id="i-bldg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <rect x="4" y="2" width="16" height="20" rx="2" />
+      <path d="M9 22v-4h6v4" />
+      <path
+        d="M8 6h.01M16 6h.01M8 10h.01M16 10h.01M8 14h.01M16 14h.01M12 6h.01M12 10h.01M12 14h.01"
+      />
+    </symbol>
+  </defs>
+</svg>
+
+<header class="appbar">
+  <div class="brand"><span class="mk">P</span>Property<em>IQ</em></div>
+  <nav class="nav">
+    <button class="pill">
+      <span class="tile" style="background: #3949ab"
+        ><svg><use href="#i-grid" /></svg></span
+      ><span class="lb">Dashboard</span>
+    </button>
+    <button class="pill on">
+      <span class="tile" style="background: #00838f"
+        ><svg><use href="#i-map" /></svg></span
+      ><span class="lb">Map</span>
+    </button>
+    <button class="pill">
+      <span class="tile" style="background: #3949ab"
+        ><svg><use href="#i-calc" /></svg></span
+      ><span class="lb">Analyzer</span>
+    </button>
+    <button class="pill">
+      <span class="tile" style="background: #7c4dff"
+        ><svg><use href="#i-filter" /></svg></span
+      ><span class="lb">Screener</span>
+    </button>
+    <button class="pill">
+      <span class="tile" style="background: #00c853"
+        ><svg><use href="#i-file" /></svg></span
+      ><span class="lb">Reports</span>
+    </button>
+  </nav>
+  <div class="spacer"></div>
+  <span class="chip-pro">Pro</span>
+  <button class="ib">
+    <svg><use href="#i-bell" /></svg>
+  </button>
+  <button class="ib">
+    <svg><use href="#i-user" /></svg>
+  </button>
+</header>
+
+<div class="ctl">
+  <div class="ctl-in">
+    <div class="grp">
+      <span class="lab">Scope</span>
+      <div class="crumbs">
+        <button class="cchip on">United States</button>
+      </div>
+    </div>
+    <div class="sep"></div>
+    <div class="grp">
+      <span class="lab">Metric</span>
+      <div class="mchips">
+        <button class="mchip on">PropertyIQ Score</button>
+        <button class="mchip">Hotness Score</button>
+        <button class="mchip">Home Value YoY</button>
+        <button class="mchip">Rent Yield</button>
+        <button class="mchip">Days on Market</button>
+        <button class="mchip">Months of Supply</button>
+      </div>
+    </div>
+    <div class="spacer"></div>
+    <div class="seg">
+      <button>State</button><button class="on">Metro</button
+      ><button>County</button><button disabled>ZIP</button>
+    </div>
+  </div>
+</div>
+
+<main>
+  <div class="wrap">
+    <div class="phead">
+      <div>
+        <h1>Market Explorer</h1>
+        <p>
+          Drill from the whole country down to a single ZIP &mdash; click a
+          market to inspect it, drag the timeline to travel through up to 10
+          years of history.
+        </p>
+      </div>
+      <div class="scopeline">
+        <svg><use href="#i-globe" /></svg>United States &middot;
+        <span class="n">935</span> metros
+      </div>
+    </div>
+
+    <!-- KPI row -->
+    <div class="kpis">
+      <div class="kpi" style="border-left-color: #3949ab">
+        <div class="top">
+          <span class="dot" style="background: #3949ab"></span
+          ><span class="lab">Median value</span>
+        </div>
+        <div class="v">
+          <b>$305K</b
+          ><span class="d d-up"
+            ><svg><use href="#i-up" /></svg>5.0%</span
+          >
+        </div>
+        <div class="cap">Typical home value across all 935 scored metros</div>
+        <svg
+          class="spark"
+          width="100%"
+          height="26"
+          viewBox="0 0 130 26"
+          preserveAspectRatio="none"
+        >
+          <polyline
+            points="2,22 20,21 38,19 56,16 74,13 92,10 112,7 128,5"
+            fill="none"
+            stroke="#3949AB"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+      </div>
+      <div class="kpi" style="border-left-color: #5c6bc0">
+        <div class="top">
+          <span class="dot" style="background: #5c6bc0"></span
+          ><span class="lab">Median rent</span>
+        </div>
+        <div class="v">
+          <b>$2K</b
+          ><span class="d d-n"
+            ><svg><use href="#i-up" /></svg>2.1%</span
+          >
+        </div>
+        <div class="cap">Typical asking rent across the same metros</div>
+        <svg
+          class="spark"
+          width="100%"
+          height="26"
+          viewBox="0 0 130 26"
+          preserveAspectRatio="none"
+        >
+          <polyline
+            points="2,20 20,18 38,19 56,15 74,14 92,11 112,9 128,8"
+            fill="none"
+            stroke="#5C6BC0"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+      </div>
+      <div class="kpi" style="border-left-color: #e07b00">
+        <div class="top">
+          <span class="dot" style="background: #e07b00"></span
+          ><span class="lab">Active listings</span>
+        </div>
+        <div class="v">
+          <b>1.02M</b
+          ><span class="d d-n"
+            ><svg><use href="#i-up" /></svg>12.8%</span
+          >
+        </div>
+        <div class="cap">
+          Homes currently for sale &mdash; supply side of the market
+        </div>
+        <svg
+          class="spark"
+          width="100%"
+          height="26"
+          viewBox="0 0 130 26"
+          preserveAspectRatio="none"
+        >
+          <polyline
+            points="2,20 20,20 38,19 56,17 74,14 92,10 112,7 128,6"
+            fill="none"
+            stroke="#e07b00"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+      </div>
+      <div class="kpi" style="border-left-color: #b3261e">
+        <div class="top">
+          <span class="dot" style="background: #b3261e"></span
+          ><span class="lab">Days on mkt</span>
+        </div>
+        <div class="v">
+          <b>57 d</b
+          ><span class="d d-up"
+            ><svg><use href="#i-down" /></svg>27.3%</span
+          >
+        </div>
+        <div class="cap">
+          Median list-to-pending time. Falling = market speeding up
+        </div>
+        <svg
+          class="spark"
+          width="100%"
+          height="26"
+          viewBox="0 0 130 26"
+          preserveAspectRatio="none"
+        >
+          <polyline
+            points="2,10 20,8 38,7 56,8 74,12 92,17 112,20 128,21"
+            fill="none"
+            stroke="#b3261e"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+      </div>
+      <div class="kpi" style="border-left-color: #00a84a">
+        <div class="top">
+          <span class="dot" style="background: #00a84a"></span
+          ><span class="lab">PIQ score</span>
+        </div>
+        <div class="v"><b>50</b><span class="d d-n">0.0 pt</span></div>
+        <div class="cap">
+          Median PropertyIQ Score. 50 = that market's state average
+        </div>
+        <svg
+          class="spark"
+          width="100%"
+          height="26"
+          viewBox="0 0 130 26"
+          preserveAspectRatio="none"
+        >
+          <polyline
+            points="2,12 20,15 38,19 56,20 74,18 92,13 112,9 128,7"
+            fill="none"
+            stroke="#00a84a"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+      </div>
+    </div>
+
+    <!-- chart + inspector -->
+    <div class="split">
+      <div class="card">
+        <div class="chead">
+          <span class="ct" style="background: #3949ab"
+            ><svg><use href="#i-scatter" /></svg
+          ></span>
+          <h3>PropertyIQ Score across <span class="n">935</span> metros</h3>
+          <div class="r">
+            <div class="seg">
+              <button class="on">
+                <svg><use href="#i-bubbles" /></svg>Bubbles
+              </button>
+              <button>
+                <svg><use href="#i-map" /></svg>Map
+              </button>
+            </div>
+            <div class="legend-gr">
+              <span class="lab">Cooling</span><span class="bar"></span
+              ><span class="lab">Rising</span>
+            </div>
+          </div>
+        </div>
+        <div class="subcap">
+          Click a bubble to inspect &middot; double-click to drill into its
+          counties &middot; size = active inventory
+        </div>
+        <div class="plotwrap">
+          <div class="plotnote">
+            Mockup plots only the 16 metros whose score and median value were
+            legible on the live page. Production renders all 935, sized by
+            active inventory.
+          </div>
+          <svg
+            width="100%"
+            viewBox="0 0 900 372"
+            preserveAspectRatio="xMidYMid meet"
+            role="img"
+            aria-label="Momentum score against median home value"
+          >
+            <g stroke="var(--line)" stroke-width="1" stroke-dasharray="3 4">
+              <line x1="60" y1="20" x2="880" y2="20" />
+              <line x1="60" y1="98.8" x2="880" y2="98.8" />
+              <line x1="60" y1="175" x2="880" y2="175" />
+              <line x1="60" y1="251.2" x2="880" y2="251.2" />
+            </g>
+            <line
+              x1="60"
+              y1="330"
+              x2="880"
+              y2="330"
+              stroke="var(--muted)"
+              stroke-width="1"
+            />
+            <g
+              class="n"
+              fill="var(--muted)"
+              font-size="11"
+              text-anchor="end"
+              font-family="var(--mono)"
+            >
+              <text x="50" y="24">109</text>
+              <text x="50" y="102.8">79</text>
+              <text x="50" y="179">50</text>
+              <text x="50" y="255.2">21</text>
+              <text x="50" y="334">&minus;9</text>
+            </g>
+            <text
+              x="18"
+              y="180"
+              fill="var(--muted)"
+              font-size="11"
+              text-anchor="middle"
+              transform="rotate(-90 18 180)"
+              font-family="var(--sans)"
+            >
+              Momentum score (1&ndash;99)
+            </text>
+            <g
+              class="n"
+              fill="var(--muted)"
+              font-size="11"
+              text-anchor="middle"
+              font-family="var(--mono)"
+            >
+              <text x="60" y="348">$40K</text>
+              <text x="265" y="348">$104K</text>
+              <text x="470" y="348">$273K</text>
+              <text x="675" y="348">$717K</text>
+              <text x="875" y="348">$1.9M</text>
+            </g>
+            <text
+              x="470"
+              y="366"
+              fill="var(--muted)"
+              font-size="11"
+              text-anchor="middle"
+              font-family="var(--sans)"
+            >
+              Median home value (log scale) &rarr;
+            </text>
+
+            <g opacity=".9">
+              <circle cx="295" cy="46" r="11" fill="#00c853" />
+              <circle cx="299" cy="49" r="11" fill="#0ac04f" />
+              <circle cx="383" cy="49" r="11" fill="#12bd52" />
+              <circle cx="392" cy="49" r="11" fill="#12bd52" />
+              <circle cx="407" cy="49" r="11" fill="#12bd52" />
+              <circle cx="411" cy="49" r="11" fill="#12bd52" />
+              <circle cx="430" cy="49" r="11" fill="#12bd52" />
+              <circle cx="431" cy="46" r="11" fill="#00c853" />
+              <circle cx="431" cy="46" r="11" fill="#00c853" />
+              <circle cx="462" cy="46" r="11" fill="#00c853" />
+              <circle cx="467" cy="46" r="11" fill="#00c853" />
+              <circle cx="481" cy="49" r="11" fill="#12bd52" />
+              <circle cx="484" cy="49" r="11" fill="#12bd52" />
+              <circle cx="567" cy="49" r="11" fill="#12bd52" />
+              <circle
+                cx="563"
+                cy="91"
+                r="12"
+                fill="#7ac943"
+                stroke="var(--ink)"
+                stroke-width="2.5"
+              />
+            </g>
+            <text
+              x="563"
+              y="72"
+              fill="var(--ink)"
+              font-size="12"
+              font-weight="600"
+              text-anchor="middle"
+              font-family="var(--sans)"
+            >
+              Anchorage, AK
+            </text>
+            <text
+              x="462"
+              y="30"
+              fill="var(--body)"
+              font-size="11"
+              text-anchor="middle"
+              font-family="var(--sans)"
+            >
+              Marquette, MI &middot; Batavia, NY &middot; Syracuse, NY &middot;
+              Buffalo, NY &hellip;
+            </text>
+          </svg>
+        </div>
+        <div
+          style="display: flex; justify-content: flex-end; padding: 0 16px 10px"
+        >
+          <div class="seg">
+            <button>6M</button><button>1Y</button><button class="on">2Y</button
+            ><button>5Y</button><button>10Y</button>
+          </div>
+        </div>
+        <div class="timeline">
+          <button class="playb">
+            <svg><use href="#i-play" /></svg>
+          </button>
+          <div class="track">
+            <div class="rail"></div>
+            <div class="fill"></div>
+            <div class="knob"></div>
+            <div class="marks">
+              <span>Jul &rsquo;24</span><span>Jul &rsquo;25</span
+              ><span>Jun &rsquo;26</span>
+            </div>
+          </div>
+          <span class="tnow">Jun &rsquo;26</span>
+        </div>
+      </div>
+
+      <!-- inspector -->
+      <div class="card insp">
+        <div class="ihead">
+          <div>
+            <h3>Anchorage, AK</h3>
+            <div class="meta n">AK &middot; metro &middot; CBSA 11260</div>
+          </div>
+          <button class="btn btn-sm btn-s" style="margin-left: auto">
+            <svg><use href="#i-plus" /></svg>Compare
+          </button>
+        </div>
+
+        <div class="ringwrap">
+          <div
+            class="ring"
+            style="
+              background: conic-gradient(
+                from 0deg,
+                #00c853 0deg,
+                #7ac943 74deg,
+                #facc15 148deg,
+                #fb923c 221deg,
+                #b3261e 295deg,
+                var(--soft) 295deg,
+                var(--soft) 360deg
+              );
+            "
+          >
+            <div class="rv">
+              <b>82</b
+              ><span
+                >STRONG <svg><use href="#i-up" /></svg
+              ></span>
+            </div>
+          </div>
+        </div>
+        <div class="conf">
+          <span class="stars"
+            ><svg><use href="#i-star" /></svg><svg><use href="#i-star" /></svg
+            ><svg><use href="#i-star" /></svg><svg><use href="#i-star" /></svg
+            ><svg><use href="#i-star" /></svg
+          ></span>
+          <span class="gradechip">A &middot; 100%</span>
+        </div>
+        <div class="confcap">
+          Data quality &mdash; how complete the inputs are, not a grade of the
+          score
+        </div>
+
+        <div class="mgrid">
+          <div class="mtile">
+            <span class="lab">Median value</span><b>$427K</b>
+          </div>
+          <div class="mtile">
+            <span class="lab">Value YoY</span><b class="pos">+9.2%</b>
+          </div>
+          <div class="mtile">
+            <span class="lab">Rent yield</span><b>5.0%</b>
+          </div>
+          <div class="mtile"><span class="lab">Hotness</span><b>54</b></div>
+          <div class="mtile">
+            <span class="lab">Days on mkt</span><b>37 d</b>
+          </div>
+          <div class="mtile">
+            <span class="lab">Mo. supply</span><b>1.0 mo</b>
+          </div>
+        </div>
+
+        <div class="trendbox">
+          <div class="th">
+            <span class="lab">PropertyIQ score &middot; trend</span
+            ><b class="n">82</b>
+          </div>
+          <svg
+            width="100%"
+            height="56"
+            viewBox="0 0 260 56"
+            preserveAspectRatio="none"
+            style="margin-top: 6px"
+          >
+            <polyline
+              points="4,34 40,40 76,48 112,30 148,18 184,12 220,20 256,24"
+              fill="none"
+              stroke="#3949AB"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </div>
+
+        <div style="display: grid; gap: 9px; margin-top: 14px">
+          <button class="btn btn-s btn-w">
+            Explore counties in Anchorage, AK <svg><use href="#i-down" /></svg>
+          </button>
+          <button class="btn btn-p btn-w">
+            Open full market dashboard <svg><use href="#i-right" /></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- three-up -->
+    <div class="three">
+      <div class="card">
+        <div class="chead">
+          <span class="ct" style="background: #7c4dff"
+            ><svg><use href="#i-bars" /></svg
+          ></span>
+          <h3>Listings activity</h3>
+          <span class="lab" style="margin-left: auto">Anchorage, AK</span>
+        </div>
+        <div class="pad">
+          <div class="chlegend">
+            <span><i style="background: #5c6bc0"></i>New listings</span
+            ><span><i style="background: #00c853"></i>Pending</span>
+          </div>
+          <svg
+            width="100%"
+            height="168"
+            viewBox="0 0 300 168"
+            preserveAspectRatio="none"
+            role="img"
+            aria-label="New listings and pending sales by month"
+          >
+            <g fill="#5C6BC0" opacity=".8">
+              <rect x="6" y="72" width="8" height="70" />
+              <rect x="30" y="66" width="8" height="76" />
+              <rect x="54" y="76" width="8" height="66" />
+              <rect x="78" y="82" width="8" height="60" />
+              <rect x="102" y="104" width="8" height="38" />
+              <rect x="126" y="109" width="8" height="33" />
+              <rect x="150" y="104" width="8" height="38" />
+              <rect x="174" y="94" width="8" height="48" />
+              <rect x="198" y="85" width="8" height="57" />
+              <rect x="222" y="79" width="8" height="63" />
+              <rect x="246" y="64" width="8" height="78" />
+              <rect x="270" y="16" width="8" height="126" />
+            </g>
+            <g fill="#00C853" opacity=".85">
+              <rect x="15" y="43" width="8" height="99" />
+              <rect x="39" y="38" width="8" height="104" />
+              <rect x="63" y="53" width="8" height="89" />
+              <rect x="87" y="60" width="8" height="82" />
+              <rect x="111" y="89" width="8" height="53" />
+              <rect x="135" y="99" width="8" height="43" />
+              <rect x="159" y="91" width="8" height="51" />
+              <rect x="183" y="81" width="8" height="61" />
+              <rect x="207" y="69" width="8" height="73" />
+              <rect x="231" y="59" width="8" height="83" />
+              <rect x="255" y="51" width="8" height="91" />
+              <rect x="279" y="35" width="8" height="107" />
+            </g>
+            <line x1="0" y1="142" x2="300" y2="142" stroke="var(--line)" />
+          </svg>
+          <div
+            class="n"
+            style="
+              display: flex;
+              justify-content: space-between;
+              font-size: 10.5px;
+              color: var(--muted);
+              margin-top: 4px;
+            "
+          >
+            <span>Jul</span><span>Sep</span><span>Nov</span><span>Jan</span
+            ><span>Mar</span><span>May</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="chead">
+          <span class="ct" style="background: #00838f"
+            ><svg><use href="#i-pie" /></svg
+          ></span>
+          <h3>Momentum mix</h3>
+          <span class="lab" style="margin-left: auto">925 metros</span>
+        </div>
+        <div class="pad">
+          <div style="display: grid; place-items: center">
+            <svg
+              width="150"
+              height="150"
+              viewBox="0 0 150 150"
+              role="img"
+              aria-label="Share of metros rising, steady and cooling"
+            >
+              <g transform="rotate(-90 75 75)" fill="none" stroke-width="17">
+                <circle
+                  cx="75"
+                  cy="75"
+                  r="54"
+                  stroke="#00C853"
+                  stroke-dasharray="136.8 202.5"
+                />
+                <circle
+                  cx="75"
+                  cy="75"
+                  r="54"
+                  stroke="#e07b00"
+                  stroke-dasharray="69.3 270"
+                  stroke-dashoffset="-136.8"
+                />
+                <circle
+                  cx="75"
+                  cy="75"
+                  r="54"
+                  stroke="#b3261e"
+                  stroke-dasharray="133.1 206.2"
+                  stroke-dashoffset="-206.1"
+                />
+              </g>
+              <text
+                x="75"
+                y="76"
+                text-anchor="middle"
+                font-family="var(--mono)"
+                font-size="27"
+                font-weight="600"
+                fill="var(--indigo)"
+                letter-spacing="-1"
+              >
+                373
+              </text>
+              <text
+                x="75"
+                y="92"
+                text-anchor="middle"
+                font-size="10"
+                fill="var(--muted)"
+                font-family="var(--sans)"
+              >
+                rising
+              </text>
+            </svg>
+          </div>
+          <div class="dlegend">
+            <div>
+              <span class="sw" style="background: #00c853"></span>Rising (60+)<b
+                >373</b
+              >
+            </div>
+            <div>
+              <span class="sw" style="background: #e07b00"></span>Steady
+              (40&ndash;59)<b>189</b>
+            </div>
+            <div>
+              <span class="sw" style="background: #b3261e"></span>Cooling
+              (&lt;40)<b>363</b>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="chead">
+          <span class="ct" style="background: #00c853"
+            ><svg><use href="#i-trup" /></svg
+          ></span>
+          <h3>Top movers</h3>
+          <span class="lab" style="margin-left: auto">3-mo &Delta; score</span>
+        </div>
+        <div class="pad" style="padding-top: 6px">
+          <div class="mover">
+            <span class="ar" style="background: #00a84a"
+              ><svg><use href="#i-up" /></svg></span
+            ><span class="nm"><a href="#">Johnstown, PA</a><em>PA</em></span
+            ><span class="dv g">+97.0</span><span class="sbadge s-hi">99</span>
+          </div>
+          <div class="mover">
+            <span class="ar" style="background: #00a84a"
+              ><svg><use href="#i-up" /></svg></span
+            ><span class="nm"><a href="#">Pecos, TX</a><em>TX</em></span
+            ><span class="dv g">+92.0</span><span class="sbadge s-hi">98</span>
+          </div>
+          <div class="mover">
+            <span class="ar" style="background: #00a84a"
+              ><svg><use href="#i-up" /></svg></span
+            ><span class="nm"><a href="#">McComb, MS</a><em>MS</em></span
+            ><span class="dv g">+72.0</span><span class="sbadge s-hi">94</span>
+          </div>
+          <div class="mover">
+            <span class="ar" style="background: #b3261e"
+              ><svg><use href="#i-down" /></svg></span
+            ><span class="nm"><a href="#">Raymondville, TX</a><em>TX</em></span
+            ><span class="dv rd">&minus;65.0</span
+            ><span class="sbadge s-lo">2</span>
+          </div>
+          <div class="mover">
+            <span class="ar" style="background: #b3261e"
+              ><svg><use href="#i-down" /></svg></span
+            ><span class="nm"><a href="#">Winnemucca, NV</a><em>NV</em></span
+            ><span class="dv rd">&minus;72.0</span
+            ><span class="sbadge s-lo">5</span>
+          </div>
+          <div class="mover">
+            <span class="ar" style="background: #b3261e"
+              ><svg><use href="#i-down" /></svg></span
+            ><span class="nm"><a href="#">Vermillion, SD</a><em>SD</em></span
+            ><span class="dv rd">&minus;83.0</span
+            ><span class="sbadge s-lo">9</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- compare tray -->
+    <div class="card" style="margin-top: 16px">
+      <div class="chead">
+        <span class="ct" style="background: #7c4dff"
+          ><svg><use href="#i-layers" /></svg
+        ></span>
+        <h3>Compare pinned markets</h3>
+        <span class="lab">1 pinned</span>
+        <div class="r"><button class="btn btn-sm">Clear all</button></div>
+      </div>
+      <div class="cmpgrid">
+        <div class="cmpcard">
+          <div class="h">
+            <div><b>Anchorage, AK</b><em>metro &middot; AK</em></div>
+            <span class="sv g">82</span>
+            <button class="xb">
+              <svg><use href="#i-x" /></svg>
+            </button>
+          </div>
+          <div class="cmprow"><span>Median value</span><b>$427K</b></div>
+          <div class="cmprow"><span>Value YoY</span><b class="g">+9.2%</b></div>
+          <div class="cmprow"><span>Rent yield</span><b>5.0%</b></div>
+          <div class="cmprow"><span>Hotness</span><b>54</b></div>
+        </div>
+        <div
+          class="cmpcard"
+          style="
+            border-style: dashed;
+            display: grid;
+            place-items: center;
+            min-height: 150px;
+            color: var(--muted);
+          "
+        >
+          <div style="text-align: center">
+            <button class="btn btn-sm btn-s">
+              <svg><use href="#i-plus" /></svg>Pin another market
+            </button>
+            <div style="font-size: 11px; margin-top: 8px">
+              Pin from the inspector to line markets up side by side
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- rankings -->
+    <div class="card" style="margin-top: 16px">
+      <div class="chead">
+        <span class="ct" style="background: #3949ab"
+          ><svg><use href="#i-list" /></svg
+        ></span>
+        <h3>Rankings &mdash; metros in U.S.</h3>
+        <div class="r"><span class="lab n">Jun &rsquo;26</span></div>
+      </div>
+      <div class="tscroll">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Market</th>
+              <th>24-mo score trend</th>
+              <th>Momentum</th>
+              <th class="r">Score</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="rk">01</td>
+              <td class="mk">
+                <a href="#">Marquette, MI</a><em>MI &middot; $266K</em>
+              </td>
+              <td>
+                <svg width="90" height="22" viewBox="0 0 90 22">
+                  <polyline
+                    points="2,18 15,15 28,13 41,9 54,10 67,5 88,3"
+                    fill="none"
+                    stroke="#00a84a"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </td>
+              <td class="lbl g">VERY STRONG</td>
+              <td class="r"><span class="sbadge s-hi">99</span></td>
+            </tr>
+            <tr>
+              <td class="rk">02</td>
+              <td class="mk">
+                <a href="#">Batavia, NY</a><em>NY &middot; $230K</em>
+              </td>
+              <td>
+                <svg width="90" height="22" viewBox="0 0 90 22">
+                  <polyline
+                    points="2,14 13,7 24,15 35,9 46,13 57,6 68,11 88,4"
+                    fill="none"
+                    stroke="#00a84a"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </td>
+              <td class="lbl g">VERY STRONG</td>
+              <td class="r"><span class="sbadge s-hi">99</span></td>
+            </tr>
+            <tr>
+              <td class="rk">03</td>
+              <td class="mk">
+                <a href="#">Seneca Falls, NY</a><em>NY &middot; $229K</em>
+              </td>
+              <td>
+                <svg width="90" height="22" viewBox="0 0 90 22">
+                  <polyline
+                    points="2,9 15,6 28,14 41,17 54,10 67,7 88,4"
+                    fill="none"
+                    stroke="#00a84a"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </td>
+              <td class="lbl g">VERY STRONG</td>
+              <td class="r"><span class="sbadge s-hi">99</span></td>
+            </tr>
+            <tr>
+              <td class="rk">04</td>
+              <td class="mk">
+                <a href="#">Syracuse, NY</a><em>NY &middot; $272K</em>
+              </td>
+              <td>
+                <svg width="90" height="22" viewBox="0 0 90 22">
+                  <polyline
+                    points="2,8 15,5 28,15 41,18 54,11 67,6 88,4"
+                    fill="none"
+                    stroke="#00a84a"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </td>
+              <td class="lbl g">VERY STRONG</td>
+              <td class="r"><span class="sbadge s-hi">99</span></td>
+            </tr>
+            <tr>
+              <td class="rk">05</td>
+              <td class="mk">
+                <a href="#">Johnstown, PA</a><em>PA &middot; $121K</em>
+              </td>
+              <td>
+                <svg width="90" height="22" viewBox="0 0 90 22">
+                  <polyline
+                    points="2,13 15,16 28,12 41,15 54,13 67,7 88,2"
+                    fill="none"
+                    stroke="#00a84a"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </td>
+              <td class="lbl g">VERY STRONG</td>
+              <td class="r"><span class="sbadge s-hi">99</span></td>
+            </tr>
+            <tr>
+              <td class="rk">06</td>
+              <td class="mk">
+                <a href="#">Norwich, CT</a><em>CT &middot; $436K</em>
+              </td>
+              <td>
+                <svg width="90" height="22" viewBox="0 0 90 22">
+                  <polyline
+                    points="2,10 15,7 28,13 41,9 54,14 67,8 88,5"
+                    fill="none"
+                    stroke="#00a84a"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </td>
+              <td class="lbl g">VERY STRONG</td>
+              <td class="r"><span class="sbadge s-hi">98</span></td>
+            </tr>
+            <tr>
+              <td class="rk">07</td>
+              <td class="mk">
+                <a href="#">Galesburg, IL</a><em>IL &middot; $123K</em>
+              </td>
+              <td>
+                <svg width="90" height="22" viewBox="0 0 90 22">
+                  <polyline
+                    points="2,16 15,12 28,15 41,9 54,7 67,6 88,5"
+                    fill="none"
+                    stroke="#00a84a"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </td>
+              <td class="lbl g">VERY STRONG</td>
+              <td class="r"><span class="sbadge s-hi">98</span></td>
+            </tr>
+            <tr>
+              <td class="rk">08</td>
+              <td class="mk">
+                <a href="#">Binghamton, NY</a><em>NY &middot; $205K</em>
+              </td>
+              <td>
+                <svg width="90" height="22" viewBox="0 0 90 22">
+                  <polyline
+                    points="2,12 13,8 24,14 35,10 46,15 57,9 68,7 88,5"
+                    fill="none"
+                    stroke="#00a84a"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </td>
+              <td class="lbl g">VERY STRONG</td>
+              <td class="r"><span class="sbadge s-hi">98</span></td>
+            </tr>
+            <tr>
+              <td class="rk">09</td>
+              <td class="mk">
+                <a href="#">Buffalo, NY</a><em>NY &middot; $295K</em>
+              </td>
+              <td>
+                <svg width="90" height="22" viewBox="0 0 90 22">
+                  <polyline
+                    points="2,9 15,6 28,14 41,17 54,12 67,7 88,5"
+                    fill="none"
+                    stroke="#00a84a"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </td>
+              <td class="lbl g">VERY STRONG</td>
+              <td class="r"><span class="sbadge s-hi">98</span></td>
+            </tr>
+            <tr>
+              <td class="rk">10</td>
+              <td class="mk">
+                <a href="#">Cortland, NY</a><em>NY &middot; $209K</em>
+              </td>
+              <td>
+                <svg width="90" height="22" viewBox="0 0 90 22">
+                  <polyline
+                    points="2,10 15,14 28,7 41,16 54,11 67,6 88,4"
+                    fill="none"
+                    stroke="#00a84a"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </td>
+              <td class="lbl g">VERY STRONG</td>
+              <td class="r"><span class="sbadge s-hi">98</span></td>
+            </tr>
+            <tr>
+              <td class="rk">11</td>
+              <td class="mk">
+                <a href="#">Gloversville, NY</a><em>NY &middot; $229K</em>
+              </td>
+              <td>
+                <svg width="90" height="22" viewBox="0 0 90 22">
+                  <polyline
+                    points="2,13 15,8 28,12 41,15 54,9 67,7 88,4"
+                    fill="none"
+                    stroke="#00a84a"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </td>
+              <td class="lbl g">VERY STRONG</td>
+              <td class="r"><span class="sbadge s-hi">98</span></td>
+            </tr>
+            <tr>
+              <td class="rk">12</td>
+              <td class="mk">
+                <a href="#">Rochester, NY</a><em>NY &middot; $291K</em>
+              </td>
+              <td>
+                <svg width="90" height="22" viewBox="0 0 90 22">
+                  <polyline
+                    points="2,9 15,6 28,15 41,18 54,12 67,7 88,5"
+                    fill="none"
+                    stroke="#00a84a"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </td>
+              <td class="lbl g">VERY STRONG</td>
+              <td class="r"><span class="sbadge s-hi">98</span></td>
+            </tr>
+            <tr>
+              <td class="rk">13</td>
+              <td class="mk">
+                <a href="#">Van Wert, OH</a><em>OH &middot; $191K</em>
+              </td>
+              <td>
+                <svg width="90" height="22" viewBox="0 0 90 22">
+                  <polyline
+                    points="2,12 11,7 20,14 29,8 38,15 47,9 56,16 65,10 88,4"
+                    fill="none"
+                    stroke="#00a84a"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </td>
+              <td class="lbl g">VERY STRONG</td>
+              <td class="r"><span class="sbadge s-hi">98</span></td>
+            </tr>
+            <tr>
+              <td class="rk">14</td>
+              <td class="mk">
+                <a href="#">Erie, PA</a><em>PA &middot; $228K</em>
+              </td>
+              <td>
+                <svg width="90" height="22" viewBox="0 0 90 22">
+                  <polyline
+                    points="2,11 15,8 28,13 41,16 54,10 67,7 88,5"
+                    fill="none"
+                    stroke="#00a84a"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </td>
+              <td class="lbl g">VERY STRONG</td>
+              <td class="r"><span class="sbadge s-hi">98</span></td>
+            </tr>
+            <tr>
+              <td class="rk">15</td>
+              <td class="mk">
+                <a href="#">Pecos, TX</a><em>TX &middot; $183K</em>
+              </td>
+              <td>
+                <svg width="90" height="22" viewBox="0 0 90 22">
+                  <polyline
+                    points="2,15 15,16 28,14 41,15 54,12 67,8 88,3"
+                    fill="none"
+                    stroke="#00a84a"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </td>
+              <td class="lbl g">VERY STRONG</td>
+              <td class="r"><span class="sbadge s-hi">98</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ============ MARKET DETAIL ============ -->
+    <section class="dsec">
+      <div class="crumbrow">
+        <svg><use href="#i-home" /></svg>Home
+        <svg><use href="#i-chevr" /></svg> Markets
+        <svg><use href="#i-chevr" /></svg> <b>Marquette, MI</b>
+      </div>
+
+      <div class="dbar">
+        <div>
+          <h2>
+            <svg><use href="#i-pin" /></svg>Marquette, MI
+          </h2>
+          <div class="sub n">Metro &middot; Updated 6/29/2026</div>
+        </div>
+        <div class="seg" style="margin-left: 22px">
+          <button class="on">
+            <svg><use href="#i-home" /></svg>Homebuyer
+          </button>
+          <button>
+            <svg><use href="#i-trup" /></svg>Investor
+          </button>
+        </div>
+        <div class="spacer"></div>
+        <button class="ib2">
+          <svg><use href="#i-refresh" /></svg>
+        </button>
+        <button class="ib2">
+          <svg><use href="#i-share" /></svg>
+        </button>
+        <button class="ib2">
+          <svg><use href="#i-dl" /></svg>
+        </button>
+      </div>
+
+      <div
+        style="
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 16px;
+          margin-top: 16px;
+        "
+        class="two"
+      >
+        <div class="ai">
+          <span class="bulb"
+            ><svg><use href="#i-bulb" /></svg
+          ></span>
+          <div>
+            <span class="lab">PropertyIQ take &middot; homebuyer</span>
+            <h4>Listings flood, yet homes sell in 20 days</h4>
+            <p>
+              For-sale inventory surged 133.8% year-over-year, but days on
+              market dropped 74% to just 20 days and pending sales rose 61.2%.
+              The median home value climbed 4.5% to $266,000, while listing
+              prices held at $424,000. Buyers should prepare for fast-moving
+              competition but can expect more options.
+            </p>
+          </div>
+        </div>
+        <div class="ai">
+          <span class="bulb"
+            ><svg><use href="#i-bulb" /></svg
+          ></span>
+          <div>
+            <span class="lab">PropertyIQ take &middot; investor</span>
+            <h4>Prices up 15%, but new listings surge</h4>
+            <p>
+              Home values rose 15.1% year-over-year to $266K, while new listings
+              jumped 69%, pushing for-sale inventory up 25.7%. Days on market
+              remain tight at 20, but the flood of supply may ease price
+              pressure. Investors should weigh the 3.4% cap rate against rapid
+              supply growth.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="split" style="margin-top: 16px">
+        <div class="card">
+          <div class="chead">
+            <span class="ct" style="background: #00838f"
+              ><svg><use href="#i-trup" /></svg
+            ></span>
+            <h3>Median home value</h3>
+            <div class="r">
+              <div class="seg">
+                <button>1Y</button><button>3Y</button
+                ><button class="on">5Y</button><button>10Y</button
+                ><button>Max</button>
+              </div>
+            </div>
+          </div>
+          <div style="padding: 12px 8px 4px">
+            <svg
+              width="100%"
+              viewBox="0 0 900 330"
+              preserveAspectRatio="xMidYMid meet"
+              role="img"
+              aria-label="Median home value 2021 to 2026"
+            >
+              <defs>
+                <linearGradient id="fillg" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#00838F" stop-opacity=".28" />
+                  <stop offset="1" stop-color="#00838F" stop-opacity="0" />
+                </linearGradient>
+              </defs>
+              <g stroke="var(--line)" stroke-width="1">
+                <line x1="78" y1="290" x2="880" y2="290" />
+                <line x1="78" y1="244" x2="880" y2="244" />
+                <line x1="78" y1="198" x2="880" y2="198" />
+                <line x1="78" y1="152" x2="880" y2="152" />
+                <line x1="78" y1="106" x2="880" y2="106" />
+                <line x1="78" y1="60" x2="880" y2="60" />
+                <line x1="78" y1="14" x2="880" y2="14" />
+              </g>
+              <g
+                class="n"
+                fill="var(--muted)"
+                font-size="11"
+                text-anchor="end"
+                font-family="var(--mono)"
+              >
+                <text x="70" y="294">$160K</text>
+                <text x="70" y="248">$180K</text>
+                <text x="70" y="202">$200K</text>
+                <text x="70" y="156">$220K</text>
+                <text x="70" y="110">$240K</text>
+                <text x="70" y="64">$260K</text>
+                <text x="70" y="18">$280K</text>
+              </g>
+              <path
+                d="M96,256 L150,244 L200,206 L250,198 L300,200 L350,196 L400,184 L450,180 L500,168 L550,150 L600,138 L650,128 L700,120 L740,110 L770,72 L800,64 L830,44 L830,290 L96,290 Z"
+                fill="url(#fillg)"
+              />
+              <polyline
+                points="96,256 150,244 200,206 250,198 300,200 350,196 400,184 450,180 500,168 550,150 600,138 650,128 700,120 740,110 770,72 800,64 830,44"
+                fill="none"
+                stroke="#00838F"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <circle cx="830" cy="44" r="4" fill="#00838F" />
+              <text
+                x="845"
+                y="48"
+                class="n"
+                font-size="12"
+                font-weight="600"
+                fill="#00838F"
+                font-family="var(--mono)"
+              >
+                $266K
+              </text>
+              <text
+                x="92"
+                y="270"
+                class="n"
+                font-size="11"
+                fill="var(--muted)"
+                font-family="var(--mono)"
+              >
+                $175K
+              </text>
+              <g
+                class="n"
+                fill="var(--muted)"
+                font-size="11"
+                text-anchor="middle"
+                font-family="var(--mono)"
+              >
+                <text x="180" y="312">2022</text>
+                <text x="330" y="312">2023</text>
+                <text x="480" y="312">2024</text>
+                <text x="630" y="312">2025</text>
+                <text x="780" y="312">2026</text>
+              </g>
+            </svg>
+          </div>
+        </div>
+
+        <div>
+          <div class="card insp" style="text-align: center">
+            <div class="ringwrap" style="margin-top: 4px">
+              <div
+                class="ring ring-sm"
+                style="
+                  background: conic-gradient(
+                    from 0deg,
+                    #00c853 0deg,
+                    #7ac943 89deg,
+                    #facc15 178deg,
+                    #fb923c 267deg,
+                    #b3261e 356deg,
+                    var(--soft) 356deg,
+                    var(--soft) 360deg
+                  );
+                "
+              >
+                <div class="rv">
+                  <b>99</b
+                  ><span
+                    >VERY STRONG <svg><use href="#i-up" /></svg
+                  ></span>
+                </div>
+              </div>
+            </div>
+            <div style="font-size: 13.5px; font-weight: 600; margin: 6px 0 9px">
+              PropertyIQ Score
+            </div>
+            <div class="conf" style="margin-bottom: 8px">
+              <span class="gradechip">A &middot; 100% CONFIDENCE</span>
+            </div>
+            <div class="confcap" style="margin: 0">
+              50 = state average &middot; higher = stronger momentum
+            </div>
+            <div style="margin-top: 9px">
+              <a
+                href="#"
+                style="
+                  font-size: 12.5px;
+                  font-weight: 600;
+                  display: inline-flex;
+                  align-items: center;
+                  gap: 5px;
+                "
+                >How it&rsquo;s calculated
+                <svg style="width: 12px; height: 12px; stroke: currentColor">
+                  <use href="#i-right" /></svg
+              ></a>
+            </div>
+          </div>
+
+          <div style="margin-top: 12px">
+            <div class="mrow hi">
+              <span class="lb2">Median home value</span
+              ><svg class="ic"><use href="#i-info" /></svg
+              ><span class="vv"
+                ><b>$266K</b
+                ><span class="d d-up"
+                  ><svg><use href="#i-trup" /></svg>4.5%</span
+                ><svg class="ic"><use href="#i-bell" /></svg
+              ></span>
+            </div>
+            <div class="mrow">
+              <span class="lb2">Rent index</span
+              ><svg class="ic"><use href="#i-info" /></svg
+              ><span class="vv"
+                ><b>$1K</b
+                ><span class="d d-dn"
+                  ><svg><use href="#i-trdn" /></svg>13.6%</span
+                ><svg class="ic"><use href="#i-bell" /></svg
+              ></span>
+            </div>
+            <div class="mrow">
+              <span class="lb2">Cap rate</span
+              ><svg class="ic"><use href="#i-info" /></svg
+              ><span class="vv"
+                ><b>3.4%</b
+                ><span class="d d-dn"
+                  ><svg><use href="#i-trdn" /></svg>17.3%</span
+                ><svg class="ic"><use href="#i-bell" /></svg
+              ></span>
+            </div>
+            <div class="mrow">
+              <span class="lb2">Days on market</span
+              ><svg class="ic"><use href="#i-info" /></svg
+              ><span class="vv"
+                ><b>20 days</b
+                ><span class="d d-up"
+                  ><svg><use href="#i-trdn" /></svg>74.0%</span
+                ><svg class="ic"><use href="#i-bell" /></svg
+              ></span>
+            </div>
+            <div class="mrow" style="margin-bottom: 0">
+              <span class="lb2">Home value growth (YoY)</span
+              ><svg class="ic"><use href="#i-info" /></svg
+              ><span class="vv"
+                ><b class="pos">+15.1%</b
+                ><span class="d d-dn"
+                  ><svg><use href="#i-trdn" /></svg>1.0%</span
+                ><svg class="ic"><use href="#i-bell" /></svg
+              ></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap">
+        <button class="btn btn-p">
+          <svg><use href="#i-file" /></svg>Generate Full Report
+        </button>
+        <button class="btn">
+          <svg><use href="#i-trup" /></svg>View Trends
+        </button>
+        <button class="btn">
+          <svg><use href="#i-map" /></svg>Explore Map
+        </button>
+      </div>
+    </section>
+  </div>
+</main>
+
+<footer>
+  <div class="lnks">
+    <a href="#">Methodology</a><a href="#">Data Sources</a><a href="#">About</a>
+  </div>
+  <p>
+    Data is provided for informational purposes only. We do not guarantee
+    completeness or correctness and accept no liability for its use.
+  </p>
+</footer>
+
+<section class="notes wrap">
+  <h2>What changed, and why</h2>
+  <ol>
+    <li>
+      <b>Collapsed two chrome rows into one control bar.</b> The live page
+      stacks a SCOPE row and a METRIC row above the content, pushing the KPI
+      tiles to 260px down the viewport. Scope breadcrumb, metric chips and the
+      State/Metro/County/ZIP segmented control now share a single sticky bar
+      under the app bar.
+    </li>
+    <li>
+      <b>Every KPI tile now says what the metric <em>is</em>.</b> Live tiles
+      read "PIQ SCORE 50 &#9650; 0.0 pt" with no explanation &mdash; and 50 is
+      not a neutral midpoint, it is the market's state average. Each tile gained
+      an 11px caption, and the score tile states the 50 = state average
+      baseline.
+    </li>
+    <li>
+      <b>Fixed the days-on-market delta polarity.</b> The live page paints "DAYS
+      ON MKT 57 d &#9660; 27.3%" red on both the explorer and the detail page,
+      because it colours purely by sign. Falling days on market is a
+      <em>positive</em> input to the PropertyIQ Score (the formula subtracts
+      z(median_days_on_market)), so it is green here. Metrics with no defined
+      polarity &mdash; active listings, median rent &mdash; are neutral slate
+      instead of being force-coloured.
+    </li>
+    <li>
+      <b>Confidence is labelled as data quality, not a verdict.</b> The explorer
+      shows five green stars and "100%" with no caption, which reads as a
+      five-star rating of the market. It is now an "A &middot; 100%" grade chip
+      with the line "how complete the inputs are, not a grade of the score",
+      matching how the detail page already words it.
+    </li>
+    <li>
+      <b>Momentum-mix denominator is exposed.</b> The card header says "Momentum
+      mix &middot; 925 metros" while the page context line right above says "935
+      metros" &mdash; 373 + 189 + 363 = 925, so ten metros carry no momentum
+      bucket. The denominator now sits in the card header as a labelled chip so
+      the gap is visible rather than buried.
+    </li>
+    <li>
+      <b>The compare tray is no longer hidden.</b> Clicking "+ Compare" flips
+      the button to "&#10003; Pinned" and silently injects a "Compare pinned
+      markets" panel roughly 900px further down the page, below the three-up row
+      &mdash; with no scroll, toast, or count. The tray now carries a "1 pinned"
+      label and an explicit empty slot inviting a second market.
+    </li>
+    <li>
+      <b>Rankings became a real table.</b> Live rows are stacked flex divs, so
+      the score, momentum label and sparkline never line up on a vertical axis.
+      It is now a proper table with uppercase micro-label headers, right-aligned
+      tabular-mono score badges, and a named "24-mo score trend" column &mdash;
+      the sparkline column on the live page has no header at all.
+    </li>
+    <li>
+      <b>Scatter axes carry an honesty note.</b> The live chart plots 935
+      bubbles sized by inventory; only 16 metros had a readable score and median
+      value, so the mockup plots exactly those and says so inside the plot
+      rather than faking a density cloud.
+    </li>
+    <li>
+      <b>Both PropertyIQ Takes are shown side by side.</b> The detail page hides
+      one behind the Homebuyer/Investor toggle, which conceals that they
+      disagree &mdash; the investor take says inventory is up 25.7%, the
+      homebuyer take says it surged 133.8%, for the same market and month.
+      Showing both makes the contradiction visible instead of sequential.
+    </li>
+    <li>
+      <b>Numbers are one monospace tabular system.</b> Scores, dollar values,
+      deltas, dates and CBSA codes all use the mono stack with tabular figures
+      and a true minus sign, so the ranking column and the mover deltas align
+      vertically &mdash; on the live page mixed proportional and mono numerals
+      make the &minus;65.0 / &minus;72.0 / &minus;83.0 column ragged.
+    </li>
+  </ol>
+</section>
