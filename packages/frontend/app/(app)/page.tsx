@@ -1,99 +1,61 @@
 import type { Metadata } from "next";
-import {
-  BrandBanner,
-  HeroSection,
-  ScoreTeaser,
-  ProblemSection,
-  StatsSection,
-  MapShowcase,
-  ValuePropsSection,
-  AlphaCallout,
-  GraphsShowcase,
-  AIIntegrationsSection,
-  UseCasesSection,
-  PricingSection,
-  CTASection,
-  Footer,
-  JsonLd,
-  StickyScoreBar,
-} from "@/app/components/home";
+import { fetchHeroContrast } from "@/lib/data";
+import { JsonLd } from "@/app/components/home/JsonLd";
+import { BeatHero } from "@/app/components/home/landing-v2/BeatHero";
+import { BeatTension } from "@/app/components/home/landing-v2/BeatTension";
+import { BeatFoundation } from "@/app/components/home/landing-v2/BeatFoundation";
+import { BeatScore } from "@/app/components/home/landing-v2/BeatScore";
+import { BeatMap } from "@/app/components/home/landing-v2/BeatMap";
+import { BeatProof } from "@/app/components/home/landing-v2/BeatProof";
+import { BeatPersona } from "@/app/components/home/landing-v2/BeatPersona";
+import { BeatDataDepth } from "@/app/components/home/landing-v2/BeatDataDepth";
+import { BeatClose } from "@/app/components/home/landing-v2/BeatClose";
+import { PricingSection } from "@/app/components/home/PricingSection";
 import { landingMetadata } from "@/app/components/home/landing-metadata";
-import { VariantStamp } from "@/app/components/home/landing-v2/VariantStamp";
 import { FaqSection } from "@/app/components/seo/FaqSection";
 import { HOME_FAQS } from "@/app/components/home/homeFaqs";
 
-// Shared canonical homepage metadata — identical object for control A + the
-// variant-B rewrite, so B (served at `/`) carries SEO over unchanged.
 export const metadata: Metadata = landingMetadata;
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
-
-async function fetchStickyScores(): Promise<{ name: string; score: number }[]> {
-  try {
-    const [topRes, bottomRes] = await Promise.all([
-      fetch(
-        `${API_URL}/api/scores/top?geography=metro&score_type=propertyiq&limit=2&sort=desc`,
-        { next: { revalidate: 3600 } },
-      ),
-      fetch(
-        `${API_URL}/api/scores/top?geography=metro&score_type=propertyiq&limit=1&sort=asc`,
-        { next: { revalidate: 3600 } },
-      ),
-    ]);
-    if (!topRes.ok || !bottomRes.ok) return [];
-    const top: { location_name: string; score: number }[] = await topRes.json();
-    const bottom: { location_name: string; score: number }[] =
-      await bottomRes.json();
-    return [...top, ...bottom].map((m) => ({
-      name: m.location_name.split(",")[0].trim(),
-      score: m.score,
-    }));
-  } catch {
-    return [];
-  }
-}
-
 /**
- * PropertyIQ Homepage
+ * PropertyIQ homepage — the 8-beat narrative funnel.
  *
- * Structure follows CMO-defined landing page order:
- * 1. Hero — headline + CTAs pointing to /map and /reports/sample
- * 2. Social Proof — market coverage stats
- * 3. Live Score Teaser — top 5 / bottom 5 metros (proof before problem)
- * 4. The Problem — why blind investing fails
- * 5. The Score — value props + alpha callout
- * 6. Map — map showcase
- * 7. Data depth — graphs, AI integrations
- * 8. Use Cases — investor, agent, syndicator personas
- * 9. Pricing — Free, Pro, Enterprise tiers
- * 10. Final CTA + Footer
- * + Sticky score ticker bar (appears on scroll/after 10s)
+ * This is the only homepage. The landing A/B split that once served this
+ * narrative from `/home-v2` behind a middleware rewrite is retired: the route,
+ * the `piq-variant` cookie, and the `LANDING_EXPERIMENT` flag are all gone, so
+ * `/` renders this directly with no rewrite and no variant assignment.
+ *
+ * Beats: hero → tension → foundation → score → map → proof → personas →
+ * data depth → pricing → close, then the FAQ (which carries the FAQPage
+ * JSON-LD, and per convention renders last).
+ *
+ * The page-level `<main>` lives in AppShell, so this wrapper is a plain div —
+ * a nested `<main>` would be invalid.
  */
 export default async function HomePage() {
-  const stickyScores = await fetchStickyScores();
+  // Cached (ISR) — the hero's live momentum contrast. Null-safe: BeatHero falls
+  // back to a static headline if the data is briefly unavailable.
+  const contrast = await fetchHeroContrast();
 
   return (
-    <>
+    // Each beat owns an opaque surface band, so there is no page-wide gradient
+    // wrapper here — the surface token is the whole background.
+    <div className="bg-surface font-sans text-on-surface">
       <JsonLd />
-      <VariantStamp variant="A" />
-      <div className="text-on-surface font-sans bg-gradient-to-b from-[#1A237E] via-[#3949AB] via-30% to-[#E8EAF6]">
-        <BrandBanner />
-        <HeroSection />
-        <StatsSection />
-        <ScoreTeaser />
-        <ProblemSection />
-        <ValuePropsSection />
-        <AlphaCallout />
-        <MapShowcase />
-        <GraphsShowcase />
-        <AIIntegrationsSection />
-        <UseCasesSection />
-        <PricingSection />
-        <CTASection />
-        <FaqSection faqs={HOME_FAQS} />
-        <Footer />
-      </div>
-      {stickyScores.length > 0 && <StickyScoreBar scores={stickyScores} />}
-    </>
+      <BeatHero contrast={contrast} />
+      <BeatTension />
+      <BeatFoundation />
+      <BeatScore
+        coolerCbsa={contrast?.cooler.cbsa ?? "12420"}
+        coolerName={contrast?.cooler.name ?? "Austin, TX"}
+      />
+      <BeatMap />
+      <BeatProof />
+      <BeatPersona />
+      <BeatDataDepth />
+      <PricingSection />
+      <BeatClose />
+      <FaqSection faqs={HOME_FAQS} />
+    </div>
   );
 }
