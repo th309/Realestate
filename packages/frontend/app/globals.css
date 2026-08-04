@@ -21,9 +21,16 @@
 
   /* PropertyIQ Tertiary — Accent Green (brand spec §3.2) */
   --md-tertiary: #00c853;
-  --md-on-tertiary: #ffffff;
+  /* Near-black green, not white. #00c853 is a bright FILL colour: white on it
+     is 2.24:1, so every green button failed AA. */
+  --md-on-tertiary: #04220f;
   --md-tertiary-container: #e8f5e9;
   --md-on-tertiary-container: #1b5e20;
+  /* The same accent, darkened until it is legible as TEXT on a pale surface.
+     The brand green is tuned for fills and bars; as body copy or a kicker on
+     `surface` it lands at 2.04:1. Use `text-tertiary` on fills and dark bands,
+     `text-tertiary-text` for green words on a light band. */
+  --md-tertiary-text: #007a35;
 
   /* PropertyIQ Error — matches brand spec §3.2 */
   --md-error: #b3261e;
@@ -41,6 +48,15 @@
      indigo range. Used only by the homepage hero band. */
   --md-hero-from: #f4f8f8;
   --md-hero-to: #efeefa;
+
+  /* Decorative accents. The homepage tints each icon tile a different hue so a
+     six-card grid reads as six things rather than one striped block. Indigo,
+     green, amber and red already have roles (primary / tertiary / warning /
+     error); violet and teal exist only for this, and are never semantic. */
+  --md-accent-violet: #7c4dff;
+  --md-accent-violet-container: #f1ecff;
+  --md-accent-teal: #00838f;
+  --md-accent-teal-container: #e0f7fa;
 
   /* PropertyIQ Surfaces — Light Mode (indigo-tinted, visible on all screens) */
   --md-surface: #f3f4fc;
@@ -95,7 +111,10 @@
   :root {
     /* Primary — lightened indigo for dark backgrounds */
     --md-primary: #7986cb;
-    --md-on-primary: #1a237e;
+    /* Near-black navy, not #1a237e. Against the lightened #7986cb primary the
+       brand navy only reached 3.84:1, so every filled button, badge and chip
+       in dark mode failed AA — the CTA included. This pairing is 5.33:1. */
+    --md-on-primary: #0d1033;
     --md-primary-container: #283593;
     --md-on-primary-container: #c5cae9;
 
@@ -107,9 +126,12 @@
 
     /* Tertiary — accent green (same hue, adjusted lightness) */
     --md-tertiary: #69f0ae;
-    --md-on-tertiary: #1b5e20;
+    --md-on-tertiary: #04220f;
     --md-tertiary-container: #2e7d32;
     --md-on-tertiary-container: #e8f5e9;
+    /* On a dark band the bright accent is already legible, so text and fill
+       are the same green here — the split only exists for light surfaces. */
+    --md-tertiary-text: #69f0ae;
 
     /* Error — lightened for dark surfaces */
     --md-error: #f2b8b5;
@@ -126,6 +148,14 @@
     /* Hero wash — near-black navy/violet so the band reads as depth, not glare */
     --md-hero-from: #101520;
     --md-hero-to: #14131f;
+
+    /* Decorative accents — lightened hue, darkened container, same as every
+       other pair here. Without these the tiles keep their light-mode fills and
+       glare out of a dark band (the bug that made the analyzer chips 1.05:1). */
+    --md-accent-violet: #b39dff;
+    --md-accent-violet-container: #2a2140;
+    --md-accent-teal: #4dd0e1;
+    --md-accent-teal-container: #10333a;
 
     /* Surfaces — deep navy (brand spec §3.4) */
     --md-surface: #1a1a2e;
@@ -191,6 +221,7 @@
 
   --color-tertiary: var(--md-tertiary);
   --color-on-tertiary: var(--md-on-tertiary);
+  --color-tertiary-text: var(--md-tertiary-text);
   --color-tertiary-container: var(--md-tertiary-container);
   --color-on-tertiary-container: var(--md-on-tertiary-container);
 
@@ -206,6 +237,11 @@
 
   --color-hero-from: var(--md-hero-from);
   --color-hero-to: var(--md-hero-to);
+
+  --color-accent-violet: var(--md-accent-violet);
+  --color-accent-violet-container: var(--md-accent-violet-container);
+  --color-accent-teal: var(--md-accent-teal);
+  --color-accent-teal-container: var(--md-accent-teal-container);
 
   --color-surface: var(--md-surface);
   --color-surface-dim: var(--md-surface-dim);
