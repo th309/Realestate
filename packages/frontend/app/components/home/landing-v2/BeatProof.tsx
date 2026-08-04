@@ -86,7 +86,10 @@ function ScoreBandRow({ band }: { band: ScoreBand }) {
   const positive = band.excess >= 0;
   const width = barWidth(band.excess);
   const barColor = positive ? "bg-tertiary" : "bg-error";
-  const valueColor = positive ? "text-tertiary" : "text-error";
+  // The bar takes the bright accent; the figure beside it takes the darkened
+  // text green. `text-tertiary` is a fill colour and reads at 2.04:1 as words
+  // on a light band.
+  const valueColor = positive ? "text-tertiary-text" : "text-error";
   return (
     <div
       className={`flex items-center gap-3 rounded-lg px-2 py-1.5 ${

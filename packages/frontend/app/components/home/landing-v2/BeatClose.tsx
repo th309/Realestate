@@ -6,10 +6,13 @@ import { Reveal } from "./Reveal";
 /**
  * The closing ask.
  *
- * Per the mockup it sits on the same pale wash as the hero, which brackets the
- * page — you end where you started, on the one action. Green rather than
- * indigo: indigo owns product chrome, green owns the ask (the two-accent split
- * in CLAUDE.md section 8.2).
+ * It keeps the faded-indigo band it has always had. The mockup put the closer
+ * on the same pale wash as the hero to bracket the page, but that wash reads
+ * as a different, lighter surface than the rest of the site and losing the
+ * indigo here was a downgrade. The hero keeps the wash; the close does not.
+ *
+ * Green rather than indigo: indigo owns product chrome, green owns the ask
+ * (the two-accent split in CLAUDE.md section 8.2).
  *
  * Reverse-trial reassurance sits above the button, not below it, so the last
  * thing read before the click is the price.
@@ -19,7 +22,7 @@ import { Reveal } from "./Reveal";
  */
 export function BeatClose() {
   return (
-    <Section id="beat-close" surface="hero">
+    <Section id="beat-close" surface="b">
       <div className="text-center">
         <Reveal className="flex flex-col items-center">
           <h2

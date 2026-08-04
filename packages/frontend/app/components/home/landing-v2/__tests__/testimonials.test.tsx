@@ -35,10 +35,10 @@ describe("Testimonials renders all four approved quotes in mockup order", () => 
       (caption) => caption.textContent,
     );
     expect(names).toEqual([
-      "JKJordan K.Real Estate Investor & Data Nerd",
-      "MTMarcus T.Real Estate Investor · Charlotte, NC",
-      "DRDana R.Broker Associate · Austin, TX",
-      "CLChris L.BRRRR Investor · Columbus, OH",
+      "Jordan K.Real Estate Investor & Data Nerd",
+      "Marcus T.Real Estate Investor · Charlotte, NC",
+      "Dana R.Broker Associate · Austin, TX",
+      "Chris L.BRRRR Investor · Columbus, OH",
     ]);
   });
 
@@ -75,12 +75,17 @@ describe("Testimonials marks each quote up as a real attributed quotation", () =
     expect(container.querySelectorAll("q")).toHaveLength(0);
   });
 
-  it("hides the initials avatars from the accessibility tree", () => {
+  /**
+   * The mockup drew an initials disc where a headshot would go. A disc in a
+   * photo's slot reads as an image that failed to load, so the attribution is
+   * text only — and nothing decorative should reappear in the caption.
+   */
+  it("shows no avatar placeholder in the attribution", () => {
     const { container } = render(<Testimonials />);
-    const avatars = Array.from(
+    expect(
       container.querySelectorAll("figcaption [aria-hidden='true']"),
-    ).map((avatar) => avatar.textContent);
-    expect(avatars).toEqual(["JK", "MT", "DR", "CL"]);
+    ).toHaveLength(0);
+    expect(container.textContent).not.toMatch(/\b(JK|MT|DR|CL)\b/);
   });
 });
 

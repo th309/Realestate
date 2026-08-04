@@ -84,7 +84,7 @@ export function BlogPreview() {
   if (posts.length === 0) return null;
 
   return (
-    <Section surface="b">
+    <Section surface="a">
       <SectionHeading
         title="The PropertyIQ Blog"
         subhead="Market breakdowns and rankings, generated from the same scored dataset that powers the product."

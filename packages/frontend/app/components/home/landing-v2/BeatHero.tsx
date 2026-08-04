@@ -4,6 +4,7 @@ import type { HeroContrast } from "@/lib/data";
 import { PrimaryCta } from "./PrimaryCta";
 import { HeroMonitor } from "./HeroMonitor";
 import { HeroCapabilities } from "./HeroCapabilities";
+import { HeroConstellation } from "./HeroConstellation";
 
 /**
  * The homepage hero.
@@ -110,8 +111,12 @@ export function BeatHero({
     // Not `Section`: the proof strip is full-bleed and sits outside the
     // container, and the hero takes a tighter rhythm than any other band. The
     // wash still comes from the shared surface token.
-    <section id="beat-hero" className={SURFACE.hero}>
-      <div className={`${CONTAINER} pb-10 pt-14`}>
+    <section
+      id="beat-hero"
+      className={`relative overflow-hidden ${SURFACE.hero}`}
+    >
+      <HeroConstellation />
+      <div className={`relative ${CONTAINER} pb-10 pt-14`}>
         <div className="grid items-center gap-12 lg:grid-cols-[42fr_58fr] lg:gap-14">
           <HeroCopy contrast={contrast} />
           {contrast ? (

@@ -1,24 +1,26 @@
 import { SectionHeading } from "@/app/components/marketing";
 import { BeatSection } from "./BeatSection";
-import { PersonaShowcase } from "./persona/PersonaShowcase";
+import { PersonaBand } from "./persona/PersonaBand";
 
 /**
- * Beat 7 — the persona branch (show, don't tell).
+ * The persona branch, built from the approved mockup: a green toggle over a
+ * green-bordered card, the pitch on the left and the proof points on the
+ * right.
  *
- * Four co-equal tabs (Investor default), each leading with the feature that
- * persona cares about, shown as REAL frozen product output (spec §5.1, §6) —
- * never an icon-and-blurb grid. The keyboard-accessible segmented control +
- * panels live in PersonaShowcase. The Power-user tab surfaces a genuine MCP
- * exchange — PropertyIQ's top differentiator — co-equal but not the default.
+ * This replaced a four-tab showcase of frozen product output. That version was
+ * richer, but it was not the approved design, and keeping it meant the page
+ * carried a section the mockup does not have while missing the one it does.
+ * The real-output panels it rendered still exist in `PersonaShowcase` /
+ * `snapshots.ts` if they earn a band of their own later.
  */
 export function BeatPersona() {
   return (
     <BeatSection id="beat-persona" surface="b">
       <SectionHeading
         title="The edge that shows up before the headlines do"
-        subhead="Whether you're deploying your own capital or advising clients, PropertyIQ replaces market intuition with a number you can defend. Every panel below is real output from the live platform, not a feature list."
+        subhead="Whether you're deploying your own capital or advising clients, PropertyIQ replaces market intuition with a number you can defend."
       />
-      <PersonaShowcase />
+      <PersonaBand />
     </BeatSection>
   );
 }
