@@ -24,12 +24,20 @@ interface ScoreInfo {
   tierRequired?: string;
 }
 
+/** The three levels the PropertyIQ Score is computed at. */
+const SCORED_LEVELS = ["metro", "county", "zip"] as const;
+type ScoredLevel = (typeof SCORED_LEVELS)[number];
+
 interface SidebarScoreCardProps {
   /** Single PropertyIQ score */
   score?: ScoreInfo;
   isLoading?: boolean;
   onClick?: () => void;
   onUpgradeClick?: () => void;
+  /** Current map geography. State has no score — see the empty state below. */
+  geoLevel?: string;
+  /** Switches the map to a scored level from the state-level message. */
+  onGeoLevelChange?: (level: ScoredLevel) => void;
 }
 
 export function SidebarScoreCard({
@@ -37,9 +45,12 @@ export function SidebarScoreCard({
   isLoading = false,
   onClick,
   onUpgradeClick,
+  geoLevel,
+  onGeoLevelChange,
 }: SidebarScoreCardProps) {
   const hasScore = currentScore?.score !== undefined && !isLoading;
   const isBreakdownLocked = currentScore?.access === "teaser";
+  const isStateLevel = geoLevel === "state";
 
   // Show trend arrow only when we have real trend data from API (not when missing/no history)
   const trendDirection =
@@ -137,6 +148,34 @@ export function SidebarScoreCard({
                 </button>
               )}
             </>
+          ) : isStateLevel ? (
+            // There is no state-level PropertyIQ Score. The geography enum is
+            // metro, county and ZIP; 50 is the calibration point AGAINST a
+            // state average, not a score a state holds (CLAUDE.md section 9).
+            // "Select a region to see scores" was misleading here — a user can
+            // click every state and never get one.
+            <div>
+              <p className="text-xs text-on-surface-variant">
+                Scored at metro, county, and ZIP — not at state level.
+              </p>
+              {onGeoLevelChange && (
+                <div className="mt-1.5 flex flex-wrap gap-1">
+                  {SCORED_LEVELS.map((level) => (
+                    <button
+                      key={level}
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onGeoLevelChange(level);
+                      }}
+                      className="rounded-full border border-outline-variant px-2 py-0.5 text-[11px] font-semibold capitalize text-primary transition-colors hover:bg-primary-container"
+                    >
+                      {level === "zip" ? "ZIP" : level}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           ) : (
             <p className="text-xs text-on-surface-variant">
               Select a region to see scores

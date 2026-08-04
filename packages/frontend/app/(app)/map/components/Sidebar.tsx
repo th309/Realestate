@@ -236,6 +236,8 @@ export function Sidebar({
           isLoading={scoreData?.isLoading}
           onClick={onScoreCardClick}
           onUpgradeClick={() => (window.location.href = "/pricing")}
+          geoLevel={geoLevel}
+          onGeoLevelChange={onGeoLevelChange}
         />
 
         {/* Metric Categories */}
