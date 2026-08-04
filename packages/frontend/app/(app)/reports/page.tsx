@@ -1,13 +1,10 @@
 "use client";
 
 import React, { Suspense, useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import {
   TrendingUp,
   MapPin,
-  ChevronRight,
   History,
-  Clock,
   FileText,
   ArrowRight,
   BarChart3,
@@ -21,6 +18,7 @@ import { PageHeaderWithBreadcrumbs } from "@/components/navigation";
 import type { ReportListItem } from "./types";
 import { fetchReportList } from "@/lib/data";
 import { ReportCreationPage } from "./ReportCreationPage";
+import { ReportHistoryList } from "./components/ReportHistoryList";
 
 // ============================================================================
 // REPORT HISTORY
@@ -30,7 +28,6 @@ function ReportHistory() {
   const { user } = useAuth();
   const [reports, setReports] = useState<ReportListItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
 
   useEffect(() => {
     const userId = user?.id;
@@ -71,37 +68,7 @@ function ReportHistory() {
     );
   }
 
-  return (
-    <div className="space-y-3">
-      {reports.map((report) => (
-        <button
-          key={report.id}
-          onClick={() => router.push(`/reports/${report.id}`)}
-          className="w-full flex items-center gap-4 p-4 rounded-xl
-            bg-surface-container hover:bg-surface-container-high
-            border border-outline-variant/30 hover:border-outline-variant/50
-            transition-all duration-200 text-left group"
-        >
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-indigo-100 text-indigo-700">
-            <BarChart3 className="w-5 h-5" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="font-medium text-on-surface truncate">
-              {report.title}
-            </div>
-            <div className="text-sm text-on-surface-variant truncate">
-              {report.primary_geography_name}
-            </div>
-          </div>
-          <div className="text-xs text-on-surface-variant flex items-center gap-1">
-            <Clock className="w-3.5 h-3.5" />
-            {new Date(report.created_at).toLocaleDateString()}
-          </div>
-          <ChevronRight className="w-5 h-5 text-on-surface-variant group-hover:text-on-surface transition-colors" />
-        </button>
-      ))}
-    </div>
-  );
+  return <ReportHistoryList reports={reports} />;
 }
 
 // ============================================================================
