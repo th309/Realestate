@@ -39,18 +39,18 @@ Every task's requirements implicitly include this section.
 
 ## Measured Starting State
 
-|                                       |                                                                                                                                                                                       |
-| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Marketing container widths            | six (`max-w-2xl` … `max-w-7xl`)                                                                                                                                                       |
-| H1 scales                             | five                                                                                                                                                                                  |
-| Gutters                               | `px-4` in `(public)`, `px-6` in `(app)` — split by route group, not design                                                                                                            |
-| Homepage vertical rhythms             | twelve                                                                                                                                                                                |
+|                                       |                                                                                                                                                                                              |
+| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Marketing container widths            | six (`max-w-2xl` … `max-w-7xl`)                                                                                                                                                              |
+| H1 scales                             | five                                                                                                                                                                                         |
+| Gutters                               | `px-4` in `(public)`, `px-6` in `(app)` — split by route group, not design                                                                                                                   |
+| Homepage vertical rhythms             | twelve                                                                                                                                                                                       |
 | Hex literals                          | 604 across 119 files — concentrated in `app/components/home` (95) and `components/account`. **The five app surfaces are already clean:** analyzer 0, screener 0, reports 0, market 0, map 2. |
-| Off-scale radii                       | ~1,418 of 3,554 (40%)                                                                                                                                                                 |
-| Elevation systems                     | two — 353 `shadow-*`, 77 `elevation-*`                                                                                                                                                |
-| `<Button>` / `<Card>` primitive usage | **0 import sites**; 961 raw `<button>` elements instead                                                                                                                               |
-| `dark:` coverage                      | 31 of 1,384 files; zero in home, blog, or magnet-landing                                                                                                                              |
-| Blog posts with an image              | **0 of 77** — the frontmatter has no image field                                                                                                                                      |
+| Off-scale radii                       | ~1,418 of 3,554 (40%)                                                                                                                                                                        |
+| Elevation systems                     | two — 353 `shadow-*`, 77 `elevation-*`                                                                                                                                                       |
+| `<Button>` / `<Card>` primitive usage | **0 import sites**; 961 raw `<button>` elements instead                                                                                                                                      |
+| `dark:` coverage                      | 31 of 1,384 files; zero in home, blog, or magnet-landing                                                                                                                                     |
+| Blog posts with an image              | **0 of 77** — the frontmatter has no image field                                                                                                                                             |
 
 ---
 
@@ -2022,7 +2022,7 @@ Every task in this phase follows the same shape. Read it once here; each task st
 
 **Surface-specific work:**
 
-- [ ] **Step 1: Write the guard test**
+- [x] **Step 1: Write the guard test**
 
 ```tsx
 import { describe, it, expect } from "vitest";
@@ -2053,36 +2053,36 @@ describe("analyzer defers to the shared primitives", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npm run test:unit -- "app/(app)/analyzer"`
 Expected: FAIL on the `KpiTile` and `JumpBar` assertions
 
-- [ ] **Step 3: Normalise the number formatting**
+- [x] **Step 3: Normalise the number formatting**
 
 The live page renders `−$386.00` in a KPI card and `-$386` in the grading table for the same value, with proportional type in the cards and monospace in the inputs. Route every figure through one formatter and render all of them via `KpiTile` or `DataTable`, both of which are already monospace and tabular. Use a true minus sign.
 
-- [ ] **Step 4: Replace the KPI row**
+- [x] **Step 4: Replace the KPI row**
 
 Swap the four hand-built metric cards for `<KpiTile>`, each with a caption naming the metric: `After debt service`, `Annual CF / cash in`, `NOI / purchase price`, `NOI / debt service`. Set `tone="negative"` for the failing values so the stripe and the value agree.
 
-- [ ] **Step 5: Add the jump bar**
+- [x] **Step 5: Add the jump bar**
 
 Insert `<JumpBar>` above the results column with items for Verdict, Cash Flow, Grading, Improve, Projection, Market. Give each corresponding section an `id` matching the item.
 
-- [ ] **Step 6: Fix the nested scroll**
+- [x] **Step 6: Fix the nested scroll**
 
 The input panel currently has both a vertical scrollbar and a horizontal one — content overflows its container. Make it a plain sticky column with a two-up field grid so nothing overflows at 344px.
 
-- [ ] **Step 7: Pair the wide blocks two-up**
+- [x] **Step 7: Pair the wide blocks two-up**
 
 Above 1240px, place the cash-flow waterfall beside the projection, and the grading table beside the improvement levers. Below that, stack. This removes roughly 40% of the scroll to reach the levers.
 
-- [ ] **Step 8: Improve the empty state**
+- [x] **Step 8: Improve the empty state**
 
 Before an address is entered the page shows four em-dashes, a `$0.00` projection chart, and a dashed "enter a property address" card sitting beside the address field it duplicates. Remove the dashed card and replace the dead KPI row and chart with a single explanatory panel.
 
-- [ ] **Step 9: Verify and commit**
+- [x] **Step 9: Verify and commit**
 
 ```bash
 npm run test:unit -- "app/(app)/analyzer" && npx tsc --noEmit && npm run build && npx next start -p 3100
@@ -2094,6 +2094,18 @@ Enter a real address, confirm every feature listed in the Phase C standing const
 git add -- "packages/frontend/app/(app)/analyzer"
 git commit -m "refactor(analyzer): restyle onto the shared app-shell primitives" -- "packages/frontend/app/(app)/analyzer"
 ```
+
+**Outcome — deviations from this task as written, and why:**
+
+| Written                                                               | Shipped                                      | Why                                                                                                                                                                                                                                                                                                                                                  |
+| --------------------------------------------------------------------- | -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| "plain sticky column"                                                 | sticky + `max-h` guard                       | The panel measures 917px (Buy & Hold) to 1231px (compare) against ~852px of viewport. A plain sticky column pins its top and puts the last control permanently off-screen. The mockup solves this with a tabbed input card (`.stabs`: Purchase / Rent / Expenses / Financing) that was **not** built — so the guard is load-bearing, not a fallback. |
+| Jump items "Verdict, Cash Flow, Grading, Improve, Projection, Market" | Verdict, Cash Flow, Grading, Improve, Market | Matches the mockup's `.jump`, which has five. Items are now filtered by what actually rendered — Fix & Flip and BRRRR produce no grading result, so those three anchors are absent and their links would have scrolled nowhere.                                                                                                                      |
+| Two-up: grading table beside levers                                   | paired, table column sticky above 1240px     | The mockup pairs them at similar heights; the engine emits one lever per failing metric, measuring 399px of table against 1136px of levers. Sticky keeps the breakdown on screen instead of leaving ~740px of dead column.                                                                                                                           |
+
+**Also fixed, outside the written steps:** the left column was `38fr` (455px rendered) where the mockup specifies a fixed `344px` at `min-width:1140px`; six hardcoded hex values in `AdvisoriesStrip` and `UpgradePathOption` that stayed light-mode-coloured in dark mode and had escaped the "analyzer: 0 hex" audit because the guard only matches Tailwind arbitrary values, not hex in a style object.
+
+**Still unbuilt vs the mockup:** the market strip (score ring + "<market> scores 75 — rising ↑" + _Open market →_) that sits between the verdict and the rules chips; the tabbed input card; and the mockup's block order, which puts the KPI row and charts _before_ the grading table + levers.
 
 ---
 
