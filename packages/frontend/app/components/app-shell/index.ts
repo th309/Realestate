@@ -1,5 +1,6 @@
 export { AppBar } from "./AppBar";
 export { AppBarActions } from "./AppBarActions";
+export { AppBarOverflow, type OverflowLink } from "./AppBarOverflow";
 export { AppChrome } from "./AppChrome";
 export { ControlBar } from "./ControlBar";
 export { KpiTile } from "./KpiTile";

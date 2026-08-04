@@ -8,8 +8,13 @@ import {
   Calculator,
   Search,
   FileText,
+  TrendingUp,
+  Info,
+  LineChart,
+  Tag,
 } from "lucide-react";
 import { AppBarActions } from "./AppBarActions";
+import { AppBarOverflow, type OverflowLink } from "./AppBarOverflow";
 
 const TOOLS = [
   {
@@ -26,8 +31,26 @@ const TOOLS = [
     accent: "bg-primary",
   },
   { href: "/screener", label: "Screener", Icon: Search, accent: "bg-tertiary" },
+  // Market Explorer is a first-class tool but was reachable only from the
+  // map's own left icon rail — absent from this bar on every other surface.
+  {
+    href: "/market",
+    label: "Market",
+    Icon: TrendingUp,
+    accent: "bg-secondary",
+  },
   { href: "/reports", label: "Reports", Icon: FileText, accent: "bg-tertiary" },
 ] as const;
+
+/**
+ * Secondary destinations, also inherited from the map's left rail. They are
+ * not tools, so they sit behind "More" rather than widening the main row.
+ */
+const OVERFLOW: OverflowLink[] = [
+  { href: "/graphs", label: "Graphs", Icon: LineChart },
+  { href: "/pricing", label: "Pricing", Icon: Tag },
+  { href: "/about", label: "About", Icon: Info },
+];
 
 /**
  * The one application bar for every authed tool. Marketing pages stay light;
@@ -80,6 +103,7 @@ export function AppBar() {
               </Link>
             );
           })}
+          <AppBarOverflow links={OVERFLOW} />
         </nav>
 
         <AppBarActions />
