@@ -17,7 +17,7 @@ export const INVESTOR_V2_SECTIONS: Record<string, NarrativePromptConfig> = {
     prompt_template: `You are writing the opening investment signal for a market brief on {{geography_name}}.
 
 Data snapshot:
-- PropertyIQ Score: {{propertyiq_score}}/100 ({{propertyiq_grade}})
+- PropertyIQ Score: {{propertyiq_score}} ({{propertyiq_grade}})
 - Net yield: {{net_yield_estimate}}
 - Cash-on-cash: {{cash_on_cash_estimate}}
 - Total return: {{total_return_estimate}}
@@ -29,7 +29,7 @@ Data snapshot:
 Write ONE sentence that an investor would use to decide whether to keep reading. This is a signal — BUY, HOLD, WATCH, or AVOID — with the single most compelling number behind it.
 
 BAD: "This market offers a mix of cash flow and appreciation potential."
-GOOD: "{{geography_name}} scores {{propertyiq_score}}/100 as a cash-flow-negative appreciation play — {{cash_on_cash_estimate}}, but {{appreciation_trajectory}} makes the total return story compelling if you can stomach negative monthly cash flow."
+GOOD: "{{geography_name}} scores {{propertyiq_score}} as a cash-flow-negative appreciation play — {{cash_on_cash_estimate}}, but {{appreciation_trajectory}} makes the total return story compelling if you can stomach negative monthly cash flow."
 
 Rules:
 - Exactly one sentence
@@ -168,7 +168,7 @@ Rules:
 {{/if}}
 
 ## Investment Summary
-- PropertyIQ Score: {{propertyiq_score}}/100 ({{propertyiq_grade}})
+- PropertyIQ Score: {{propertyiq_score}} ({{propertyiq_grade}})
 - Net yield: {{net_yield_estimate}}
 - Cash-on-cash: {{cash_on_cash_estimate}}
 - Total return: {{total_return_estimate}}
