@@ -2158,20 +2158,33 @@ Step 5 says "make the filter rail read as one panel". **The mockup has no rail.*
 
 **Surface-specific work:**
 
-- [ ] **Step 1: Write the guard test** asserting the builder page renders `ControlBar` and the report core components use monospace numerics.
+- [x] **Step 1: Write the guard test** asserting the builder page renders `ControlBar` and the report core components use monospace numerics.
 
-- [ ] **Step 2: Fix the builder's dead space.** The page is mostly empty with a disabled Generate Report CTA and a large empty gradient band under the title. Tighten the layout and give the disabled state a reason.
+- [x] **Step 2: Fix the builder's dead space.** The page is mostly empty with a disabled Generate Report CTA and a large empty gradient band under the title. Tighten the layout and give the disabled state a reason.
 
-- [ ] **Step 3: Fix truncated Recent Reports titles.** They currently read "Frederick County, M…" — mid-word truncation with the same market repeated and nothing distinguishing the entries. Show the geography, the report type, and the generation date so duplicates are tellable apart.
+- [x] **Step 3: Fix truncated Recent Reports titles.** They currently read "Frederick County, M…" — mid-word truncation with the same market repeated and nothing distinguishing the entries. Show the geography, the report type, and the generation date so duplicates are tellable apart.
 
-- [ ] **Step 4: Align the report core components** — `MetricsRow`, `MetricDisplay`, `ComponentScoreBadge`, `SectionCard`, `AIAnalysisBlock` — with the shared primitives. `SectionCard` is imported by 18 files, so changing it propagates widely; run the full suite after.
+- [x] **Step 4: Align the report core components** — `MetricsRow`, `MetricDisplay`, `ComponentScoreBadge`, `SectionCard`, `AIAnalysisBlock` — with the shared primitives. `SectionCard` is imported by 18 files, so changing it propagates widely; run the full suite after.
 
-- [ ] **Step 5: Verify and commit.** Open a generated report and confirm every section still renders with its data.
+- [x] **Step 5: Verify and commit.** Open a generated report and confirm every section still renders with its data.
 
 ```bash
 git add -- "packages/frontend/app/(app)/reports"
 git commit -m "refactor(reports): restyle the builder and report core components" -- "packages/frontend/app/(app)/reports"
 ```
+
+**Outcome.** The mockup's own design notes enumerate each live defect, so they drove this task rather than the prose above. Verified signed in as admin against real report history.
+
+**Bug the restyle exposed:** comparison reports carry `template_name: "PropertyIQ Report"`, so a type badge derived from the template labelled "Charleston-North Charleston - Market Comparison" as a PropertyIQ Report — precisely the thing the badge exists to disambiguate. Type now comes off the title suffix and is stripped from the displayed title, so two same-market, same-date rows read as "Market Comparison" vs "PropertyIQ Report" instead of being indistinguishable.
+
+**Step 4 found a brand violation, not just an alignment gap:** metric values rendered in the editorial **serif** (`--report-font-display`). Numbers are mono + tabular (§8.3), so `MetricsRow`, `MetricDisplay`, `ComponentScoreBadge` and the shared `.report-metric-value` class moved to `--report-font-mono`. The component _label_ stays display — it is prose, not a figure.
+
+**Two mockup notes did NOT reproduce and were left alone:**
+
+- _"Contents lists sections that do not exist."_ Checked the Austin report: all six `IN THIS REPORT` links resolve to real section ids, zero dead anchors. The note cites the Frederick report specifically, so this may be per-report rather than systemic — worth re-checking there before building a filter for a condition that may not exist.
+- The comparison-report content fixes (leaked `PART 1:` prompt scaffold, the collapsed `$2K` rent row) live in generated report **content**, not in the components this task covers.
+
+**Separate defect found, not fixed here:** a generated report's narrative reads "PropertyIQ score of 2 out of 100". §9 says the score is **1–99, never 0–100**. This is stored AI prose, so the fix belongs in the insight prompt plus a regeneration — not in a restyle. Worth its own task.
 
 ---
 
