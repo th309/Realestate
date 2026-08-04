@@ -42,12 +42,15 @@ export function NumField({
   groupThousands = true,
 }: NumFieldProps) {
   return (
-    <div data-num-field className="flex flex-col gap-1">
-      <div className="flex items-center justify-between">
-        <label className="text-xs uppercase font-semibold text-on-surface-variant">
+    <div data-num-field className="flex min-w-0 flex-col gap-1">
+      {/* Label row holds only the label, per the mockup's `.fld .top`. The
+          source badge sits below the input alongside the confidence rating
+          (the mockup's `.conf` row) — sharing this row with the label made
+          "Monthly Rent" truncate inside the 344px column's two-up cells. */}
+      <div className="flex min-w-0 items-center gap-2">
+        <label className="truncate text-[10px] font-bold uppercase tracking-[0.09em] text-on-surface-variant">
           {label}
         </label>
-        {badge}
       </div>
       <div className="flex items-center rounded-lg border border-outline-variant bg-surface-container-low focus-within:border-primary">
         {prefix && (
@@ -68,12 +71,17 @@ export function NumField({
             const n = Number(cleaned);
             if (Number.isFinite(n)) onChange(n);
           }}
-          className="flex-1 bg-transparent px-3 py-2 font-mono text-sm text-on-surface focus:outline-none"
+          // min-w-0 is load-bearing: a bare <input> has a browser-intrinsic
+          // width of ~20 characters, and a flex item defaults to
+          // min-width:auto, so without this the field refuses to shrink into
+          // the two-up grid's ~200px cell and overflows the panel.
+          className="min-w-0 flex-1 bg-transparent px-3 py-2 font-mono text-sm text-on-surface focus:outline-none"
         />
         {suffix && (
           <span className="pr-3 text-on-surface-variant text-sm">{suffix}</span>
         )}
       </div>
+      {badge}
       {nudge && <Nudge level={nudge.level} text={nudge.text} />}
     </div>
   );

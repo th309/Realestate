@@ -83,12 +83,10 @@ export function GradingResultPanel({
   flipContext,
   flipOverrideThresholds,
   onApplyFlipLever,
-  onApplyFlipCombination,
   brrrrInput,
   brrrrContext,
   brrrrOverrideThresholds,
   onApplyBrrrrLever,
-  onApplyBrrrrCombination,
   onCustomizeClick,
   onEditAutoKillCriteria,
   presetLabel,
@@ -114,52 +112,74 @@ export function GradingResultPanel({
     strategy === "BRRRR" &&
     onApplyBrrrrLever;
 
+  // Exactly one upgrade-path panel can apply at a time — the three guards are
+  // mutually exclusive on `strategy`. Resolving it to a single node lets the
+  // grading table pair with it two-up, and fall back to full width for an
+  // A-grade deal, which has no levers left to pull.
+  const leverPanel = canRenderBnhUpgradePath ? (
+    <UpgradePathPanel
+      input={input}
+      context={context ?? {}}
+      currentGrade={result.letter}
+      strategy={strategy}
+      onApply={onApplyLever}
+      overrideThresholds={overrideThresholds}
+    />
+  ) : canRenderFlipUpgradePath ? (
+    <FlipUpgradePathPanel
+      input={flipInput}
+      context={flipContext}
+      currentGrade={result.letter}
+      onApplyFlipLever={onApplyFlipLever}
+      overrideThresholds={flipOverrideThresholds}
+    />
+  ) : canRenderBrrrrUpgradePath ? (
+    <BrrrrUpgradePathPanel
+      input={brrrrInput}
+      context={brrrrContext}
+      currentGrade={result.letter}
+      onApplyBrrrrLever={onApplyBrrrrLever}
+      overrideThresholds={brrrrOverrideThresholds}
+    />
+  ) : null;
+
+  const scoreTable = (
+    <ScoreBreakdownTable
+      metrics={result.metrics}
+      rawGpa={result.rawGpa}
+      marketAdjustment={result.marketAdjustment}
+      finalGpa={result.finalGpa}
+      finalLetter={result.letter}
+    />
+  );
+
   return (
     <div data-grading-result-panel className="space-y-4">
       <AutoKillBanner
         autoKills={result.autoKills}
         onEditCriteria={onEditAutoKillCriteria}
       />
-      <RecommendationCard
-        result={result}
-        onCustomizeClick={onCustomizeClick}
-        presetLabel={presetLabel}
-        aiProps={aiProps}
-      />
-      <ScoreBreakdownTable
-        metrics={result.metrics}
-        rawGpa={result.rawGpa}
-        marketAdjustment={result.marketAdjustment}
-        finalGpa={result.finalGpa}
-        finalLetter={result.letter}
-      />
-      {canRenderBnhUpgradePath && (
-        <UpgradePathPanel
-          input={input}
-          context={context ?? {}}
-          currentGrade={result.letter}
-          strategy={strategy}
-          onApply={onApplyLever}
-          overrideThresholds={overrideThresholds}
+      <div id="verdict" className="scroll-mt-20">
+        <RecommendationCard
+          result={result}
+          onCustomizeClick={onCustomizeClick}
+          presetLabel={presetLabel}
+          aiProps={aiProps}
         />
-      )}
-      {canRenderFlipUpgradePath && (
-        <FlipUpgradePathPanel
-          input={flipInput}
-          context={flipContext}
-          currentGrade={result.letter}
-          onApplyFlipLever={onApplyFlipLever}
-          overrideThresholds={flipOverrideThresholds}
-        />
-      )}
-      {canRenderBrrrrUpgradePath && (
-        <BrrrrUpgradePathPanel
-          input={brrrrInput}
-          context={brrrrContext}
-          currentGrade={result.letter}
-          onApplyBrrrrLever={onApplyBrrrrLever}
-          overrideThresholds={brrrrOverrideThresholds}
-        />
+      </div>
+      {leverPanel ? (
+        <div className="grid grid-cols-1 items-start gap-4 min-[1240px]:grid-cols-2">
+          <div id="grading" className="min-w-0 scroll-mt-20">
+            {scoreTable}
+          </div>
+          <div id="improve" className="min-w-0 scroll-mt-20">
+            {leverPanel}
+          </div>
+        </div>
+      ) : (
+        <div id="grading" className="scroll-mt-20">
+          {scoreTable}
+        </div>
       )}
       <AdvisoriesStrip advisories={result.advisories} />
     </div>

@@ -1,9 +1,10 @@
-import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, expect, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fmtUsd } from "../lib/format-helpers";
 import { MetricBlock } from "../components/primitives/MetricBlock";
+import { AnalyzerEmptyState } from "../components/chrome/AnalyzerEmptyState";
 
 const read = (rel: string) =>
   readFileSync(join(__dirname, "..", rel), "utf8").replace(
@@ -14,6 +15,10 @@ const read = (rel: string) =>
 const CLIENT = read("AnalyzerClient.tsx");
 const KPI = read("components/Hero/StrategyKPI.tsx");
 const PANEL = read("components/InputPanel/InputPanel.tsx");
+const NUM_FIELD = read("components/InputPanel/NumField.tsx");
+const SIDEBAR = read("components/chrome/AnalyzerSidebar.tsx");
+const SECTIONS = read("components/AnalyzerSections.tsx");
+const GRADING = read("components/cards/GradingResultPanel.tsx");
 
 describe("analyzer defers to the shared primitives", () => {
   it("renders KPIs through the shared tile, not bespoke markup", () => {
@@ -26,6 +31,72 @@ describe("analyzer defers to the shared primitives", () => {
 
   it("uses no arbitrary hex", () => {
     expect(CLIENT + KPI + PANEL).not.toMatch(/\[#[0-9A-Fa-f]{3,8}\]/);
+  });
+});
+
+/**
+ * The input panel used to render a vertical scrollbar AND a horizontal one at
+ * once: each NumField's <input> is a flex item, and a flex item defaults to
+ * min-width:auto, so it refused to shrink below the browser's intrinsic ~20ch
+ * input width and pushed the two-up grid 30px past the panel's edge. The fix
+ * is CSS-only, so guard it where it lives rather than let it silently return.
+ */
+describe("analyzer input panel cannot overflow its column", () => {
+  it("lets the number input shrink inside its grid cell", () => {
+    expect(NUM_FIELD).toMatch(/min-w-0[^"]*flex-1|flex-1[^"]*min-w-0/);
+  });
+
+  it("lets every field-grid cell shrink below its intrinsic width", () => {
+    expect(PANEL).toContain("[&>*]:min-w-0");
+  });
+
+  it("does not nest a scroll container inside the page scroll by default", () => {
+    // A max-height guard is allowed so a tall variant stays reachable, but the
+    // column must not be a fixed-height scroll box.
+    expect(SIDEBAR).toContain("sticky");
+    expect(SIDEBAR).not.toContain("h-screen");
+  });
+});
+
+describe("analyzer pairs its widest blocks two-up on wide viewports", () => {
+  it("puts the projection beside the cash-flow waterfall", () => {
+    expect(SECTIONS).toContain("min-[1240px]:grid-cols-2");
+  });
+
+  it("puts the grading table beside the improvement levers", () => {
+    expect(GRADING).toContain("min-[1240px]:grid-cols-2");
+  });
+});
+
+describe("analyzer empty state explains the page instead of faking it", () => {
+  it("renders no dead KPI row or $0 chart before there is input", () => {
+    // The KPI row and the sections only mount once a deal is gradable.
+    expect(CLIENT).toMatch(/hasGradableInput && \(\s*<div id="cashflow"/);
+    expect(CLIENT).toMatch(/hasGradableInput && \(\s*<AnalyzerSections/);
+    expect(CLIENT).toContain("AnalyzerEmptyState");
+  });
+
+  it("keeps a working entry point into the inputs", () => {
+    const onStart = vi.fn();
+    render(<AnalyzerEmptyState onStart={onStart} />);
+    fireEvent.click(
+      screen.getByRole("button", { name: /enter a property address/i }),
+    );
+    expect(onStart).toHaveBeenCalledOnce();
+  });
+
+  it("previews every section the jump bar navigates to", () => {
+    render(<AnalyzerEmptyState onStart={() => {}} />);
+    for (const section of [
+      "Cash flow",
+      "Grading",
+      "Projection",
+      "Expenses",
+      "Comps",
+      "Market",
+    ]) {
+      expect(screen.getByText(section)).toBeInTheDocument();
+    }
   });
 });
 

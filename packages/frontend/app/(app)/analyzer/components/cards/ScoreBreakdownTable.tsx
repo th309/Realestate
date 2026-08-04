@@ -62,17 +62,20 @@ export function ScoreBreakdownTable({
       data-score-breakdown-table
       className="rounded-2xl border border-outline-variant bg-surface overflow-hidden"
     >
-      <table className="w-full text-sm">
+      {/* Compact at half width: the mockup pairs this table beside the levers
+          above 1240px, so it uses 12.5px body / 10px headers and tight cell
+          padding rather than the full-width text-sm / px-2.5 py-2.5. */}
+      <table className="w-full text-[12.5px] [&_td:first-child]:pl-4 [&_td:last-child]:pr-4 [&_th:first-child]:pl-4 [&_th:last-child]:pr-4 [&_td]:whitespace-nowrap [&_td:first-child]:whitespace-normal">
         <thead>
           <tr
-            className="text-xs uppercase tracking-wide text-on-surface-variant"
+            className="text-[10px] font-bold uppercase tracking-[0.11em] text-on-surface-variant"
             style={{ borderBottom: "1.75px solid var(--md-outline-variant)" }}
           >
-            <th className="text-left font-medium px-4 py-3">Metric</th>
-            <th className="text-right font-medium px-4 py-3">Your Deal</th>
-            <th className="text-center font-medium px-4 py-3">Grade</th>
-            <th className="text-right font-medium px-4 py-3">Weight</th>
-            <th className="text-right font-medium px-4 py-3">Contribution</th>
+            <th className="text-left font-medium px-2.5 py-2.5">Metric</th>
+            <th className="text-right font-medium px-2.5 py-2.5">Your Deal</th>
+            <th className="text-center font-medium px-2.5 py-2.5">Grade</th>
+            <th className="text-right font-medium px-2.5 py-2.5">Weight</th>
+            <th className="text-right font-medium px-2.5 py-2.5">Contribution</th>
           </tr>
         </thead>
         <tbody>
@@ -94,7 +97,7 @@ export function ScoreBreakdownTable({
                     : "border-b border-outline-variant"
                 }`}
               >
-                <td className="px-4 py-3 text-on-surface">
+                <td className="px-2.5 py-2.5 text-on-surface">
                   <span className="inline-flex items-center">
                     {m.label}
                     <MetricHelpButton
@@ -103,16 +106,16 @@ export function ScoreBreakdownTable({
                     />
                   </span>
                 </td>
-                <td className="px-4 py-3 text-right tabular-nums text-on-surface font-mono">
+                <td className="px-2.5 py-2.5 text-right tabular-nums text-on-surface font-mono">
                   {m.formattedValue}
                 </td>
-                <td className="px-4 py-3 text-center">
+                <td className="px-2.5 py-2.5 text-center">
                   <GradePill grade={m.grade} />
                 </td>
-                <td className="px-4 py-3 text-right tabular-nums text-on-surface-variant">
+                <td className="px-2.5 py-2.5 text-right tabular-nums text-on-surface-variant">
                   {m.weight}%
                 </td>
-                <td className="px-4 py-3 text-right">
+                <td className="px-2.5 py-2.5 text-right">
                   <div className="inline-flex items-center justify-end gap-2">
                     <span className="tabular-nums font-mono text-on-surface">
                       {m.contribution.toFixed(2)}
@@ -120,7 +123,7 @@ export function ScoreBreakdownTable({
                     <span
                       aria-hidden
                       className="inline-block h-1.5 rounded-full bg-outline-variant overflow-hidden"
-                      style={{ width: 60 }}
+                      style={{ width: 44 }}
                     >
                       <span
                         className="block h-full rounded-full"
@@ -140,22 +143,22 @@ export function ScoreBreakdownTable({
           <tr data-footer-row="raw-gpa">
             <td
               colSpan={4}
-              className="px-4 py-2 text-right text-on-surface-variant"
+              className="px-2.5 py-2 text-right text-on-surface-variant"
             >
               Raw GPA
             </td>
-            <td className="px-4 py-2 text-right tabular-nums font-mono text-on-surface">
+            <td className="px-2.5 py-2 text-right tabular-nums font-mono text-on-surface">
               {rawGpa.toFixed(2)}
             </td>
           </tr>
           <tr data-footer-row="market-adj">
             <td
               colSpan={4}
-              className="px-4 py-2 text-right text-on-surface-variant"
+              className="px-2.5 py-2 text-right text-on-surface-variant"
             >
               Market adjustment
             </td>
-            <td className="px-4 py-2 text-right tabular-nums font-mono text-on-surface">
+            <td className="px-2.5 py-2 text-right tabular-nums font-mono text-on-surface">
               <span className="inline-flex items-center justify-end">
                 {adjSign}
                 {marketAdjustment.toFixed(2)}
@@ -168,11 +171,11 @@ export function ScoreBreakdownTable({
           <tr data-footer-row="final-gpa">
             <td
               colSpan={4}
-              className="px-4 py-2 text-right text-on-surface font-semibold"
+              className="px-2.5 py-2 text-right text-on-surface font-semibold"
             >
               Final GPA
             </td>
-            <td className="px-4 py-2 text-right">
+            <td className="px-2.5 py-2 text-right">
               <span className="inline-flex items-center justify-end gap-2 tabular-nums font-mono font-bold text-on-surface">
                 {finalDisplay}
                 <GradePill grade={finalLetter} />

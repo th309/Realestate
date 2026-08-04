@@ -22,7 +22,7 @@ export function SliderField({
   return (
     <div data-slider-field className="flex flex-col gap-1">
       <div className="flex items-center justify-between">
-        <label className="text-xs uppercase font-semibold text-on-surface-variant">
+        <label className="text-[10px] font-bold uppercase tracking-[0.11em] text-on-surface-variant">
           {label}
         </label>
         <span data-slider-readout className="font-mono text-sm text-on-surface">

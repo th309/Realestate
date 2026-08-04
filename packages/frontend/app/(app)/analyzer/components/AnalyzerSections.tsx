@@ -124,22 +124,29 @@ export function AnalyzerSections({
 }: AnalyzerSectionsProps) {
   return (
     <>
-      <div id="projection" className="scroll-mt-20">
-      <ProjectionSection
-        input={input}
-        projection={projection}
-        afterTax={afterTax}
-        {...sectionAi.projection}
-      />
-      </div>
-      <div id="expenses" className="scroll-mt-20">
-      <ExpenseSection
-        grossRentMonthly={grossRentMonthly}
-        vacancyMonthly={vacancyMonthly}
-        opexMonthly={opexAnnual / 12}
-        debtServiceMonthly={debtServiceMonthly}
-        {...sectionAi.expense_waterfall}
-      />
+      {/*
+        Above 1240px the projection and the cash-flow waterfall sit side by
+        side; below it they stack. Pairing the two widest blocks cuts roughly
+        40% of the scroll needed to reach the improvement levers.
+      */}
+      <div className="grid grid-cols-1 items-start gap-6 min-[1240px]:grid-cols-2">
+        <div id="projection" className="min-w-0 scroll-mt-20">
+          <ProjectionSection
+            input={input}
+            projection={projection}
+            afterTax={afterTax}
+            {...sectionAi.projection}
+          />
+        </div>
+        <div id="expenses" className="min-w-0 scroll-mt-20">
+          <ExpenseSection
+            grossRentMonthly={grossRentMonthly}
+            vacancyMonthly={vacancyMonthly}
+            opexMonthly={opexAnnual / 12}
+            debtServiceMonthly={debtServiceMonthly}
+            {...sectionAi.expense_waterfall}
+          />
+        </div>
       </div>
       <SensitivitySection
         input={input}
@@ -153,32 +160,32 @@ export function AnalyzerSections({
         {...sectionAi.sensitivity}
       />
       <div id="comps" className="scroll-mt-20">
-      <CompsSection
-        subjectLat={subjectLat}
-        subjectLon={subjectLon}
-        subjectAddress={displayAddress}
-        pricePerSqftValues={pricePerSqftValues}
-        yourPricePerSqft={yourPricePerSqft}
-        subjectPrice={subjectPrice}
-        salesComps={salesComps}
-        rentalComps={rentalComps}
-        mapboxToken={mapboxToken}
-        {...sectionAi.comps}
-      />
+        <CompsSection
+          subjectLat={subjectLat}
+          subjectLon={subjectLon}
+          subjectAddress={displayAddress}
+          pricePerSqftValues={pricePerSqftValues}
+          yourPricePerSqft={yourPricePerSqft}
+          subjectPrice={subjectPrice}
+          salesComps={salesComps}
+          rentalComps={rentalComps}
+          mapboxToken={mapboxToken}
+          {...sectionAi.comps}
+        />
       </div>
       <div id="market" className="scroll-mt-20">
-      <MarketContextSection
-        chain={marketContext?.chain ?? null}
-        initialGeoLevel={marketContext?.geo_level ?? null}
-        fallbackPiq={marketContext?.piq_score?.value ?? null}
-        fallbackHomeValue={marketContext?.home_value?.value ?? null}
-        fallbackHomeValueYoy={marketContext?.home_value_yoy?.value ?? null}
-        fallbackRentIndex={marketContext?.rent_index?.value ?? null}
-        fallbackMarketHeat={marketContext?.market_heat?.value ?? null}
-        fallbackNetMigration={marketContext?.net_migration?.value ?? null}
-        aiPayloadBase={marketContextAi.aiPayloadBase}
-        aiEnabled={marketContextAi.aiEnabled}
-      />
+        <MarketContextSection
+          chain={marketContext?.chain ?? null}
+          initialGeoLevel={marketContext?.geo_level ?? null}
+          fallbackPiq={marketContext?.piq_score?.value ?? null}
+          fallbackHomeValue={marketContext?.home_value?.value ?? null}
+          fallbackHomeValueYoy={marketContext?.home_value_yoy?.value ?? null}
+          fallbackRentIndex={marketContext?.rent_index?.value ?? null}
+          fallbackMarketHeat={marketContext?.market_heat?.value ?? null}
+          fallbackNetMigration={marketContext?.net_migration?.value ?? null}
+          aiPayloadBase={marketContextAi.aiPayloadBase}
+          aiEnabled={marketContextAi.aiEnabled}
+        />
       </div>
       <AfterTaxSection
         afterTax={afterTax}

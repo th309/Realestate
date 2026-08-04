@@ -23,7 +23,6 @@ import {
   nudgeForTax,
   nudgeForInsurance,
   nudgeForHOA,
-  nudgeForRate,
   nudgeForArv,
 } from "../../lib/nudges";
 import type { Strategy } from "../../lib/strategy-tile-mappers";
@@ -182,7 +181,10 @@ export function InputPanel({
         onClick={onFetchProperty}
       />
 
-      <div className="grid grid-cols-2 gap-3">
+      {/* [&>*]:min-w-0 — grid items default to min-width:auto, which lets a
+          cell's intrinsic content push the track wider than its share and
+          overflow the panel. Every cell must be allowed to shrink. */}
+      <div className="grid grid-cols-2 gap-3 [&>*]:min-w-0">
         <div>
           <NumField
             label="Price"

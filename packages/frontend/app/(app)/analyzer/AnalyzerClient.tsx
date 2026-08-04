@@ -6,12 +6,12 @@ import { AnalyzerHeader } from "./components/chrome/AnalyzerHeader";
 import { StrategyCompare } from "./components/StrategyCompare/StrategyCompare";
 import { AnalyzerInputPanel } from "./components/InputPanel/AnalyzerInputPanel";
 import { MobileInputSheet } from "./components/chrome/MobileInputSheet";
-import { EmptyStateCta } from "./components/chrome/EmptyStateCta";
+import { AnalyzerEmptyState } from "./components/chrome/AnalyzerEmptyState";
 import { EditInputsBar } from "./components/chrome/EditInputsBar";
 import { useAnalyzerState } from "./lib/use-analyzer-state";
 import { buildStrategyCompareProps } from "./lib/strategy-compare-builders";
 import { deriveVerdict } from "./lib/format-helpers";
-import { GradingResultPanel } from "./components/cards/GradingResultPanel";
+import { GradingBlock } from "./components/cards/GradingBlock";
 import { AnalyzerSections } from "./components/AnalyzerSections";
 import { CustomizeThresholdsDrawer } from "./components/CustomizeThresholdsDrawer/CustomizeThresholdsDrawer";
 import type { ThresholdsTabId } from "./components/CustomizeThresholdsDrawer/useDrawerState";
@@ -23,17 +23,10 @@ import { useThresholds } from "@/lib/data";
 import { toEngineStrategy, useGradingResult } from "./lib/use-grading-result";
 import { useAnalyzerDefaultsPrefill } from "./lib/use-analyzer-defaults-prefill";
 import { StrategyKPI } from "./components/Hero/StrategyKPI";
-import { JumpBar, type JumpItem } from "@/app/components/app-shell";
-import {
-  Gauge,
-  ClipboardCheck,
-  TrendingUp,
-  Receipt,
-  Home,
-  MapPin,
-} from "lucide-react";
+import { JumpBar } from "@/app/components/app-shell";
+import { JUMP_ITEMS } from "./lib/jump-items";
 import { PropertyHeader } from "./components/PropertyHeader";
-import { PropertyRecordCard } from "./components/PropertyRecordCard";
+import { AnalyzerSidebar } from "./components/chrome/AnalyzerSidebar";
 import { SavedAnalysesPanel } from "./components/SavedAnalysesPanel";
 import { RentcastBanners } from "./components/RentcastBanners";
 import { useSelectedGoal } from "./lib/use-selected-goal";
@@ -46,20 +39,6 @@ import { useSectionAiInsights } from "./lib/use-section-ai-insights";
 import { buildCompsViewProps } from "./lib/comps-view-props";
 import type { Strategy } from "./lib/strategy-tile-mappers";
 import type { AnalysisMode } from "./components/InputPanel/StrategyControls";
-
-/**
- * In-page navigation for the results column, which stacks a KPI row, a grading
- * table with its verdict and improvement levers, a projection, a cash-flow
- * waterfall, comps, and market context in one scroll.
- */
-const JUMP_ITEMS: JumpItem[] = [
-  { id: "cashflow", label: "Cash Flow", icon: <Gauge className="size-3" />, accent: "bg-primary" },
-  { id: "grading", label: "Grading", icon: <ClipboardCheck className="size-3" />, accent: "bg-secondary" },
-  { id: "projection", label: "Projection", icon: <TrendingUp className="size-3" />, accent: "bg-tertiary" },
-  { id: "expenses", label: "Expenses", icon: <Receipt className="size-3" />, accent: "bg-warning" },
-  { id: "comps", label: "Comps", icon: <Home className="size-3" />, accent: "bg-primary" },
-  { id: "market", label: "Market", icon: <MapPin className="size-3" />, accent: "bg-tertiary" },
-];
 
 export default function AnalyzerClient({
   searchParamsPromise,
@@ -85,7 +64,7 @@ export default function AnalyzerClient({
   const {
     analyzer, address, arvLocal, setArvLocal, rehabBudget,
     setRehabBudget, assumptions, setAssumption, propertyLookup, rentcastData,
-    quotaExceeded, projection, sensitivity, afterTax, breakEven, brrrrTimeline,
+    quotaExceeded, projection, afterTax, breakEven, brrrrTimeline,
     marketContext, piqByGeo,
   } = state;
   const { rental, flip, brrrr } = analyzer;
@@ -263,92 +242,22 @@ export default function AnalyzerClient({
           <PropertyHeader address={displayAddress} piqByGeo={piqByGeo} />
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-[minmax(0,38fr)_minmax(0,62fr)] gap-6">
-          <div className="hidden md:block">
-            <div className="sticky top-6 max-h-[calc(100vh-2rem)] overflow-y-auto space-y-4 pr-1">
-              {inputPanel}
-              {rentcastData?.property_record && (
-                <PropertyRecordCard record={rentcastData.property_record} />
-              )}
-            </div>
-          </div>
+        {/* Mockup: `grid-template-columns: 344px minmax(0, 1fr)` above 1140px,
+            single column below. The input column is a fixed 344px, not a
+            fraction — that width is what the panel's two-up field grid is
+            designed against. */}
+        <div className="grid grid-cols-1 items-start gap-4 min-[1140px]:grid-cols-[344px_minmax(0,1fr)]">
+          <AnalyzerSidebar
+            inputPanel={inputPanel}
+            propertyRecord={rentcastData?.property_record}
+          />
 
           <div className="space-y-6 min-w-0">
             {hasGradableInput && (
-              <JumpBar items={JUMP_ITEMS} activeId="cashflow" />
+              <JumpBar items={JUMP_ITEMS} activeId="verdict" />
             )}
             <SavedAnalysesPanel />
-            {!address.trim() && !rentcastData ? (
-              <EmptyStateCta onClick={openInputs} />
-            ) : (
-              <EditInputsBar onClick={openInputs} />
-            )}
-
-            {analysisMode === "compare" && (
-              <GoalPicker
-                selectedGoal={selectedGoal}
-                onChange={setSelectedGoal}
-              />
-            )}
-
-            {analysisMode === "compare" && (
-              <StrategyCompare
-                {...strategyProps}
-                isDealViable={
-                  hasGradableInput && verdict !== "bad" && verdict !== "avoid"
-                }
-                selectedGoal={selectedGoal}
-                winner={bestPlay}
-                noGoalFit={noGoalFit}
-              />
-            )}
-
-            <div id="grading" className="scroll-mt-20">
-            {grading.data ? (
-              <GradingResultPanel
-                result={grading.data}
-                input={analyzer.input}
-                context={{
-                  marketPiqScore: marketContext?.piq_score?.value ?? undefined,
-                }}
-                strategy={toEngineStrategy(activeStrategy) ?? "BUY_AND_HOLD"}
-                onApplyLever={analyzer.setInput}
-                {...upgradeProps}
-                onCustomizeClick={() => openDrawer("thresholds")}
-                onEditAutoKillCriteria={() => openDrawer("autokill")}
-                presetLabel={presetLabel}
-                aiProps={sectionAi.recommendation_analysis}
-              />
-            ) : grading.isLoading ? (
-              <div
-                className="rounded-2xl border border-outline-variant bg-surface p-6 animate-pulse"
-                aria-busy="true"
-                role="status"
-              >
-                <div className="h-24 w-24 rounded-xl bg-surface-container-high" />
-                <div className="mt-4 h-6 w-32 rounded bg-surface-container-high" />
-                <div className="mt-2 h-4 w-64 rounded bg-surface-container-high" />
-              </div>
-            ) : null}
-            </div>
-
-            <div id="cashflow" className="scroll-mt-20">
-            <StrategyKPI
-              ctx={{
-                input: analyzer.input,
-                rental,
-                flip,
-                brrrr,
-                projection,
-                breakEven,
-                afterTax,
-                arv: arvLocal,
-                rehabBudget,
-              }}
-              active={activeStrategy}
-              isCompareWinner={analysisMode === "compare"}
-            />
-            </div>
+            {hasGradableInput && <EditInputsBar onClick={openInputs} />}
 
             <RentcastBanners
               lookupErrorMsg={lookupErrorMsg}
@@ -357,45 +266,109 @@ export default function AnalyzerClient({
               address={address}
             />
 
-            <AnalyzerSections
+            {/*
+              Before there is enough input to underwrite, the results column
+              used to render four em-dash KPI tiles and a $0 projection chart.
+              One explanatory panel replaces those dead instruments and
+              absorbs the start CTA, so mobile — where the input panel is
+              behind a sheet — still has its entry point.
+            */}
+            {!hasGradableInput && <AnalyzerEmptyState onStart={openInputs} />}
+
+            {hasGradableInput && analysisMode === "compare" && (
+              <GoalPicker
+                selectedGoal={selectedGoal}
+                onChange={setSelectedGoal}
+              />
+            )}
+
+            {hasGradableInput && analysisMode === "compare" && (
+              <StrategyCompare
+                {...strategyProps}
+                isDealViable={verdict !== "bad" && verdict !== "avoid"}
+                selectedGoal={selectedGoal}
+                winner={bestPlay}
+                noGoalFit={noGoalFit}
+              />
+            )}
+
+            <GradingBlock
+              result={grading.data}
+              isLoading={grading.isLoading}
               input={analyzer.input}
-              rental={rental}
-              flip={flip}
-              brrrr={brrrr}
-              projection={projection}
-              afterTax={afterTax}
-              arvLocal={arvLocal}
-              rehabBudget={rehabBudget}
-              activeStrategy={activeStrategy}
-              marginalTaxRate={assumptions.marginalTaxRate}
-              grossRentMonthly={grossRentMonthly}
-              vacancyMonthly={vacancyMonthly}
-              opexAnnual={opexAnnual}
-              debtServiceMonthly={debtServiceMonthly}
-              subjectLat={subjectLat}
-              subjectLon={subjectLon}
-              displayAddress={displayAddress}
-              pricePerSqftValues={pricePerSqftValues}
-              yourPricePerSqft={yourPricePerSqft}
-              subjectPrice={subjectPrice}
-              salesComps={salesComps}
-              rentalComps={rentalComps}
-              mapboxToken={mapboxToken}
-              marketContext={marketContext}
-              sectionAi={sectionAi}
-              marketContextAi={{
-                aiPayloadBase: {
-                  input: analyzer.input,
-                  result: { rental, flip, brrrr },
-                  rentcast: rentcastData,
-                },
-                aiEnabled: isPro && hasGradableInput,
+              context={{
+                marketPiqScore: marketContext?.piq_score?.value ?? undefined,
               }}
-              notes={notesState.notes}
-              shareNotes={notesState.shareNotes}
-              onNotesChange={notesState.onNotesChange}
-              onSaveNotes={notesState.saveNotes}
+              strategy={toEngineStrategy(activeStrategy) ?? "BUY_AND_HOLD"}
+              onApplyLever={analyzer.setInput}
+              {...upgradeProps}
+              onCustomizeClick={() => openDrawer("thresholds")}
+              onEditAutoKillCriteria={() => openDrawer("autokill")}
+              presetLabel={presetLabel}
+              aiProps={sectionAi.recommendation_analysis}
             />
+
+            {hasGradableInput && (
+              <div id="cashflow" className="scroll-mt-20">
+                <StrategyKPI
+                  ctx={{
+                    input: analyzer.input,
+                    rental,
+                    flip,
+                    brrrr,
+                    projection,
+                    breakEven,
+                    afterTax,
+                    arv: arvLocal,
+                    rehabBudget,
+                  }}
+                  active={activeStrategy}
+                  isCompareWinner={analysisMode === "compare"}
+                />
+              </div>
+            )}
+
+            {hasGradableInput && (
+              <AnalyzerSections
+                input={analyzer.input}
+                rental={rental}
+                flip={flip}
+                brrrr={brrrr}
+                projection={projection}
+                afterTax={afterTax}
+                arvLocal={arvLocal}
+                rehabBudget={rehabBudget}
+                activeStrategy={activeStrategy}
+                marginalTaxRate={assumptions.marginalTaxRate}
+                grossRentMonthly={grossRentMonthly}
+                vacancyMonthly={vacancyMonthly}
+                opexAnnual={opexAnnual}
+                debtServiceMonthly={debtServiceMonthly}
+                subjectLat={subjectLat}
+                subjectLon={subjectLon}
+                displayAddress={displayAddress}
+                pricePerSqftValues={pricePerSqftValues}
+                yourPricePerSqft={yourPricePerSqft}
+                subjectPrice={subjectPrice}
+                salesComps={salesComps}
+                rentalComps={rentalComps}
+                mapboxToken={mapboxToken}
+                marketContext={marketContext}
+                sectionAi={sectionAi}
+                marketContextAi={{
+                  aiPayloadBase: {
+                    input: analyzer.input,
+                    result: { rental, flip, brrrr },
+                    rentcast: rentcastData,
+                  },
+                  aiEnabled: isPro && hasGradableInput,
+                }}
+                notes={notesState.notes}
+                shareNotes={notesState.shareNotes}
+                onNotesChange={notesState.onNotesChange}
+                onSaveNotes={notesState.saveNotes}
+              />
+            )}
           </div>
         </div>
       </div>
