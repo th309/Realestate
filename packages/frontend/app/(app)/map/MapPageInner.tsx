@@ -38,7 +38,6 @@ mapboxgl.accessToken = MAPBOX_ACCESS_TOKEN;
 // first-load JS. Keep the mapbox import + `mapboxgl.accessToken =` side
 // effect in THIS file, not page.tsx, or the dynamic split does nothing.
 export default function MapPageInner() {
-
   const { isMetricGated } = useEntitlements();
 
   const { viewMode, handleViewModeChange } = useViewModePreference();
@@ -278,7 +277,6 @@ export default function MapPageInner() {
         onSearch={handleSearch}
         onSelectSearchResult={handleSelectSearchResult}
         onShowSearchResults={setShowSearchResults}
-        mobileMenuOpen={mobileMenuOpen}
         onToggleMobileMenu={() => setMobileMenuOpen(!mobileMenuOpen)}
         geoLevel={geoLevel}
         selectedMetric={selectedMetric}
@@ -302,6 +300,7 @@ export default function MapPageInner() {
 
         <div data-tour="metric-sidebar" className="min-h-0 overflow-hidden">
           <Sidebar
+            mobileMenuOpen={mobileMenuOpen}
             metricCategories={metricCategories}
             expandedCategories={expandedCategories}
             selectedMetric={selectedMetric}
@@ -312,7 +311,6 @@ export default function MapPageInner() {
             renterDemandType={renterDemandType}
             sidebarWidth={sidebarWidth}
             viewMode={viewMode}
-            mobileMenuOpen={mobileMenuOpen}
             sidebarCollapsed={sidebarCollapsed}
             onToggleSidebarCollapsed={handleToggleSidebarCollapsed}
             onToggleCategory={toggleCategory}
