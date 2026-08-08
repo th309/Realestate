@@ -123,8 +123,13 @@ export interface DealStateV2 {
   unitCount: number | null;
   assumptions: AnalyzerAssumptions;
 
-  // UI selections that change what is displayed and how it is graded
-  goal: { selectedGoal: string | null; analysisMode: AnalysisMode };
+  // per-deal UI state. analysisMode ONLY — the investor goal is a global
+  // standing preference and is deliberately NOT restored per deal. See §4.6.
+  analysisMode: AnalysisMode;
+  /** Recorded for the audit trail (the AI narratives were framed by it).
+   *  Written on save, never read back into state. See §4.6. */
+  activeGoalAtSave: InvestorGoal | null;
+
   thresholds?: AnyStrategyThresholds; // omitted unless detectActivePreset() === custom
   provenance: ProvenanceMap; // preserves RentCast-vs-typed divergence badges
 
@@ -216,7 +221,8 @@ useSavedAnalysis(id)
   └─ migrateDealState(row) → DealStateV2
        └─ useAnalyzerState({ isPro, initialState })
             ├─ useAnalyzer(state.input)            // useAnalyzer already accepts initial input
-            ├─ restore panel state + assumptions + goal + thresholds + provenance
+            ├─ restore panel state + assumptions + analysisMode + thresholds
+            │  + provenance  (NOT the investor goal — see §4.6)
             ├─ restore marketContext / piqByGeo from row.market_context + state.piqByGeo
             └─ recompute derived analytics locally
 ```
@@ -252,6 +258,38 @@ so no migration is required.
 
 60 days clears two monthly rescores, so when the notice fires something has almost certainly
 moved.
+
+---
+
+### 4.6 The investor goal is NOT per-deal state
+
+`selectedGoal` looks like deal state and is not. `use-selected-goal.ts:21,63-79` persists it
+globally to `localStorage["analyzer.investorGoal"]`, deliberately:
+
+> a goal is a standing investing preference, so carrying "I'm optimizing for cash flow" onto the
+> next deal you compare is the desired behavior.
+
+The same docstring records the bug that motivated the rule: an auto-inferred `fast_cash` persisted
+from one compare session, then framed every later focused-mode analysis, because the AI payload
+read `selectedGoal` unconditionally. Buy-and-hold analyses opened with "your goal is fast cash
+within 12 months" — a goal the user could neither see nor change on that screen. The fix was
+`activeGoal` (= `selectedGoal` in compare mode, `null` everywhere else), and the hook states that
+anything user-facing — **the AI payload and the saved snapshot explicitly named** — must read
+`activeGoal`.
+
+Therefore:
+
+- **Persist `analysisMode`.** It is genuine per-deal state (plain `useState` in
+  `AnalyzerClient.tsx:87`, not localStorage) and decides whether the user sees focused or compare.
+- **Persist `activeGoalAtSave` as a record only.** It documents what framed the saved narratives.
+  Never write it back into `selectedGoal`.
+- **Never restore the goal.** Writing a saved deal's goal into `selectedGoal` would fire the
+  persistence effect at `use-selected-goal.ts:105-109` and overwrite the user's global standing
+  preference with one deal's goal — the leak the `activeGoal` split exists to prevent.
+
+Consequence, and it is the correct behavior: reopening a compare-mode deal shows the user's
+_current_ standing goal, not the one in force when they saved. The goal is a preference about the
+investor, not an input of the deal.
 
 ---
 
@@ -304,16 +342,16 @@ else                         → build V2 by harvesting a legacy row
 
 Legacy harvest — most of the state is recoverable because `result_snapshot` already carries it:
 
-| V2 field                                                              | Recovered from                                                      |
-| --------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| `input`                                                               | `result_snapshot.input ?? input_snapshot` (flat legacy `DealInput`) |
-| `assumptions`, `arvLocal`, `rehabBudget`, `propertyType`, `unitCount` | `result_snapshot.*`                                                 |
-| `notes`, `shareNotes`                                                 | `result_snapshot.*`                                                 |
-| `address`, `label`                                                    | `row.address_full`, `row.label`                                     |
-| `selectedZip`                                                         | `row.address_zip`                                                   |
-| `rentcastEcho`                                                        | `row.address_city/state/zip` (AVM unavailable — `null`)             |
-| `marketCapturedAt`                                                    | `row.updated_at`                                                    |
-| `goal`, `thresholds`, `provenance`, `piqByGeo`                        | defaults — genuinely absent in v1                                   |
+| V2 field                                                                   | Recovered from                                                             |
+| -------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `input`                                                                    | `result_snapshot.input ?? input_snapshot` (flat legacy `DealInput`)        |
+| `assumptions`, `arvLocal`, `rehabBudget`, `propertyType`, `unitCount`      | `result_snapshot.*`                                                        |
+| `notes`, `shareNotes`                                                      | `result_snapshot.*`                                                        |
+| `address`, `label`                                                         | `row.address_full`, `row.label`                                            |
+| `selectedZip`                                                              | `row.address_zip`                                                          |
+| `rentcastEcho`                                                             | `row.address_city/state/zip` (AVM unavailable — `null`)                    |
+| `marketCapturedAt`                                                         | `row.updated_at`                                                           |
+| `analysisMode`, `activeGoalAtSave`, `thresholds`, `provenance`, `piqByGeo` | defaults — genuinely absent in v1 (`analysisMode` defaults to `"focused"`) |
 
 Legacy rows are **not** bulk-migrated. They upconvert on read and are written back as v2 on the
 next save.
@@ -385,6 +423,11 @@ _Update market data_.
 address collision returns 409.
 
 **Hydration** — a hydrated deal does not fire the `?address=` RentCast auto-fetch.
+
+**Investor goal (§4.6)** — hydrating a saved deal whose `activeGoalAtSave` is `fast_cash`, while
+`localStorage["analyzer.investorGoal"]` holds `cash_flow`, leaves localStorage as `cash_flow` and
+leaves `selectedGoal` as `cash_flow`. This is the regression test for the goal-leak bug; assert on
+localStorage directly, not just on rendered output.
 
 ---
 
