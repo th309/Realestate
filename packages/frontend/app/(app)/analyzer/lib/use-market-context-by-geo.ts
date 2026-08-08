@@ -54,12 +54,21 @@ interface UseMarketContextByGeoArgs {
   aiPayloadBase: Omit<AiInsightPayload, "piq"> | undefined;
   /** Pro + has-input gate from the parent. */
   aiEnabled: boolean;
+  /**
+   * False while a saved deal is showing RESTORED market data. Opening a saved
+   * deal is a page view: these three fetches resolve post-mount, change the
+   * deal-state content, and make autosave PATCH a row nobody edited. Same gate
+   * as `useMarketRefreshGate` / `usePiqByGeo` — this hook is the third call
+   * site of the same three queries. Defaults true for a fresh analysis.
+   */
+  enabled?: boolean;
 }
 
 export function useMarketContextByGeo({
   chain,
   aiPayloadBase,
   aiEnabled,
+  enabled = true,
 }: UseMarketContextByGeoArgs): MarketContextByGeo {
   const metroId = chain?.cbsa_code ?? null;
   const countyId = chain?.county_fips ?? null;
@@ -68,15 +77,15 @@ export function useMarketContextByGeo({
   // Three parallel data fetches — React Query dedupes per queryKey.
   const metroCtx = useMarketContext({
     cbsa_code: metroId ?? undefined,
-    enabled: !!metroId,
+    enabled: enabled && !!metroId,
   });
   const countyCtx = useMarketContext({
     county_fips: countyId ?? undefined,
-    enabled: !!countyId,
+    enabled: enabled && !!countyId,
   });
   const zipCtx = useMarketContext({
     zip: zipId ?? undefined,
-    enabled: !!zipId,
+    enabled: enabled && !!zipId,
   });
 
   // Three parallel AI fetches. Each gates on its own data being resolved so

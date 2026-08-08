@@ -1,5 +1,7 @@
 "use client";
 import { useState } from "react";
+import { NotebookPen } from "lucide-react";
+import { PiqCard, PiqCardHeader } from "../primitives/card";
 
 interface NotesSectionProps {
   initialNotes?: string;
@@ -30,62 +32,69 @@ export function NotesSection({
   const [saved, setSaved] = useState(false);
   const [saveFailed, setSaveFailed] = useState(false);
   return (
-    <section
-      data-notes-section
-      className="rounded-xl bg-surface border border-outline-variant p-4 space-y-3"
-    >
-      <h3 className="text-sm font-semibold text-on-surface">My Notes</h3>
-      <textarea
-        data-notes-textarea
-        value={notes}
-        onChange={(e) => {
-          const next = e.currentTarget.value;
-          setNotes(next);
-          setSaved(false);
-          setSaveFailed(false);
-          onChange?.(next, shareWithClient);
-        }}
-        placeholder="Add personal observations, follow-up tasks, comp prices…"
-        className="w-full min-h-[120px] p-3 rounded-lg border border-outline-variant bg-surface-container-low text-on-surface text-sm"
-      />
-      <div className="flex items-center justify-between">
-        <label className="flex items-center gap-2 text-sm text-on-surface">
-          <input
-            data-notes-share
-            type="checkbox"
-            checked={shareWithClient}
+    <PiqCard>
+      <section data-notes-section>
+        <PiqCardHeader
+          icon={<NotebookPen size={13} strokeWidth={2} aria-hidden />}
+          tone="violet"
+          title="My Notes"
+          label={shareWithClient ? "Shared" : "Private"}
+        />
+        <div className="space-y-3 p-4">
+          <textarea
+            data-notes-textarea
+            value={notes}
             onChange={(e) => {
-              const next = e.currentTarget.checked;
-              setShareWithClient(next);
+              const next = e.currentTarget.value;
+              setNotes(next);
               setSaved(false);
               setSaveFailed(false);
-              onChange?.(notes, next);
+              onChange?.(next, shareWithClient);
             }}
+            placeholder="Add personal observations, follow-up tasks, comp prices…"
+            className="min-h-[120px] w-full rounded-[9px] border border-piq-line bg-piq-canvas p-3 text-[13.5px] text-piq-ink placeholder:text-piq-muted focus:border-piq-indigo focus:outline-none focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--piq-indigo)_14%,transparent)]"
           />
-          Share with client (visible in shared link)
-        </label>
-        <button
-          data-notes-save
-          onClick={async () => {
-            setSaveFailed(false);
-            const ok = await onSave?.({ notes, shareWithClient });
-            if (ok === false) {
-              setSaveFailed(true);
-            } else {
-              setSaved(true);
-            }
-          }}
-          className="rounded-full bg-primary text-on-primary px-4 py-1.5 text-sm font-semibold"
-        >
-          {saved ? "Saved ✓" : "Save"}
-        </button>
-      </div>
-      {saveFailed && (
-        <p data-notes-save-error className="text-xs text-error">
-          Couldn&apos;t save — make sure this analysis has a property address,
-          then try again.
-        </p>
-      )}
-    </section>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <label className="flex items-center gap-2 text-[12.5px] text-piq-body">
+              <input
+                data-notes-share
+                type="checkbox"
+                checked={shareWithClient}
+                onChange={(e) => {
+                  const next = e.currentTarget.checked;
+                  setShareWithClient(next);
+                  setSaved(false);
+                  setSaveFailed(false);
+                  onChange?.(notes, next);
+                }}
+                className="accent-[var(--piq-indigo)]"
+              />
+              Share with client (visible in shared link)
+            </label>
+            <button
+              data-notes-save
+              onClick={async () => {
+                setSaveFailed(false);
+                const ok = await onSave?.({ notes, shareWithClient });
+                if (ok === false) {
+                  setSaveFailed(true);
+                } else {
+                  setSaved(true);
+                }
+              }}
+              className="rounded-full bg-piq-indigo px-4 py-1.5 text-[12.5px] font-bold text-piq-on-indigo transition-opacity duration-200 hover:opacity-90"
+            >
+              {saved ? "Saved ✓" : "Save"}
+            </button>
+          </div>
+          {saveFailed && (
+            <p data-notes-save-error className="text-xs text-piq-red">
+              Couldn&apos;t save — make sure this analysis has a property
+              address, then try again.
+            </p>
+          )}
+        </div>
+      </section>
+    </PiqCard>
   );
 }

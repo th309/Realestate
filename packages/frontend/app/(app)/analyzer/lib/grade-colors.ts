@@ -3,31 +3,40 @@ import type { Letter } from "@propertyiq/analyzer-core";
 export interface GradeColorSet {
   fg: string;
   bg: string;
-  glow: string;
 }
 
+/**
+ * Grade colours, on the analyzer palette.
+ *
+ * Three tones, not five. These were five hardcoded hex values — a distinct
+ * mid-green for B and a distinct orange for D — which had two problems: they
+ * were literals that stayed put in dark mode, and #FFB300 on a white card is
+ * 1.9:1, so a C pill was effectively unreadable. The letter already carries
+ * the granularity, so the colour only has to say pass / borderline / fail:
+ * green for A–B, amber for C–D, red for F. Every value is a token, so the
+ * whole set inverts with the scheme.
+ */
+const PASS: GradeColorSet = {
+  fg: "var(--piq-green)",
+  bg: "var(--piq-green-soft)",
+};
+
+const BORDERLINE: GradeColorSet = {
+  fg: "var(--piq-amber)",
+  bg: "var(--piq-amber-soft)",
+};
+
+const FAIL: GradeColorSet = {
+  fg: "var(--piq-red)",
+  bg: "var(--piq-red-soft)",
+};
+
 export const GRADE_COLORS: Record<Letter, GradeColorSet> = {
-  A: { fg: "#00C853", bg: "rgba(0,200,83,0.08)", glow: "rgba(0,200,83,0.45)" },
-  B: {
-    fg: "#66BB6A",
-    bg: "rgba(102,187,106,0.08)",
-    glow: "rgba(102,187,106,0.35)",
-  },
-  C: {
-    fg: "#FFB300",
-    bg: "rgba(255,179,0,0.08)",
-    glow: "rgba(255,179,0,0.35)",
-  },
-  D: {
-    fg: "#FB8C00",
-    bg: "rgba(251,140,0,0.08)",
-    glow: "rgba(251,140,0,0.35)",
-  },
-  F: {
-    fg: "#E53935",
-    bg: "rgba(229,57,53,0.08)",
-    glow: "rgba(229,57,53,0.45)",
-  },
+  A: PASS,
+  B: PASS,
+  C: BORDERLINE,
+  D: BORDERLINE,
+  F: FAIL,
 };
 
 export function getGradeColor(letter: Letter): GradeColorSet {

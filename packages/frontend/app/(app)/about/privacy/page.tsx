@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Shield } from "lucide-react";
 import { PageHeaderWithBreadcrumbs } from "@/components/navigation";
-import { Section, Callout, ContactCard } from "../terms/TermsComponents";
+import { Section, ContactCard } from "../terms/TermsComponents";
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
@@ -33,7 +33,7 @@ export default function PrivacyPolicyPage() {
 
         <div className="mt-4 mb-10">
           <span className="inline-block text-xs font-semibold text-primary bg-primary/10 px-3.5 py-1.5 rounded-full">
-            Effective Date: April 4, 2026
+            Effective Date: July 29, 2026
           </span>
         </div>
 
@@ -77,7 +77,21 @@ export default function PrivacyPolicyPage() {
               <strong className="text-on-surface">Usage Data.</strong> We
               automatically collect information about how you interact with the
               Service, including pages visited, features used, search queries,
-              geographic areas analyzed, and timestamps.
+              geographic areas analyzed, and timestamps. Your activity may be
+              tracked and analyzed for marketing and site improvement purposes.
+              When you are signed in, this activity is linked to your account
+              rather than held anonymously, so we can understand how individual
+              customers use the Service and where it falls short for them.
+            </p>
+            <p>
+              <strong className="text-on-surface">Session Recording.</strong> We
+              record a small sample of sessions, and sessions in which an error
+              occurs, so that we can replay what happened and diagnose the
+              problem. A recording captures page navigation, clicks, scrolling,
+              and mouse movement. Text is masked and images and video are
+              blocked, so a recording shows the layout of a page and what you
+              interacted with rather than the words on it. We do not capture the
+              contents of form fields, passwords, or payment card details.
             </p>
             <p>
               <strong className="text-on-surface">
@@ -132,6 +146,16 @@ export default function PrivacyPolicyPage() {
                 Aggregate and anonymize data for analytics and product
                 improvement
               </li>
+              <li>
+                Analyze how you and other customers use the Service, at both an
+                individual and an aggregate level, to improve the product,
+                prioritize what we build, measure our marketing, and shape the
+                offers and communications you receive
+              </li>
+              <li>
+                Identify where customers encounter errors, limits, or upgrade
+                prompts, so we can fix friction and improve our plans
+              </li>
             </ul>
           </Section>
 
@@ -184,9 +208,30 @@ export default function PrivacyPolicyPage() {
               may limit certain features of the Service.
             </p>
             <p>
-              We use Google Analytics to understand how users interact with the
-              Service. Google Analytics collects anonymized usage data. You may
-              opt out by installing the Google Analytics opt-out browser add-on.
+              <strong className="text-on-surface">
+                First-party analytics.
+              </strong>{" "}
+              Most of our usage analysis is done by PropertyIQ itself rather
+              than by an outside provider. We store an identifier in your
+              browser to recognize returning visits, and we record the pages you
+              view and the features you use to our own servers. When you sign
+              in, we associate that history with your account, including
+              activity from before you created it on the same browser. This data
+              is not sold, and it is not shared with advertising networks.
+            </p>
+            <p>
+              We also use Google Analytics. It receives a page view for each
+              page you open, page-performance measurements such as load and
+              responsiveness timings, and a small number of account events such
+              as completing a sign-up or a purchase. Google Analytics does not
+              store your IP address. You may opt out by installing the Google
+              Analytics opt-out browser add-on.
+            </p>
+            <p>
+              To limit first-party analytics and session recording, enable Do
+              Not Track or Global Privacy Control in your browser, or contact us
+              using the details in the Contact section and we will exclude your
+              account.
             </p>
           </Section>
 

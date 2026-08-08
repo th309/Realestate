@@ -27,29 +27,48 @@ export interface DirectionalColorOpts {
  * Non-finite values (NaN, Infinity) collapse to text-primary regardless of
  * variant — matches the analyzer convention of rendering "—" for missing data.
  */
-export function useDirectionalColor({
+export type DirectionalLevel = "good" | "warn" | "bad" | "neutral" | "muted";
+
+/**
+ * The health verdict behind the colour, as a semantic level.
+ *
+ * Extracted so consumers that render tokens rather than piq colour strings —
+ * the shared KpiTile, whose stripe and tone are Tailwind classes — can reuse
+ * the exact same thresholds instead of re-deriving them and drifting.
+ */
+export function directionalLevel({
   value,
   variant,
   threshold,
-}: DirectionalColorOpts): string {
-  if (variant === "neutral" || !Number.isFinite(value)) {
-    return piq.textPrimary;
-  }
+}: DirectionalColorOpts): DirectionalLevel {
+  if (variant === "neutral" || !Number.isFinite(value)) return "neutral";
 
   if (variant === "score") {
-    if (value >= 70) return piq.green;
-    if (value >= 40) return piq.amber;
-    return piq.red;
+    if (value >= 70) return "good";
+    if (value >= 40) return "warn";
+    return "bad";
   }
 
   // variant === "directional"
   if (threshold) {
-    if (value >= threshold.good) return piq.green;
-    if (value >= threshold.warning) return piq.amber;
-    return piq.red;
+    if (value >= threshold.good) return "good";
+    if (value >= threshold.warning) return "warn";
+    return "bad";
   }
 
-  if (value > 0) return piq.green;
-  if (value < 0) return piq.red;
-  return piq.textMuted;
+  if (value > 0) return "good";
+  if (value < 0) return "bad";
+  return "muted";
+}
+
+const LEVEL_COLOR: Record<DirectionalLevel, string> = {
+  good: piq.green,
+  warn: piq.amber,
+  bad: piq.red,
+  neutral: piq.textPrimary,
+  muted: piq.textMuted,
+};
+
+export function useDirectionalColor(opts: DirectionalColorOpts): string {
+  return LEVEL_COLOR[directionalLevel(opts)];
 }

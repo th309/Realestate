@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import React from 'react';
+import React from "react";
 
-import { formatMetricValue, getMetricFormat } from '@/lib/data';
+import { formatMetricValue, getMetricFormat } from "@/lib/data";
 
-import { TrendSparkline, TrendDirection } from './TrendSparkline';
+import { TrendSparkline, TrendDirection } from "./TrendSparkline";
 
 /**
  * Trend data for displaying metric changes over time
@@ -75,7 +75,7 @@ export function MetricDisplay({
   value,
   label,
   trend,
-  className = '',
+  className = "",
   compact = false,
 }: MetricDisplayProps): React.ReactElement {
   const format = getMetricFormat(metricId);
@@ -85,23 +85,37 @@ export function MetricDisplay({
     : `report-metric-card ${className}`.trim();
 
   const labelClass = compact
-    ? 'text-xs font-medium uppercase tracking-wide mb-1'
-    : 'report-metric-label';
+    ? "text-xs font-medium uppercase tracking-wide mb-1"
+    : "report-metric-label";
 
+  // Mono + tabular in both sizes: a metric value is a number, and the
+  // editorial serif is for prose (CLAUDE.md 8.3). `report-metric-value`
+  // carries the same treatment from report-theme.css.
   const valueClass = compact
-    ? 'text-lg font-semibold'
-    : 'report-metric-value';
+    ? "text-lg font-semibold font-mono tabular-nums"
+    : "report-metric-value";
 
   // Handle null/unavailable data
   if (value === null) {
     return (
       <div className={cardClass}>
-        <p className={labelClass} style={{ color: 'var(--report-stone-light)' }}>{label}</p>
-        <p className={valueClass} style={{ opacity: 0.4, color: 'var(--report-navy)' }}>
+        <p
+          className={labelClass}
+          style={{ color: "var(--report-stone-light)" }}
+        >
+          {label}
+        </p>
+        <p
+          className={valueClass}
+          style={{ opacity: 0.4, color: "var(--report-navy)" }}
+        >
           —
         </p>
         {!compact && (
-          <p className="report-body-sm" style={{ marginTop: 'var(--report-space-xs)' }}>
+          <p
+            className="report-body-sm"
+            style={{ marginTop: "var(--report-space-xs)" }}
+          >
             Data unavailable
           </p>
         )}
@@ -113,11 +127,15 @@ export function MetricDisplay({
 
   return (
     <div className={cardClass}>
-      <p className={labelClass} style={{ color: 'var(--report-stone-light)' }}>{label}</p>
-      <p className={valueClass} style={{ color: 'var(--report-navy)' }}>{formattedValue}</p>
+      <p className={labelClass} style={{ color: "var(--report-stone-light)" }}>
+        {label}
+      </p>
+      <p className={valueClass} style={{ color: "var(--report-navy)" }}>
+        {formattedValue}
+      </p>
 
       {trend && trend.sparklineData && trend.sparklineData.length >= 2 && (
-        <div style={{ marginTop: compact ? '4px' : 'var(--report-space-xs)' }}>
+        <div style={{ marginTop: compact ? "4px" : "var(--report-space-xs)" }}>
           <TrendSparkline
             data={trend.sparklineData}
             trend={trend.direction}
@@ -129,21 +147,24 @@ export function MetricDisplay({
       )}
 
       {/* Show trend badge in compact mode if no sparkline */}
-      {compact && trend && (!trend.sparklineData || trend.sparklineData.length < 2) && (
-        <div className="mt-1">
-          <span
-            className={`text-xs font-medium px-1.5 py-0.5 rounded ${
-              trend.direction === 'up'
-                ? 'bg-[var(--report-success-bg)] text-[var(--report-success)]'
-                : trend.direction === 'down'
-                ? 'bg-[var(--report-error-bg)] text-[var(--report-error)]'
-                : 'bg-[var(--report-cream-dark)] text-[var(--report-stone)]'
-            }`}
-          >
-            {trend.changePct >= 0 ? '+' : ''}{trend.changePct.toFixed(1)}%
-          </span>
-        </div>
-      )}
+      {compact &&
+        trend &&
+        (!trend.sparklineData || trend.sparklineData.length < 2) && (
+          <div className="mt-1">
+            <span
+              className={`text-xs font-medium px-1.5 py-0.5 rounded ${
+                trend.direction === "up"
+                  ? "bg-[var(--report-success-bg)] text-[var(--report-success)]"
+                  : trend.direction === "down"
+                    ? "bg-[var(--report-error-bg)] text-[var(--report-error)]"
+                    : "bg-[var(--report-cream-dark)] text-[var(--report-stone)]"
+              }`}
+            >
+              {trend.changePct >= 0 ? "+" : ""}
+              {trend.changePct.toFixed(1)}%
+            </span>
+          </div>
+        )}
     </div>
   );
 }

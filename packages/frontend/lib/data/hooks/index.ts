@@ -180,3 +180,9 @@ export {
   useVisitorTimeline,
   visitorTimelineQueryKey,
 } from "./useVisitorTimeline";
+
+// Property imagery (Street View availability for the Analyzer)
+export { usePropertyImagery } from "./usePropertyImagery";
+
+// Geocoding (building-level coordinates for an address)
+export { useGeocodedAddress } from "./useGeocodedAddress";

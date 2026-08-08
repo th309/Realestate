@@ -1,4 +1,5 @@
 import { ScoreWidget } from "@/app/components/scoring/ScoreWidget";
+import { BeatSection } from "./BeatSection";
 import { Reveal } from "./Reveal";
 import { PrimaryCta } from "./PrimaryCta";
 
@@ -39,8 +40,8 @@ export function BeatScore({
   coolerName: string;
 }) {
   return (
-    <section id="beat-score" className="px-5 py-20 md:py-28">
-      <div className="mx-auto max-w-6xl rounded-[28px] bg-surface p-6 text-on-surface shadow-lg md:p-12">
+    <BeatSection id="beat-score" surface="b">
+      <div className="rounded-[28px] bg-surface p-6 text-on-surface shadow-lg md:p-12">
         <p className="mb-3 text-sm font-medium uppercase tracking-wide text-primary">
           The Score
         </p>
@@ -66,7 +67,7 @@ export function BeatScore({
             {PANELS.map((panel, i) => (
               <div
                 key={panel.title}
-                className="flex items-center py-10 md:min-h-[44vh] md:py-0"
+                className="flex items-center py-8 md:min-h-[44vh] md:py-0"
               >
                 <Reveal>
                   <h3 className="font-serif text-3xl font-semibold tracking-tight md:text-4xl">
@@ -88,6 +89,6 @@ export function BeatScore({
           <PrimaryCta source="after_score" />
         </div>
       </div>
-    </section>
+    </BeatSection>
   );
 }

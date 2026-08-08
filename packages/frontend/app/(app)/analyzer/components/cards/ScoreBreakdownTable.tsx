@@ -1,9 +1,11 @@
 "use client";
 
+import { BarChart3 } from "lucide-react";
 import type { Letter, MetricResult } from "@propertyiq/analyzer-core";
 import { getGradeColor } from "../../lib/grade-colors";
 import { getMetricHelp } from "../../lib/metric-help";
 import { MetricHelpButton } from "./MetricHelpButton";
+import { PiqCard, PiqCardHeader } from "../primitives/card";
 
 interface ScoreBreakdownTableProps {
   metrics: MetricResult[];
@@ -12,16 +14,24 @@ interface ScoreBreakdownTableProps {
   finalGpa: number;
   finalLetter: Letter;
   formattedFinalGpa?: string;
+  /** Active threshold preset, shown on the header's right rail. */
+  presetLabel?: string;
 }
 
-function GradePill({ grade }: { grade: Letter }) {
+/**
+ * The spec's `.gp` — a round grade mark, not a lozenge. At a fixed 21px it
+ * keeps the Grade column an even width whatever letter lands in it.
+ */
+function GradePill({ grade, small }: { grade: Letter; small?: boolean }) {
   const color = getGradeColor(grade);
   return (
     <span
       data-grade-pill
       data-grade={grade}
       aria-label={`Grade ${grade}`}
-      className="inline-flex items-center justify-center rounded-full px-2 py-0.5 text-xs font-bold tabular-nums"
+      className={`inline-grid place-items-center rounded-full font-mono font-bold tabular-nums ${
+        small ? "size-[19px] text-[10px]" : "size-[21px] text-[11px]"
+      }`}
       style={{ background: color.bg, color: color.fg }}
     >
       {grade}
@@ -36,7 +46,7 @@ function ChevronIcon({ up }: { up: boolean }) {
       width="10"
       height="10"
       viewBox="0 0 10 10"
-      className="inline-block ml-1"
+      className="ml-1 inline-block"
     >
       <path
         d={up ? "M5 2 L9 8 L1 8 Z" : "M5 8 L9 2 L1 2 Z"}
@@ -46,6 +56,20 @@ function ChevronIcon({ up }: { up: boolean }) {
   );
 }
 
+const TH =
+  "px-2.5 py-2.5 text-[9.5px] font-bold uppercase tracking-[0.09em] text-piq-muted whitespace-nowrap border-b border-piq-line";
+const TD =
+  "px-2.5 py-2.5 font-mono tabular-nums text-piq-ink whitespace-nowrap";
+
+/**
+ * How the grade was built, metric by metric.
+ *
+ * The contribution column used to carry a small progress bar beside each
+ * number. Paired at half width beside the levers it was ~44px of bar competing
+ * with the figure it duplicated, and the ratio it encoded (contribution over
+ * its own weight cap) is not a quantity anyone reads across rows. The number
+ * stays; the bar is gone.
+ */
 export function ScoreBreakdownTable({
   metrics,
   rawGpa,
@@ -53,134 +77,110 @@ export function ScoreBreakdownTable({
   finalGpa,
   finalLetter,
   formattedFinalGpa,
+  presetLabel,
 }: ScoreBreakdownTableProps) {
   const finalDisplay = formattedFinalGpa ?? finalGpa.toFixed(2);
   const adjSign = marketAdjustment >= 0 ? "+" : "";
 
   return (
-    <div
-      data-score-breakdown-table
-      className="rounded-2xl border border-outline-variant bg-surface overflow-hidden"
-    >
-      <table className="w-full text-sm">
-        <thead>
-          <tr
-            className="text-xs uppercase tracking-wide text-on-surface-variant"
-            style={{ borderBottom: "1.75px solid var(--md-outline-variant)" }}
-          >
-            <th className="text-left font-medium px-4 py-3">Metric</th>
-            <th className="text-right font-medium px-4 py-3">Your Deal</th>
-            <th className="text-center font-medium px-4 py-3">Grade</th>
-            <th className="text-right font-medium px-4 py-3">Weight</th>
-            <th className="text-right font-medium px-4 py-3">Contribution</th>
-          </tr>
-        </thead>
-        <tbody>
-          {metrics.map((m, idx) => {
-            const color = getGradeColor(m.grade);
-            const maxContribution = (m.weight / 100) * 4;
-            const ratio =
-              maxContribution > 0
-                ? Math.min(1, Math.max(0, m.contribution / maxContribution))
-                : 0;
-            return (
-              <tr
-                key={m.key}
-                data-metric-row
-                data-metric-key={m.key}
-                className={`hover:bg-surface-container-low transition-colors hover:[transform:translateY(-1px)] ${
-                  idx === metrics.length - 1
-                    ? ""
-                    : "border-b border-outline-variant"
-                }`}
-              >
-                <td className="px-4 py-3 text-on-surface">
-                  <span className="inline-flex items-center">
-                    {m.label}
-                    <MetricHelpButton
-                      help={getMetricHelp(m.key)}
-                      metricLabel={m.label}
-                    />
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-right tabular-nums text-on-surface font-mono">
-                  {m.formattedValue}
-                </td>
-                <td className="px-4 py-3 text-center">
-                  <GradePill grade={m.grade} />
-                </td>
-                <td className="px-4 py-3 text-right tabular-nums text-on-surface-variant">
-                  {m.weight}%
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <div className="inline-flex items-center justify-end gap-2">
-                    <span className="tabular-nums font-mono text-on-surface">
-                      {m.contribution.toFixed(2)}
-                    </span>
-                    <span
-                      aria-hidden
-                      className="inline-block h-1.5 rounded-full bg-outline-variant overflow-hidden"
-                      style={{ width: 60 }}
-                    >
-                      <span
-                        className="block h-full rounded-full"
-                        style={{
-                          width: `${ratio * 100}%`,
-                          background: color.fg,
-                        }}
+    <PiqCard>
+      <div data-score-breakdown-table>
+        <PiqCardHeader
+          icon={<BarChart3 size={13} strokeWidth={2} aria-hidden />}
+          tone="violet"
+          title="How the grade is built"
+          label={presetLabel}
+        />
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-[12.5px]">
+            <thead>
+              <tr>
+                <th className={`${TH} pl-4 text-left`}>Metric</th>
+                <th className={`${TH} text-right`}>Deal</th>
+                <th className={`${TH} text-center`}>Grade</th>
+                <th className={`${TH} text-right`}>Wt</th>
+                <th className={`${TH} pr-4 text-right`}>Contrib.</th>
+              </tr>
+            </thead>
+            <tbody>
+              {metrics.map((m) => (
+                <tr
+                  key={m.key}
+                  data-metric-row
+                  data-metric-key={m.key}
+                  className="border-b border-piq-soft transition-colors hover:bg-piq-canvas"
+                >
+                  <td className="whitespace-normal py-2.5 pl-4 pr-2.5 text-left text-piq-body">
+                    <span className="inline-flex items-center">
+                      {m.label}
+                      <MetricHelpButton
+                        help={getMetricHelp(m.key)}
+                        metricLabel={m.label}
                       />
                     </span>
-                  </div>
+                  </td>
+                  <td className={`${TD} text-right`}>{m.formattedValue}</td>
+                  <td className={`${TD} text-center`}>
+                    <GradePill grade={m.grade} />
+                  </td>
+                  <td className={`${TD} text-right`}>{m.weight}%</td>
+                  <td className={`${TD} pr-4 text-right`}>
+                    {m.contribution.toFixed(2)}
+                  </td>
+                </tr>
+              ))}
+
+              <tr data-footer-row="raw-gpa" className="bg-piq-canvas font-bold">
+                <td className="py-2.5 pl-4 pr-2.5 text-left text-piq-ink">
+                  Raw GPA
+                </td>
+                <td colSpan={3} />
+                <td className={`${TD} pr-4 text-right font-bold`}>
+                  {rawGpa.toFixed(2)}
                 </td>
               </tr>
-            );
-          })}
-        </tbody>
-        <tfoot style={{ borderTop: "1.75px solid var(--md-outline-variant)" }}>
-          <tr data-footer-row="raw-gpa">
-            <td
-              colSpan={4}
-              className="px-4 py-2 text-right text-on-surface-variant"
-            >
-              Raw GPA
-            </td>
-            <td className="px-4 py-2 text-right tabular-nums font-mono text-on-surface">
-              {rawGpa.toFixed(2)}
-            </td>
-          </tr>
-          <tr data-footer-row="market-adj">
-            <td
-              colSpan={4}
-              className="px-4 py-2 text-right text-on-surface-variant"
-            >
-              Market adjustment
-            </td>
-            <td className="px-4 py-2 text-right tabular-nums font-mono text-on-surface">
-              <span className="inline-flex items-center justify-end">
-                {adjSign}
-                {marketAdjustment.toFixed(2)}
-                {marketAdjustment !== 0 && (
-                  <ChevronIcon up={marketAdjustment > 0} />
-                )}
-              </span>
-            </td>
-          </tr>
-          <tr data-footer-row="final-gpa">
-            <td
-              colSpan={4}
-              className="px-4 py-2 text-right text-on-surface font-semibold"
-            >
-              Final GPA
-            </td>
-            <td className="px-4 py-2 text-right">
-              <span className="inline-flex items-center justify-end gap-2 tabular-nums font-mono font-bold text-on-surface">
-                {finalDisplay}
-                <GradePill grade={finalLetter} />
-              </span>
-            </td>
-          </tr>
-        </tfoot>
-      </table>
-    </div>
+
+              {/* The market adjustment is the one row whose value is not the
+                  deal's own doing, so it carries the caution tone rather than
+                  sitting in the ink ramp with the metrics above it. */}
+              <tr
+                data-footer-row="market-adj"
+                className="border-b border-piq-soft"
+              >
+                <td className="py-2.5 pl-4 pr-2.5 text-left text-piq-amber">
+                  Market adjustment
+                </td>
+                <td colSpan={3} />
+                <td
+                  className={`${TD} pr-4 text-right`}
+                  style={{ color: "var(--piq-amber)" }}
+                >
+                  <span className="inline-flex items-center justify-end">
+                    {adjSign}
+                    {marketAdjustment.toFixed(2)}
+                    {marketAdjustment !== 0 && (
+                      <ChevronIcon up={marketAdjustment > 0} />
+                    )}
+                  </span>
+                </td>
+              </tr>
+
+              <tr data-footer-row="final-gpa" className="bg-piq-canvas">
+                <td className="py-2.5 pl-4 pr-2.5 text-left font-bold text-piq-ink">
+                  Final GPA
+                </td>
+                <td colSpan={3} />
+                <td className={`${TD} pr-4 text-right font-bold`}>
+                  <span className="inline-flex items-center justify-end gap-2">
+                    {finalDisplay}
+                    <GradePill grade={finalLetter} />
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </PiqCard>
   );
 }

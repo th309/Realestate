@@ -18,9 +18,12 @@ import type {
 import { GradeRingLarge } from "./components/GradeRingLarge";
 import { KpiBand } from "./components/KpiBand";
 import { InputsTable } from "./components/InputsTable";
+import { StaticPropertyImagery } from "./components/StaticPropertyImagery";
+import type { ShareImagery } from "./resolve-share-imagery";
 
 interface CoverProps {
   preparedDate: string; // already formatted (YYYY-MM-DD)
+  imagery: ShareImagery;
   addressFull: string | null;
   addressCity: string | null;
   addressState: string | null;
@@ -86,6 +89,13 @@ export function ReadonlyCoverPage(p: CoverProps) {
           </p>
         )}
       </div>
+
+      <StaticPropertyImagery
+        streetUrl={p.imagery.streetUrl}
+        lat={p.imagery.lat}
+        lon={p.imagery.lon}
+        address={p.addressFull ?? ""}
+      />
 
       {/* Grade + verdict prose */}
       <div

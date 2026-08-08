@@ -42,16 +42,24 @@ export function NumField({
   groupThousands = true,
 }: NumFieldProps) {
   return (
-    <div data-num-field className="flex flex-col gap-1">
-      <div className="flex items-center justify-between">
-        <label className="text-xs uppercase font-semibold text-on-surface-variant">
+    <div data-num-field className="flex min-w-0 flex-col gap-1">
+      {/* Label row holds only the label, per the mockup's `.fld .top`. The
+          source badge sits below the input alongside the confidence rating
+          (the mockup's `.conf` row) — sharing this row with the label made
+          "Monthly Rent" truncate inside the 344px column's two-up cells. */}
+      <div className="flex min-w-0 items-center gap-2">
+        <label className="truncate text-[10px] font-bold uppercase tracking-[0.09em] text-piq-muted">
           {label}
         </label>
-        {badge}
       </div>
-      <div className="flex items-center rounded-lg border border-outline-variant bg-surface-container-low focus-within:border-primary">
+      {/* The spec's `.inp`: the unit sits in its own cell on the canvas fill
+          with a rule between it and the number, so "$" reads as the field's
+          unit rather than as the first character of the value. */}
+      <div className="flex items-stretch overflow-hidden rounded-[9px] border border-piq-line bg-piq-surface focus-within:border-piq-indigo focus-within:shadow-[0_0_0_3px_color-mix(in_srgb,var(--piq-indigo)_14%,transparent)]">
         {prefix && (
-          <span className="pl-3 text-on-surface-variant text-sm">{prefix}</span>
+          <span className="grid flex-none place-items-center border-r border-piq-line bg-piq-canvas px-[9px] text-[13px] text-piq-muted">
+            {prefix}
+          </span>
         )}
         <input
           type="text"
@@ -68,12 +76,19 @@ export function NumField({
             const n = Number(cleaned);
             if (Number.isFinite(n)) onChange(n);
           }}
-          className="flex-1 bg-transparent px-3 py-2 font-mono text-sm text-on-surface focus:outline-none"
+          // min-w-0 is load-bearing: a bare <input> has a browser-intrinsic
+          // width of ~20 characters, and a flex item defaults to
+          // min-width:auto, so without this the field refuses to shrink into
+          // the two-up grid's ~200px cell and overflows the panel.
+          className="min-w-0 flex-1 bg-transparent px-[11px] py-[9px] font-mono text-[13.5px] tabular-nums text-piq-ink focus:outline-none"
         />
         {suffix && (
-          <span className="pr-3 text-on-surface-variant text-sm">{suffix}</span>
+          <span className="grid flex-none place-items-center border-l border-piq-line bg-piq-canvas px-[9px] text-[13px] text-piq-muted">
+            {suffix}
+          </span>
         )}
       </div>
+      {badge}
       {nudge && <Nudge level={nudge.level} text={nudge.text} />}
     </div>
   );

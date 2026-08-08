@@ -19,6 +19,13 @@ interface KpiCardRowProps {
   };
   sparklines: Record<string, number[]>;
   compare: boolean;
+  /**
+   * False when the comparison window predates the instrumentation that
+   * classifies a session as human. The trend badges are omitted in that case,
+   * and this drives the note explaining their absence — a missing arrow with no
+   * explanation is its own small mystery.
+   */
+  trendsComparable?: boolean;
 }
 
 /** Formats seconds into "Xm Ys" display string. */
@@ -57,6 +64,7 @@ export function KpiCardRow({
   kpis,
   sparklines,
   compare: _compare,
+  trendsComparable,
 }: KpiCardRowProps) {
   // _compare is reserved for future period-over-period display in MetricCard
   const kpiDefinitions: KpiDefinition[] = [
@@ -99,16 +107,32 @@ export function KpiCardRow({
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
-      {kpiDefinitions.map(({ key, title, kpi, format }) => (
-        <MetricCard
-          key={key}
-          title={title}
-          value={format(kpi.current)}
-          trend={kpi.changePercent}
-          sparkline={sparklines[key]}
-        />
-      ))}
+    <div className="space-y-2">
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+        {kpiDefinitions.map(({ key, title, kpi, format }) => (
+          <MetricCard
+            key={key}
+            title={title}
+            value={format(kpi.current)}
+            // null means the comparison window predates the instrumentation that
+            // classifies a session as human, so a delta would measure coverage
+            // rather than change. Undefined tells MetricCard to omit the badge
+            // entirely — an arrow is read before any footnote is.
+            trend={kpi.changePercent ?? undefined}
+            sparkline={sparklines[key]}
+          />
+        ))}
+      </div>
+
+      {trendsComparable === false && (
+        <p className="text-xs text-on-surface-variant">
+          Period-over-period change is hidden: the comparison window predates
+          the traffic classification that identifies real people, so a delta
+          would measure how much of the data is classified rather than how much
+          the traffic changed. Comparisons return once both windows sit after 28
+          Jul 2026 — around 11 Aug for the 7-day view, 26 Sep for 30-day.
+        </p>
+      )}
     </div>
   );
 }

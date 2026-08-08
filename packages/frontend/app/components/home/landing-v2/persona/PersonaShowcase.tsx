@@ -17,15 +17,17 @@ const TAB_LABELS: Record<PersonaKey, string> = {
   developer: "Power user",
 };
 
+/** Semantic tokens, not palette literals: `bg-red-50` does not flip for dark
+ *  mode, so these badges glared white-on-pale on a dark surface. */
 const VERDICT_TONE: Record<string, string> = {
-  neg: "bg-red-50 text-red-700",
-  warn: "bg-amber-50 text-amber-700",
-  pos: "bg-green-50 text-green-700",
+  neg: "bg-error-container text-on-error-container",
+  warn: "bg-warning-container text-on-warning-container",
+  pos: "bg-tertiary-container text-on-tertiary-container",
 };
 
 function valueColor(tone?: string): string {
-  if (tone === "neg") return "text-red-700";
-  if (tone === "pos") return "text-green-700";
+  if (tone === "neg") return "text-error";
+  if (tone === "pos") return "text-tertiary";
   return "text-on-surface";
 }
 
@@ -69,38 +71,43 @@ function StatPanel({ snap }: { snap: PersonaSnapshot }) {
   );
 }
 
+/**
+ * A terminal, so it is dark in BOTH schemes — fixed neutrals, not the
+ * `inverse-surface` pair. Those tokens invert: in dark mode the panel turned
+ * pale while the syntax highlight stayed light green, leaving the tool call
+ * unreadable. A scheme-independent surface is the honest fix, the same one the
+ * hero monitor's caption scrim uses.
+ */
 function McpPanel() {
   return (
-    <div className="overflow-hidden rounded-xl bg-inverse-surface text-inverse-on-surface shadow-sm">
+    <div className="overflow-hidden rounded-xl bg-neutral-900 text-neutral-100 shadow-sm">
       <div className="border-b border-white/10 px-6 py-4">
         <p className="font-serif text-2xl font-semibold">
           PropertyIQ where you already work.
         </p>
-        <p className="mt-1 text-sm text-inverse-on-surface/80">
+        <p className="mt-1 text-sm text-neutral-300">
           Ask Claude about any market — it answers from our live data. No
           dashboard required. {MCP_EXCHANGE.feature}.
         </p>
       </div>
       <div className="space-y-4 px-6 py-5 font-mono text-sm">
         <div>
-          <p className="text-inverse-on-surface/60">{"// you ask Claude"}</p>
+          <p className="text-neutral-400">{"// you ask Claude"}</p>
           <p className="mt-1">{MCP_EXCHANGE.question}</p>
         </div>
         <div>
-          <p className="text-inverse-on-surface/60">
-            {"// Claude calls PropertyIQ"}
-          </p>
+          <p className="text-neutral-400">{"// Claude calls PropertyIQ"}</p>
           <p className="mt-1 text-green-300">{MCP_EXCHANGE.toolCall}</p>
         </div>
         <div>
-          <p className="text-inverse-on-surface/60">{"// live response"}</p>
-          <pre className="mt-1 overflow-x-auto whitespace-pre text-inverse-on-surface/95">
+          <p className="text-neutral-400">{"// live response"}</p>
+          <pre className="mt-1 overflow-x-auto whitespace-pre text-neutral-100">
             {MCP_EXCHANGE.response}
           </pre>
         </div>
       </div>
       <div className="border-t border-white/10 px-6 py-3">
-        <p className="text-xs text-inverse-on-surface/70">
+        <p className="text-xs text-neutral-300">
           {MCP_EXCHANGE.caption} · No major real-estate-data platform ships a
           Claude/MCP integration like this.
         </p>
@@ -178,7 +185,7 @@ export function PersonaShowcase() {
               className={`rounded-full px-4 py-2 text-sm font-medium transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
                 selected
                   ? "bg-primary text-on-primary shadow-sm"
-                  : "bg-primary-container text-primary hover:bg-primary-light"
+                  : "bg-primary-container text-on-primary-container hover:bg-primary-light"
               }`}
             >
               {TAB_LABELS[key]}

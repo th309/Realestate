@@ -6,6 +6,39 @@ Do not hand-edit old entries — just let the monthly job append.
 
 ---
 
+## 2026-08-01 — automated run
+
+**Verdict:** 20 professional/investor-intent queries in the top 20 this run. 5 new vs last run (e.g. "housing market forecast"). 5 dropped out of the top 20. Biggest mover: "chicago real estate forecast" (+16 impressions).
+
+Window: 2026-04-30 to 2026-07-29 (trailing 90 days, 3-day lag pullback). Scanned 10122 distinct queries; excluded 18 bot-pattern, 14 branded, 288 generic geo-lookup.
+
+| Query | Impressions | Δ vs last run | Clicks | Avg position |
+| --- | --- | --- | --- | --- |
+| best cities to buy a house in mississippi | 27 | -3 | 0 | 22.0 |
+| best places to invest in north dakota | 24 | -7 | 0 | 8.8 |
+| chicago real estate forecast | 22 | +16 | 0 | 56.7 |
+| sacramento vs inland empire vs central valley real estate investment 2026 | 19 | 0 | 0 | 3.7 |
+| best cities to buy a home in indiana | 17 | 0 | 0 | 28.8 |
+| best cities for investment properties idaho | 13 | -2 | 0 | 56.9 |
+| investment property market insights idaho | 13 | 0 | 0 | 67.5 |
+| best markets for brrrr strategy 2026 | 12 | -8 | 0 | 3.8 |
+| missoula real estate forecast | 12 | +2 | 0 | 16.4 |
+| 21218 market trend | 11 | 0 | 0 | 10.7 |
+| best places to invest in real estate nevada | 11 | 0 | 0 | 20.8 |
+| housing market forecast | 11 | new | 0 | 49.1 |
+| phoenix housing market forecast | 11 | new | 0 | 54.0 |
+| average days on market zip 60607 chicago 2026 | 10 | 0 | 0 | 7.0 |
+| housing forecast | 10 | new | 0 | 62.2 |
+| nashville real estate market forecast | 9 | new | 0 | 61.9 |
+| seattle housing market forecast | 9 | new | 0 | 39.0 |
+| best places to invest in real estate in idaho | 8 | 0 | 0 | 15.4 |
+| pensacola florida housing market forecast 2026 2027 | 8 | 0 | 0 | 7.4 |
+| wilmington nc real estate market forecast 2026 | 8 | -3 | 0 | 14.0 |
+
+Next comparison should be against this entry.
+
+---
+
 ## 2026-07-19 — automated run
 
 **Verdict:** 20 professional/investor-intent queries in the top 20 this run.
@@ -71,5 +104,6 @@ Window: 2026-04-17 to 2026-07-16 (trailing 90 days, 3-day lag pullback). Scanned
 Next comparison should be against this entry.
 
 ---
+
 
 

@@ -2,8 +2,6 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { motion } from "framer-motion";
-import { Sparkles } from "lucide-react";
 import { useEntitlements } from "@/lib/entitlements/EntitlementsContext";
 import { useAuth } from "@/lib/auth";
 import { generateReport as generateReportAPI } from "@/lib/data";
@@ -12,7 +10,7 @@ import type { UserType, Geography, GeographyType } from "./types";
 import type { Market } from "./components/reportBuilderTypes";
 import { MarketSelector } from "./components/MarketSelector";
 import { ReportBuilderPersonalizationPanel } from "./components/ReportBuilderPersonalizationPanel";
-import { ReportBuilderHeader } from "./components/ReportBuilderHeader";
+import { ReportBuilderControlBar } from "./components/ReportBuilderControlBar";
 import { CustomResearchPromoCard } from "./components/CustomResearchPromoCard";
 import { ReportGenerateFeedback } from "./components/ReportGenerateFeedback";
 
@@ -87,6 +85,7 @@ export function ReportCreationPage({ recentReports }: ReportCreationPageProps) {
   }, [markets.length, searchParams]);
 
   const canGenerate = markets.length > 0;
+  const MAX_MARKETS = 5;
 
   // Reports entitlement gate. `feature:reports` is a single boolean in the
   // entitlement system (free = no access; pro/enterprise/admin = full) — it
@@ -213,14 +212,21 @@ export function ReportCreationPage({ recentReports }: ReportCreationPageProps) {
 
   return (
     <div className="min-h-screen bg-surface">
-      {/* Header */}
-      <ReportBuilderHeader />
+      <ReportBuilderControlBar
+        marketCount={markets.length}
+        maxMarkets={MAX_MARKETS}
+        canGenerate={canGenerate}
+        isGenerating={isGenerating}
+        onGenerate={handleGenerate}
+      />
 
-      {/* Form + Custom Research side by side */}
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+      {/* Form + Custom Research side by side. 1.55fr/1fr at 1040px, per the
+          mockup's `.builder` — the old 3/5 + 2/5 split at `lg` left the form
+          column too narrow for the market picker. */}
+      <div className="mx-auto max-w-[1280px] px-4 py-6 sm:px-6">
+        <div className="grid grid-cols-1 items-start gap-4 min-[1040px]:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
           {/* Left: Report Builder */}
-          <div className="lg:col-span-3 space-y-8">
+          <div className="space-y-6">
             <section>
               <h2 className="text-lg font-semibold text-on-surface mb-1">
                 Select your market(s)
@@ -256,39 +262,8 @@ export function ReportCreationPage({ recentReports }: ReportCreationPageProps) {
               />
             </section>
 
-            <motion.button
-              data-tour="reports-generate-btn"
-              onClick={handleGenerate}
-              disabled={!canGenerate || isGenerating}
-              className="w-full py-4 px-6 rounded-2xl font-semibold text-lg
-            flex items-center justify-center gap-3
-            transition-all duration-300
-            disabled:opacity-50 disabled:cursor-not-allowed
-            bg-primary text-on-primary hover:bg-primary/90 shadow-lg shadow-primary/25"
-              whileHover={canGenerate ? { scale: 1.01 } : {}}
-              whileTap={canGenerate ? { scale: 0.99 } : {}}
-            >
-              {isGenerating ? (
-                <>
-                  <motion.div
-                    className="w-5 h-5 border-2 border-current border-t-transparent rounded-full"
-                    animate={{ rotate: 360 }}
-                    transition={{
-                      duration: 1,
-                      repeat: Infinity,
-                      ease: "linear",
-                    }}
-                  />
-                  Generating your report...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-5 h-5" />
-                  Generate Report
-                </>
-              )}
-            </motion.button>
-
+            {/* The Generate CTA lives in the sticky control bar now — it used
+                to sit here, at the foot of a mostly empty column. */}
             <ReportGenerateFeedback
               showReportsPaywall={showReportsPaywall}
               showSignupPrompt={showSignupPrompt}

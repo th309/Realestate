@@ -1,159 +1,145 @@
-import { ScoreDisplay } from "@/app/components/scoring/ScoreDisplay";
-import type { HeroContrast, HeroMarket } from "@/lib/data";
+import { CONTAINER, HEADING, SURFACE } from "@/app/components/marketing";
+import { COVERAGE_COPY } from "@/lib/data/validation-claims";
+import type { HeroContrast } from "@/lib/data";
 import { PrimaryCta } from "./PrimaryCta";
-import { OutlookNarrative } from "./OutlookNarrative";
+import { HeroMonitor } from "./HeroMonitor";
+import { HeroCapabilities } from "./HeroCapabilities";
+import { Constellation } from "./Constellation";
 
 /**
- * Beat 1 — the verdict, first.
+ * The homepage hero.
  *
- * The LCP element: server-rendered (ISR-cached), static markup, no load
- * animation. A balanced two-column hero — the claim + CTA on the left, two
- * real-market "proof" cards on the right.
+ * Built from the approved mockup: a 42/58 split with the claim on the left and
+ * the product on the right, over the pale hero wash, closed by a full-width
+ * proof strip. The right column is a drawn monitor rather than a screenshot —
+ * see HeroMonitor for why.
  *
- * FRAMING: the PropertyIQ Score is PREDICTIVE — it forecasts how a market will
- * perform against its own state over the coming years (validated by backtest),
- * NOT today's temperature. The two cards contrast a famous market the Score
- * flags to lag vs. a market it flags to lead. Copy must stay future-tense.
+ * The LCP element is the H1, server-rendered from ISR-cached data with no load
+ * animation. `contrast` is null-safe: if the score batch is briefly unavailable
+ * the hero drops to the static headline and the monitor is omitted rather than
+ * rendering placeholder numbers.
  *
- * NARRATIVE: `cooler.narrative` / `riser.narrative` are real AI-written ad copy
- * (DeepSeek, generated server-side and cached per market+score-date — never per
- * visitor). The functions below are the deterministic fallback used when the AI
- * copy is absent, and they stay future-framed too.
+ * FRAMING (CLAUDE.md section 9): the Score is a momentum forecast measured
+ * against the market's own state average, not a quality grade. Copy here stays
+ * future-tense and never uses a quality word.
  */
-
-function fallbackCoolerNarrative(m: HeroMarket): string {
-  const signal =
-    m.priceCutPct != null && m.priceCutPct > 0
-      ? `${m.priceCutPct}% of sellers are already cutting price`
-      : `its demand momentum is fading`;
-  return `At ${m.score}, the Score flags ${m.name} to grow slower than its state in the years ahead — ${signal}, the kind of early signal that has led price growth lower before the headlines noticed.`;
-}
-
-function fallbackRiserNarrative(m: HeroMarket): string {
-  const signal =
-    m.valueYoyPct != null && m.valueYoyPct > 0 && m.dom != null
-      ? `values are up ${m.valueYoyPct}% and homes clear in ${m.dom} days`
-      : m.dom != null
-        ? `homes clear in just ${m.dom} days`
-        : `demand is the strongest in the country`;
-  return `At ${m.score}, ${m.name} carries one of the strongest demand signals in the country — historically the setup for years of above-state appreciation. Today ${signal}, and almost no one is watching.`;
-}
-
-function ContrastCard({
-  market,
-  role,
-}: {
-  market: HeroMarket;
-  role: "cooler" | "riser";
-}) {
-  const kicker = role === "cooler" ? "Flagged to lag" : "Strongest outlook";
-  const kickerColor = role === "cooler" ? "text-red-700" : "text-green-700";
-  const narrative =
-    market.narrative ??
-    (role === "cooler"
-      ? fallbackCoolerNarrative(market)
-      : fallbackRiserNarrative(market));
-  return (
-    <div className="flex items-start gap-4 rounded-xl bg-surface p-5 shadow-sm">
-      <ScoreDisplay
-        value={market.score}
-        size={92}
-        strokeWidth={8}
-        showGrade={false}
-        showLabel={false}
-        className="mt-0.5"
-      />
-      <div className="min-w-0 flex-1">
-        <p
-          className={`text-xs font-semibold uppercase tracking-wide ${kickerColor}`}
-        >
-          {kicker}
-        </p>
-        <p className="text-lg font-semibold text-on-surface">{market.name}</p>
-        <OutlookNarrative
-          cbsa={market.cbsa}
-          fallback={narrative}
-          className="mt-1.5 text-sm leading-snug text-on-surface-variant"
-        />
-      </div>
-    </div>
-  );
-}
 
 function HeroCopy({ contrast }: { contrast: HeroContrast | null }) {
   return (
     <div>
-      <p className="mb-4 text-sm font-medium uppercase tracking-[0.2em] text-primary-light">
-        The forecast, first
+      <span className="inline-flex items-center gap-2.5 rounded-full border border-outline-variant bg-surface px-4 py-2 text-[11.5px] font-bold uppercase tracking-[0.13em] text-primary">
+        <span className="size-[7px] rounded-full bg-tertiary" />
+        Forward-looking market scores
+      </span>
+
+      <h1 className={`${HEADING.hero} my-6 text-balance text-on-surface`}>
+        Know where a market is headed{" "}
+        <span className="bg-gradient-to-r from-tertiary to-primary bg-clip-text text-transparent">
+          before you buy.
+        </span>
+      </h1>
+
+      <p className="max-w-[33em] text-[17px] leading-[1.62] text-on-surface-variant">
+        {contrast ? (
+          <>
+            {contrast.cooler.name} scores{" "}
+            <span className="font-mono tabular-nums">
+              {contrast.cooler.score}
+            </span>
+            . {contrast.riser.name} scores{" "}
+            <span className="font-mono tabular-nums">
+              {contrast.riser.score}
+            </span>
+            .{" "}
+          </>
+        ) : null}
+        PropertyIQ distills price momentum, days on market, and price cuts into
+        one number per metro, county, and ZIP — updated monthly, and calibrated
+        so <span className="font-mono tabular-nums">50</span> is that
+        market&rsquo;s own state average.
       </p>
-      {contrast ? (
-        <h1 className="font-serif text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl">
-          {contrast.cooler.name} scores{" "}
-          <span className="font-mono">{contrast.cooler.score}</span>.
-          <br />
-          {contrast.riser.name} scores{" "}
-          <span className="font-mono">{contrast.riser.score}</span>.
-        </h1>
-      ) : (
-        <h1 className="font-serif text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl">
-          Every U.S. market, scored on one honest number.
-        </h1>
-      )}
 
-      <p className="mt-6 max-w-xl text-lg text-primary-light">
-        Two markets, opposite futures. The PropertyIQ Score is a momentum
-        forecast, not a quality grade &mdash; it distills price momentum, days
-        on market, and price cuts into one 1&ndash;99 number that predicts how a
-        market will perform against its state, so you buy where the data is
-        headed, not where the hype is.
+      <p className="mt-3.5 text-[15px] italic text-tertiary-text">
+        Built on twenty-five years of data, not vibes.
       </p>
 
-      <div className="mt-8">
-        <PrimaryCta source="hero" tone="onDark" />
-        <a
-          href="#beat-score"
-          className="mt-5 inline-block text-sm font-medium text-primary-light underline-offset-4 hover:underline"
-        >
-          See how the Score works →
-        </a>
-      </div>
+      <PrimaryCta source="hero" tone="onLight" className="mt-7" />
 
-      {contrast?.asOf && (
-        <p className="mt-6 text-xs text-primary-light/70">
+      <p className="mt-4 text-[13.5px] text-on-surface-variant">
+        <strong className="font-semibold text-on-surface">
+          {COVERAGE_COPY.metros} metros, {COVERAGE_COPY.counties} counties,{" "}
+          {COVERAGE_COPY.zips} ZIPs.
+        </strong>{" "}
+        Scored monthly, with history back to 2001.
+      </p>
+
+      <p className="mt-3.5 text-[15px] italic text-tertiary-text">
+        Everyone else is still guessing off median list price.
+      </p>
+
+      {contrast?.asOf ? (
+        <p className="mt-4 text-xs text-on-surface-variant">
           PropertyIQ Scores as of {contrast.asOf}. Updated monthly.
         </p>
-      )}
+      ) : null}
     </div>
   );
 }
 
-export function BeatHero({ contrast }: { contrast: HeroContrast | null }) {
+export function BeatHero({
+  contrast = null,
+}: {
+  contrast?: HeroContrast | null;
+}) {
+  // Leaders plus the cooler, so the strip shows the spread rather than a wall
+  // of green — the contrast is the whole argument of the hero. Both the
+  // featured market and the cooler are excluded from the slice: the featured
+  // one is already the headline above, and the cooler is pinned to the bottom.
+  // Seven leaders rather than four because the panel now fills its column, and
+  // a short list left the frame half empty. The pool carries 39 metros, so
+  // these are real rows, not filler.
+  const leaderboard = contrast
+    ? [
+        ...contrast.ranked
+          .filter(
+            (m) =>
+              m.cbsa !== contrast.cooler.cbsa && m.cbsa !== contrast.riser.cbsa,
+          )
+          .slice(0, 7),
+        contrast.cooler,
+      ]
+    : [];
+
   return (
+    // Not `Section`: the proof strip is full-bleed and sits outside the
+    // container, and the hero takes a tighter rhythm than any other band. The
+    // wash still comes from the shared surface token.
     <section
       id="beat-hero"
-      className="px-5 pb-10 pt-12 text-on-primary md:pb-14 md:pt-14"
+      className={`relative overflow-hidden ${SURFACE.hero}`}
     >
-      <div className="mx-auto w-full max-w-6xl">
-        {contrast ? (
-          <div className="grid items-start gap-10 lg:grid-cols-2 lg:gap-16">
-            <HeroCopy contrast={contrast} />
-            <div className="flex flex-col gap-3">
-              <ContrastCard market={contrast.cooler} role="cooler" />
-              <p
-                className="self-center font-serif text-lg text-primary-light"
-                aria-hidden
-              >
-                vs
-              </p>
-              <ContrastCard market={contrast.riser} role="riser" />
+      <Constellation />
+      <div className={`relative ${CONTAINER} pb-10 pt-14`}>
+        <div className="grid items-center gap-12 lg:grid-cols-[42fr_58fr] lg:gap-14">
+          <HeroCopy contrast={contrast} />
+          {contrast ? (
+            <div className="flex flex-col items-center">
+              <HeroMonitor market={contrast.riser} leaderboard={leaderboard} />
+              <HeroCapabilities />
             </div>
-          </div>
-        ) : (
-          <div className="max-w-2xl">
-            <HeroCopy contrast={null} />
-          </div>
-        )}
+          ) : (
+            <HeroCapabilities />
+          )}
+        </div>
       </div>
+
+      <p className="border-t border-outline-variant bg-surface py-5 text-center text-[14.5px] text-on-surface-variant">
+        Used by{" "}
+        <strong className="font-semibold text-on-surface">
+          investors, agents, and syndicators
+        </strong>{" "}
+        who&rsquo;d rather not learn a market the expensive way
+      </p>
     </section>
   );
 }

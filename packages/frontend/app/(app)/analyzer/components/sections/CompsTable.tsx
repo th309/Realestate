@@ -88,9 +88,15 @@ interface CompsTableProps {
 }
 
 /**
- * Sortable comp table hidden behind a `▾ Comp details` expander. Tabular
- * numerics + alternating subtle indigo-tinted row backgrounds + 0.5px
- * horizontal borders only.
+ * Sortable comp table. Tabular numerics + alternating subtle indigo-tinted row
+ * backgrounds + 0.5px horizontal borders only.
+ *
+ * Open by default. This used to start collapsed behind a small muted "Comp
+ * details" link, which meant a card titled "Comparable Sales & Rentals" showed
+ * a histogram and a map and no comps — the individual sales and rentals, which
+ * are the thing the section is named for and the only place their addresses,
+ * beds, sqft and distances appear, were one unlabelled disclosure away. The
+ * toggle stays for collapsing it back.
  */
 export function CompsTable({ rows, totalAvailable }: CompsTableProps) {
   const isCapped =
@@ -98,7 +104,7 @@ export function CompsTable({ rows, totalAvailable }: CompsTableProps) {
   const countLabel = isCapped
     ? `top ${rows.length} of ${totalAvailable}`
     : `${rows.length}`;
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
@@ -124,30 +130,24 @@ export function CompsTable({ rows, totalAvailable }: CompsTableProps) {
 
   return (
     <div data-comps-table>
-      <div className="flex justify-end">
+      {/* Left-aligned and labelled like the other section eyebrows, not a
+          muted link floating at the right margin — it heads the table it
+          controls, so it reads as that table's title. */}
+      <div className="flex items-center justify-between gap-3 border-b border-piq-line pb-2">
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
-          className="inline-flex items-center gap-1.5 rounded-md transition-colors hover:underline focus:outline-none focus:ring-2 focus:ring-offset-1"
-          style={{
-            background: "transparent",
-            border: "none",
-            color: piq.textMuted,
-            fontSize: "13px",
-            fontWeight: 500,
-            padding: "4px 8px",
-            cursor: "pointer",
-          }}
+          className="inline-flex items-center gap-1.5 rounded-md px-1 py-1 text-[10px] font-bold uppercase tracking-[0.11em] text-piq-muted transition-colors hover:text-piq-ink focus-visible:outline-2 focus-visible:outline-piq-indigo"
         >
-          <span
-            aria-hidden
-            style={{ display: "inline-block", width: 12, textAlign: "center" }}
-          >
+          <span aria-hidden className="inline-block w-3 text-center">
             {open ? "▾" : "▸"}
           </span>
-          Comp details ({countLabel})
+          Comp details
         </button>
+        <span className="text-[10px] font-bold uppercase tracking-[0.11em] text-piq-muted">
+          {countLabel}
+        </span>
       </div>
       {open && (
         <div style={{ marginTop: 12, overflowX: "auto" }}>

@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { WebPageJsonLd } from "@/app/components/seo/WebPageJsonLd";
 import { FaqSection } from "@/app/components/seo/FaqSection";
 import { PRICING_FAQS } from "./pricing-faqs";
 
@@ -139,9 +138,12 @@ export default function PricingLayout({
         </div>
       </noscript>
 
-      <FaqSection faqs={PRICING_FAQS} />
-
       {children}
+
+      {/* FAQ renders LAST, after the pricing cards and feature showcase — the
+          same order every other page uses. It previously sat above {children},
+          which pushed the plan cards below the fold. */}
+      <FaqSection faqs={PRICING_FAQS} />
     </>
   );
 }

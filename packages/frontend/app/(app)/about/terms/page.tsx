@@ -37,7 +37,7 @@ export default function TermsOfServicePage() {
 
         <div className="mt-4 mb-10">
           <span className="inline-block text-xs font-semibold text-primary bg-primary/10 px-3.5 py-1.5 rounded-full">
-            Effective Date: February 24, 2026
+            Effective Date: July 29, 2026
           </span>
         </div>
 

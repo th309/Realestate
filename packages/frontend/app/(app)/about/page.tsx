@@ -4,8 +4,10 @@ import Link from "next/link";
 import { PageHeaderWithBreadcrumbs } from "@/components/navigation";
 import { WebPageJsonLd } from "@/app/components/seo/WebPageJsonLd";
 import { FaqSection } from "@/app/components/seo/FaqSection";
-import { COVERAGE_COPY } from "@/lib/data/validation-claims";
+import { COVERAGE_COPY, V4_CLAIMS } from "@/lib/data/validation-claims";
 import { ABOUT_FAQS } from "./about-faqs";
+import { AboutJourneyTimeline } from "./AboutJourneyTimeline";
+import { AboutDifferentiators } from "./AboutDifferentiators";
 
 export const metadata: Metadata = {
   title: "About PropertyIQ — Our Mission, Team & Data Sources",
@@ -165,143 +167,43 @@ export default function AboutPage() {
               </div>
             </section>
 
-            {/* Our Team */}
+            {/* Who Builds It — must stay consistent with the first-person
+                "Behind PropertyIQ" section above and the Person JSON-LD at the
+                top of this page: PropertyIQ is founder-built, not a team. */}
             <section className="mt-12 pt-12 border-t border-outline-variant">
               <h2 className="text-xl font-medium text-on-surface mb-6">
-                Our Team
+                Who Builds It
               </h2>
               <div className="flex flex-col sm:flex-row gap-8">
                 <div className="flex-1">
                   <h3 className="text-lg font-medium text-on-surface mb-2">
-                    Built by Data Scientists, for Real People
+                    Independent and Founder-Built
                   </h3>
                   <p className="text-on-surface-variant leading-relaxed mb-4">
-                    PropertyIQ was founded in 2024 by a team of data scientists
-                    and real estate professionals who saw a gap in the market:
-                    plenty of raw data existed, but no platform offered a
-                    validated, predictive signal for which markets would
-                    outperform. The founders combined expertise in quantitative
-                    finance, real estate investment, and data engineering to
-                    build a scoring system that doesn&apos;t just describe
-                    markets — it predicts their future performance.
+                    PropertyIQ was founded in 2024 by Troy H, MBA, and is built
+                    and maintained by its founder. It is not owned by a listing
+                    portal, a brokerage, or a lender, so nobody can pay to have
+                    a market scored higher. Plenty of raw housing data already
+                    existed — what was missing was a validated, predictive
+                    signal for which markets would outperform, published in the
+                    open rather than sold as a black box.
                   </p>
                   <p className="text-on-surface-variant leading-relaxed">
-                    The team&apos;s background spans hedge fund analytics, real
-                    estate portfolio management, and production data systems.
-                    This cross-disciplinary expertise is why the PropertyIQ
-                    Score achieves a 0.27 out-of-sample Information Coefficient
-                    at metro level — a level of predictive accuracy typically
-                    found only in institutional-grade analytics tools.
+                    Being a one-person operation means the work has to stand on
+                    its own rather than on a logo. That is why the full formula,
+                    its four inputs, and every out-of-sample validation run are
+                    published — including the {V4_CLAIMS.ic3Y} information
+                    coefficient the PropertyIQ Score earns at metro level over a
+                    3-year horizon. You do not have to take our word for any of
+                    it; you can check the method.
                   </p>
                 </div>
               </div>
             </section>
 
-            {/* Our Journey */}
-            <section className="mt-12 pt-12 border-t border-outline-variant">
-              <h2 className="text-xl font-medium text-on-surface mb-6">
-                Our Journey
-              </h2>
-              <div className="space-y-6">
-                {[
-                  {
-                    date: "2024",
-                    event:
-                      "PropertyIQ founded with a mission to democratize real estate market intelligence",
-                  },
-                  {
-                    date: "Early 2025",
-                    event:
-                      "First scoring formula built and validated out-of-sample on more than two decades of historical price data",
-                  },
-                  {
-                    date: "Mid 2025",
-                    event:
-                      "Out-of-sample validation completed: 0.27 information coefficient at metro level, positive in every validated year",
-                  },
-                  {
-                    date: "Late 2025",
-                    event: `Platform expanded to cover ${COVERAGE_COPY.zips} ZIP codes and ${COVERAGE_COPY.counties} counties`,
-                  },
-                  {
-                    date: "2026",
-                    event:
-                      "Public beta launch with AI-generated market reports and interactive analytics",
-                  },
-                ].map((milestone) => (
-                  <div key={milestone.date} className="flex gap-6 items-start">
-                    <span className="text-sm font-medium text-primary whitespace-nowrap min-w-[100px]">
-                      {milestone.date}
-                    </span>
-                    <p className="text-on-surface-variant">{milestone.event}</p>
-                  </div>
-                ))}
-              </div>
-            </section>
+            <AboutJourneyTimeline />
 
-            {/* What Makes PropertyIQ Different */}
-            <section className="mt-12 pt-12 border-t border-outline-variant">
-              <h2 className="text-xl font-medium text-on-surface mb-6">
-                What Makes PropertyIQ Different
-              </h2>
-              <div className="grid sm:grid-cols-2 gap-6">
-                <div className="p-6 rounded-xl bg-surface-container-low">
-                  <h3 className="font-medium text-on-surface mb-2">
-                    Predictive, Not Just Descriptive
-                  </h3>
-                  <p className="text-sm text-on-surface-variant">
-                    Most real estate platforms show you what happened.
-                    PropertyIQ predicts what will happen, using a transparent,
-                    validated scoring formula tested against actual market
-                    outcomes.
-                  </p>
-                </div>
-                <div className="p-6 rounded-xl bg-surface-container-low">
-                  <h3 className="font-medium text-on-surface mb-2">
-                    Validated with Real Data
-                  </h3>
-                  <p className="text-sm text-on-surface-variant">
-                    The PropertyIQ Score is validated against actual market
-                    outcomes across more than two decades, and was positive in
-                    every validated year. We publish our accuracy metrics openly
-                    — something most competitors don&apos;t do.
-                  </p>
-                  <Link
-                    href="/scores/methodology"
-                    className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
-                  >
-                    See how scores are validated →
-                  </Link>
-                </div>
-                <div className="p-6 rounded-xl bg-surface-container-low">
-                  <h3 className="font-medium text-on-surface mb-2">
-                    Comprehensive Coverage
-                  </h3>
-                  <p className="text-sm text-on-surface-variant">
-                    {COVERAGE_COPY.metros} metros, {COVERAGE_COPY.counties}{" "}
-                    counties, {COVERAGE_COPY.zips} ZIP codes. From major cities
-                    to small towns, PropertyIQ covers every corner of the US
-                    housing market.
-                  </p>
-                </div>
-                <div className="p-6 rounded-xl bg-surface-container-low">
-                  <h3 className="font-medium text-on-surface mb-2">
-                    Transparent Methodology
-                  </h3>
-                  <p className="text-sm text-on-surface-variant">
-                    We publish our full methodology, validation results, and
-                    data sources. You can see exactly how scores are calculated
-                    and verified.
-                  </p>
-                  <Link
-                    href="/scores/methodology"
-                    className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
-                  >
-                    Read the full methodology →
-                  </Link>
-                </div>
-              </div>
-            </section>
+            <AboutDifferentiators />
 
             {/* Data Sources */}
             <section>

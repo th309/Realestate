@@ -140,8 +140,8 @@ export function Header() {
                 <circle cx="36" cy="48" r="2.5" fill="#00C853" opacity="0.6" />
               </svg>
               <span className="text-xl font-bold tracking-tight group-hover:opacity-90 transition-opacity">
-                <span className="text-[#1A237E]">Property</span>
-                <span className="text-[#3949AB]">IQ</span>
+                <span className="text-on-surface">Property</span>
+                <span className="text-primary">IQ</span>
               </span>
             </Link>
           </div>

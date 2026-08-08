@@ -4,6 +4,7 @@ import {
   IsString,
   IsNotEmpty,
   IsNumber,
+  IsUUID,
   MaxLength,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
@@ -11,19 +12,36 @@ import { Transform } from 'class-transformer';
 /**
  * Payload for POST /api/analyzer/save.
  *
- * Upserted into `deal_analyses` keyed on `(owner_id, address_full)` — see
- * the `20260722120000_dedupe_deal_analyses_by_address` migration, which
- * also made `address_full` `NOT NULL` with a unique constraint. The
- * controller adds `owner_id` (from JwtAuthGuard) and `share_token`
+ * Two keying strategies, see `AnalyzerPersistenceService.save()`:
+ *  - `id` present: updates that row directly (an already-open saved deal).
+ *  - `id` absent: upserted into `deal_analyses` keyed on
+ *    `(owner_id, address_full)` — see the
+ *    `20260722120000_dedupe_deal_analyses_by_address` migration, which
+ *    also made `address_full` `NOT NULL` with a unique constraint.
+ *
+ * The controller adds `owner_id` (from JwtAuthGuard) and `share_token`
  * (server-generated on first insert only) before persisting; clients never
  * set those.
  *
  * Address fields are intentionally minimal — `address_full` is required (it's
- * the upsert key), city/state are required for the saved-analyses list UI;
- * the rest are optional, no PII beyond a street address the user typed
- * themselves.
+ * the upsert key when `id` is absent), city/state are required for the
+ * saved-analyses list UI; the rest are optional, no PII beyond a street
+ * address the user typed themselves.
  */
 export class AnalysisSnapshotDto {
+  /**
+   * Existing row to update. Present when the client has an open saved deal;
+   * absent for a first save. When set, the row is updated BY ID and the
+   * `(owner_id, address_full)` upsert key is bypassed — otherwise editing a
+   * saved deal's address would create a second row rather than rename it.
+   *
+   * Always re-scoped by `owner_id` server-side; a client-supplied id can
+   * never reach another owner's row.
+   */
+  @IsOptional()
+  @IsUUID()
+  id?: string;
+
   @IsOptional()
   @IsString()
   @MaxLength(120)
@@ -64,8 +82,23 @@ export class AnalysisSnapshotDto {
   @IsObject()
   input_snapshot!: Record<string, unknown>;
 
+  /**
+   * The frozen render artifact behind the public share link and the PDF.
+   *
+   * OPTIONAL, and the omission is load-bearing. A plain "Save deal" persists
+   * the user's working state without republishing — it sends no
+   * `result_snapshot`, and `save()` omits the key from the UPDATE so the
+   * artifact a client may already be reading survives untouched. Only Share
+   * and PDF send it. See `buildDealStatePayload` vs `buildPublishedArtifact`
+   * on the frontend, which make that distinction a type rather than a
+   * convention.
+   *
+   * The column is `NOT NULL`, so `save()` defaults it to `{}` on INSERT —
+   * a deal that has never been shared has nothing published yet.
+   */
+  @IsOptional()
   @IsObject()
-  result_snapshot!: Record<string, unknown>;
+  result_snapshot?: Record<string, unknown>;
 
   @IsOptional()
   @IsObject()

@@ -32,6 +32,45 @@ function makeRequest(path: string, method = "GET"): NextRequest {
   return new NextRequest(url, { method });
 }
 
+describe("middleware homepage passthrough (landing A/B retired)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("does not rewrite / to another route", async () => {
+    const res = await middleware(makeRequest("/"));
+    expect(res.status).toBe(200);
+    // NextResponse.rewrite sets x-middleware-rewrite; a passthrough must not.
+    expect(res.headers.get("x-middleware-rewrite")).toBeNull();
+    expect(res.headers.get("location")).toBeNull();
+  });
+
+  it("assigns no landing-variant cookie on /", async () => {
+    const res = await middleware(makeRequest("/"));
+    expect(res.cookies.get("piq-variant")).toBeUndefined();
+    expect(res.headers.get("set-cookie") ?? "").not.toContain("piq-variant");
+  });
+
+  it("ignores the retired ?landing=v2 preview override", async () => {
+    const res = await middleware(makeRequest("/?landing=v2"));
+    expect(res.status).toBe(200);
+    expect(res.headers.get("x-middleware-rewrite")).toBeNull();
+    // The preview override used to force a noindex header on `/`.
+    expect(res.headers.get("X-Robots-Tag")).toBeNull();
+  });
+
+  it("honours LANDING_EXPERIMENT no longer — / is a passthrough even when set", async () => {
+    process.env.LANDING_EXPERIMENT = "on";
+    try {
+      const res = await middleware(makeRequest("/"));
+      expect(res.status).toBe(200);
+      expect(res.headers.get("x-middleware-rewrite")).toBeNull();
+    } finally {
+      delete process.env.LANDING_EXPERIMENT;
+    }
+  });
+});
+
 describe("middleware /get-started redirect", () => {
   beforeEach(() => {
     vi.clearAllMocks();

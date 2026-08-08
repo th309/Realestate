@@ -1,5 +1,6 @@
 import { AnimatedCounter } from "@/app/components/home/AnimatedCounter";
 import { COVERAGE_COPY } from "@/lib/data/validation-claims";
+import { SectionHeading } from "@/app/components/marketing";
 import { BeatSection } from "./BeatSection";
 import { Reveal } from "./Reveal";
 
@@ -8,9 +9,7 @@ import { Reveal } from "./Reveal";
  *
  * One point, stated plainly: PropertyIQ covers every U.S. market, built from
  * five real data sources. Four count-up stats (mono numbers via AnimatedCounter)
- * anchor the claim, followed by a quiet source-attribution line. Sits in the
- * upper-middle of the page's fixed indigo→light gradient, so it's still
- * light-on-dark — tone="dark" (spec §4.0).
+ * anchor the claim, followed by a quiet source-attribution line. Sits on its own light surface band.
  *
  * No 'use client' here: AnimatedCounter is itself a client component and can be
  * rendered from this server component. The count-ups only fire on scroll-into-
@@ -43,14 +42,14 @@ const SOURCES = ["Zillow", "Realtor.com", "Census", "FRED", "BLS"];
 function FoundationStatBlock({ stat }: { stat: FoundationStat }) {
   return (
     <div className="flex flex-col items-center text-center sm:items-start sm:text-left">
-      <div className="font-mono text-4xl font-semibold tracking-tight text-on-primary sm:text-5xl md:text-6xl">
+      <div className="font-mono text-4xl font-semibold tracking-tight tabular-nums text-on-surface sm:text-5xl md:text-6xl">
         {stat.staticValue !== undefined ? (
           stat.staticValue
         ) : (
           <AnimatedCounter end={stat.end ?? 0} suffix={stat.suffix} />
         )}
       </div>
-      <p className="mt-2 text-sm font-medium uppercase tracking-wide text-primary-light">
+      <p className="mt-2 text-sm font-medium uppercase tracking-wide text-on-surface-variant">
         {stat.label}
       </p>
     </div>
@@ -59,22 +58,15 @@ function FoundationStatBlock({ stat }: { stat: FoundationStat }) {
 
 export function BeatFoundation() {
   return (
-    <BeatSection id="beat-foundation" eyebrow="The foundation" tone="dark">
-      <Reveal>
-        <h2 className="font-serif text-3xl font-semibold leading-[1.1] tracking-tight sm:text-4xl md:text-5xl">
-          Every market. Five sources. One number.
-        </h2>
-      </Reveal>
+    <BeatSection id="beat-foundation" surface="a">
+      <SectionHeading
+        eyebrow="The foundation"
+        title="Every market. Five sources. One number."
+        subhead="We score the entire country — from the biggest metros down to individual ZIP codes — and we've been tracking it for over two decades."
+        align="start"
+      />
 
-      <Reveal delayMs={70}>
-        <p className="mt-5 max-w-2xl text-lg text-primary-light">
-          We score the entire country &mdash; from the biggest metros down to
-          individual ZIP codes &mdash; and we&apos;ve been tracking it for over
-          two decades.
-        </p>
-      </Reveal>
-
-      <div className="mt-12 grid grid-cols-2 gap-x-6 gap-y-10 md:mt-16 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-x-6 gap-y-10 md:grid-cols-4">
         {FOUNDATION_STATS.map((stat, index) => (
           <Reveal key={stat.label} delayMs={140 + index * 70}>
             <FoundationStatBlock stat={stat} />
@@ -83,12 +75,12 @@ export function BeatFoundation() {
       </div>
 
       <Reveal delayMs={140 + FOUNDATION_STATS.length * 70} className="mt-14">
-        <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-primary-light">
-          <span className="font-medium text-on-primary">Built on</span>
+        <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-on-surface-variant">
+          <span className="font-medium text-on-surface">Built on</span>
           {SOURCES.map((source, index) => (
             <span key={source} className="inline-flex items-center gap-2">
               {index > 0 && (
-                <span className="text-primary-light/50" aria-hidden>
+                <span className="text-on-surface-variant/50" aria-hidden>
                   &middot;
                 </span>
               )}

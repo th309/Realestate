@@ -14,6 +14,7 @@
 import { getAnonymousSessionId } from "@/lib/entitlements/session";
 import { getVisitorId } from "./visitor-identity";
 import { getSessionContext } from "./session-context";
+import { hasOptedOutOfTracking } from "./privacy-signals";
 
 // Telemetry posts to a same-origin Next.js proxy (app/api/usage/*) which
 // forwards to the backend. Going same-origin bypasses third-party-tracker
@@ -119,7 +120,7 @@ export function trackEvent(
   properties: Record<string, unknown> = {},
 ): void {
   if (typeof window === "undefined") return;
-  if (trackingExcluded) return;
+  if (isTrackingExcluded()) return;
 
   // Parse category.action from name (e.g., 'pageview.view' -> category='pageview', action='view')
   const [eventCategory, ...rest] = eventName.split(".");
@@ -192,9 +193,13 @@ export function setTrackingExcluded(excluded: boolean): void {
 
 /**
  * Check if tracking is currently excluded.
+ *
+ * Covers both the admin-set exclusion and the browser privacy signals. Every
+ * emission path consults this — trackEvent below, and the heartbeat in
+ * heartbeat.ts — so one check suppresses events and keepalives together.
  */
 export function isTrackingExcluded(): boolean {
-  return trackingExcluded;
+  return trackingExcluded || hasOptedOutOfTracking();
 }
 
 /**

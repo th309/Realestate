@@ -4,7 +4,6 @@ import type { GeoLevel, ForecastHorizon, MapData } from "./types";
 import {
   Legend,
   DataTableModal,
-  TableIcon,
   type ScoreViewMode,
 } from "./components";
 import { useOnlineStatus } from "@/lib/hooks/use-online-status";
@@ -52,43 +51,9 @@ export function MapCanvas({
   const isOnline = useOnlineStatus();
 
   return (
-    <main className="flex-1 relative min-h-0" data-tour="map-area">
-      {mapError && (
-        <div className="absolute inset-0 flex items-center justify-center bg-error-container z-10">
-          <p className="text-on-error-container font-medium">{mapError}</p>
-        </div>
-      )}
-      {!mapError && boundaryError && (
-        <div className="absolute inset-0 flex items-center justify-center bg-surface/95 z-10">
-          <div className="text-center px-6">
-            <p className="text-on-surface font-medium mb-4">
-              {isOnline
-                ? "Couldn't load boundaries"
-                : "You're offline — showing saved data"}
-            </p>
-            <button
-              onClick={onRetryBoundary}
-              className="px-4 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold hover:bg-primary/90 transition-colors"
-            >
-              Try again
-            </button>
-          </div>
-        </div>
-      )}
-      {effectiveDataLoading && (
-        <div className="absolute inset-0 z-10 animate-pulse bg-surface/80 p-4 flex flex-col">
-          {/* Skeleton: map area */}
-          <div className="flex-1 bg-surface-container-high rounded-xl" />
-          {/* Skeleton: legend bar */}
-          <div className="mt-3 h-10 w-64 bg-surface-container-high rounded-xl" />
-        </div>
-      )}
-      <div
-        ref={mapContainer}
-        className="absolute inset-0"
-        style={{ width: "100%", height: "100%" }}
-      />
-
+    <main className="flex min-h-0 flex-1 flex-col" data-tour="map-area">
+      {/* Docked scale strip — was an absolutely positioned card floating over
+          the Pacific, covering the geography it described. */}
       <Legend
         selectedMetric={effectiveMetric}
         forecastHorizon={forecastHorizon}
@@ -99,14 +64,47 @@ export function MapCanvas({
         }
       />
 
-      {/* M3 Extended FAB */}
-      <button
-        onClick={() => onShowTableView(true)}
-        className="absolute bottom-8 right-3 md:bottom-10 md:right-6 bg-primary-container elevation-3 rounded-2xl px-3 md:px-5 py-2 md:py-3 flex items-center gap-2 md:gap-3 hover:elevation-4 transition-all duration-200 z-10 text-on-primary-container"
-      >
-        <TableIcon />
-        <span className="hidden sm:inline font-medium">Table View</span>
-      </button>
+      <div className="relative min-h-0 flex-1">
+        {mapError && (
+          <div className="absolute inset-0 flex items-center justify-center bg-error-container z-10">
+            <p className="text-on-error-container font-medium">{mapError}</p>
+          </div>
+        )}
+        {!mapError && boundaryError && (
+          <div className="absolute inset-0 flex items-center justify-center bg-surface/95 z-10">
+            <div className="text-center px-6">
+              <p className="text-on-surface font-medium mb-4">
+                {isOnline
+                  ? "Couldn't load boundaries"
+                  : "You're offline — showing saved data"}
+              </p>
+              <button
+                onClick={onRetryBoundary}
+                className="px-4 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold hover:bg-primary/90 transition-colors"
+              >
+                Try again
+              </button>
+            </div>
+          </div>
+        )}
+        {effectiveDataLoading && (
+          <div className="absolute inset-0 z-10 animate-pulse bg-surface/80 p-4 flex flex-col">
+            {/* Skeleton: map area */}
+            <div className="flex-1 bg-surface-container-high rounded-xl" />
+            {/* Skeleton: legend bar */}
+            <div className="mt-3 h-10 w-64 bg-surface-container-high rounded-xl" />
+          </div>
+        )}
+        <div
+          ref={mapContainer}
+          className="absolute inset-0"
+          style={{ width: "100%", height: "100%" }}
+        />
+
+        {/* The Table View FAB that floated here moved into the control bar as
+            a Map/Table segmented control — it was an orphan pill over the
+            canvas, unrelated to anything around it. */}
+      </div>
 
       {/* Data Table Modal */}
       <DataTableModal

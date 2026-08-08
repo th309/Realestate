@@ -1,5 +1,6 @@
 import { Test } from '@nestjs/testing';
 import { AiInsightsCache } from '../ai-insights.cache';
+import { AiInsightsStore } from '../ai-insights.store';
 import { RedisService } from '../../redis/redis.service';
 
 /**
@@ -58,6 +59,10 @@ describe('AiInsightsCache.computeKey', () => {
       providers: [
         AiInsightsCache,
         { provide: RedisService, useValue: { getClient: jest.fn() } },
+        {
+          provide: AiInsightsStore,
+          useValue: { get: jest.fn(), set: jest.fn() },
+        },
       ],
     }).compile();
     cache = mod.get(AiInsightsCache);
@@ -213,5 +218,118 @@ describe('AiInsightsCache.computeKey', () => {
   it('starts with the ai-insights:<PROMPT_REVISION>:<sectionId> prefix', () => {
     const key = cache.computeKey(basePayload, 'batch');
     expect(key).toMatch(/^ai-insights:v\d+:batch:/);
+  });
+});
+
+/**
+ * The two-tier read path (Redis hot -> Postgres durable). These are the
+ * guarantees that make "same address, same scores, no rerun" survive a Redis
+ * restart, an eviction, and local dev with REDIS_URL unset — the three ways
+ * the old Redis-only cache silently degraded to an LLM call on every load.
+ */
+describe('AiInsightsCache two-tier get/set', () => {
+  let cache: AiInsightsCache;
+  let store: { get: jest.Mock; set: jest.Mock };
+  let redisClient: { get: jest.Mock; set: jest.Mock };
+  let getClient: jest.Mock;
+
+  const insight = {
+    text: 'cached narrative',
+    threadId: 'tid-1',
+    citedFacts: [],
+  };
+  const KEY = 'ai-insights:v10:batch:BUY_AND_HOLD:cash_flow:800000:aa:bb:cc';
+
+  beforeEach(async () => {
+    redisClient = {
+      get: jest.fn().mockResolvedValue(null),
+      set: jest.fn().mockResolvedValue('OK'),
+    };
+    getClient = jest.fn().mockReturnValue(redisClient);
+    store = { get: jest.fn().mockResolvedValue(null), set: jest.fn() };
+
+    const mod = await Test.createTestingModule({
+      providers: [
+        AiInsightsCache,
+        { provide: RedisService, useValue: { getClient } },
+        { provide: AiInsightsStore, useValue: store },
+      ],
+    }).compile();
+    cache = mod.get(AiInsightsCache);
+  });
+
+  it('serves from Redis without touching Postgres when hot', async () => {
+    redisClient.get.mockResolvedValue(JSON.stringify(insight));
+
+    await expect(cache.get(KEY)).resolves.toEqual(insight);
+    expect(store.get).not.toHaveBeenCalled();
+  });
+
+  it('falls through to Postgres on a Redis miss and re-warms Redis', async () => {
+    store.get.mockResolvedValue(insight);
+
+    await expect(cache.get(KEY)).resolves.toEqual(insight);
+    expect(store.get).toHaveBeenCalledWith(KEY);
+    // Promotion back into the hot tier is what keeps the NEXT read off Postgres.
+    expect(redisClient.set).toHaveBeenCalledWith(
+      KEY,
+      JSON.stringify(insight),
+      'EX',
+      expect.any(Number),
+    );
+  });
+
+  it('still serves from Postgres when Redis is entirely unavailable', async () => {
+    // REDIS_URL unset (local dev): RedisService.getClient() returns null. This
+    // was previously an unconditional cache miss, so every analyzer load
+    // re-billed the provider.
+    getClient.mockReturnValue(null);
+    store.get.mockResolvedValue(insight);
+
+    await expect(cache.get(KEY)).resolves.toEqual(insight);
+  });
+
+  it('returns null only when BOTH tiers miss', async () => {
+    await expect(cache.get(KEY)).resolves.toBeNull();
+    expect(store.get).toHaveBeenCalledWith(KEY);
+  });
+
+  it('writes both tiers, passing parsed key metadata to the durable one', async () => {
+    const piqByGeo = { metro: 73, county: 68, zip: 42 };
+    await cache.set(KEY, insight, piqByGeo);
+
+    expect(redisClient.set).toHaveBeenCalledWith(
+      KEY,
+      JSON.stringify(insight),
+      'EX',
+      expect.any(Number),
+    );
+    expect(store.set).toHaveBeenCalledWith(KEY, insight, {
+      promptRevision: 'v10',
+      sectionId: 'batch',
+      strategy: 'BUY_AND_HOLD',
+      goal: 'cash_flow',
+      piqByGeo,
+    });
+  });
+
+  it('persists to Postgres even when Redis is unavailable', async () => {
+    getClient.mockReturnValue(null);
+    await cache.set(KEY, insight, null);
+    expect(store.set).toHaveBeenCalled();
+  });
+
+  it("maps computeKey's 'none' sentinels to null columns", () => {
+    const meta = AiInsightsCache.parseKey(
+      'ai-insights:v10:comps:none:none:none:aa:bb:cc',
+      null,
+    );
+    expect(meta).toEqual({
+      promptRevision: 'v10',
+      sectionId: 'comps',
+      strategy: null,
+      goal: null,
+      piqByGeo: null,
+    });
   });
 });

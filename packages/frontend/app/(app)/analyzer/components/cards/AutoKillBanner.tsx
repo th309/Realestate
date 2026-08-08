@@ -1,3 +1,4 @@
+import { TriangleAlert } from "lucide-react";
 import type { AutoKillFlag } from "@propertyiq/analyzer-core";
 
 interface AutoKillBannerProps {
@@ -6,36 +7,16 @@ interface AutoKillBannerProps {
   onEditCriteria?: () => void;
 }
 
-function WarningIcon() {
-  return (
-    <svg
-      aria-hidden
-      width="18"
-      height="18"
-      viewBox="0 0 18 18"
-      className="inline-block mr-2"
-    >
-      <path
-        d="M9 1.5 L17 16 L1 16 Z"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.75"
-        strokeLinejoin="round"
-      />
-      <line
-        x1="9"
-        x2="9"
-        y1="7"
-        y2="11"
-        stroke="currentColor"
-        strokeWidth="1.75"
-        strokeLinecap="round"
-      />
-      <circle cx="9" cy="13.5" r="0.9" fill="currentColor" />
-    </svg>
-  );
-}
-
+/**
+ * The one block on the page that is not a card: a red-bordered alert on the
+ * red container fill, sitting above the verdict.
+ *
+ * It deliberately breaks the card rhythm — everything else in the column is
+ * white on canvas with a hairline, so the filled red panel is the only thing
+ * that reads as an interruption rather than a section. That is the whole job:
+ * this deal tripped a rule the user set, and they should see it before they
+ * read the grade.
+ */
 export function AutoKillBanner({
   autoKills,
   onEditCriteria,
@@ -47,20 +28,20 @@ export function AutoKillBanner({
       data-auto-kill-banner
       role="alert"
       aria-live="polite"
-      className="rounded-xl p-4"
-      style={{
-        border: "1.75px solid #E53935",
-        background: "rgba(229,57,53,0.08)",
-      }}
+      className="rounded-piq border border-piq-red bg-piq-red-soft px-[18px] py-4"
     >
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-center gap-2.5">
+        <TriangleAlert
+          size={17}
+          strokeWidth={2}
+          aria-hidden
+          className="flex-none text-piq-red"
+        />
         <h3
           data-auto-kill-heading
-          className="text-base font-bold flex items-center"
-          style={{ color: "#E53935" }}
+          className="flex-1 text-[14.5px] font-bold tracking-[-0.02em] text-piq-red"
         >
-          <WarningIcon />
-          Auto-Kill Triggered
+          Auto-kill triggered
         </h3>
         {onEditCriteria && (
           <button
@@ -68,24 +49,20 @@ export function AutoKillBanner({
             onClick={onEditCriteria}
             aria-label="Edit auto-kill criteria"
             data-testid="autokill-edit-criteria"
-            className="shrink-0 rounded-full border px-3 py-1 text-xs font-semibold transition-colors duration-200 hover:bg-[rgba(229,57,53,0.12)]"
-            style={{ color: "#E53935", borderColor: "#E53935" }}
+            className="shrink-0 rounded-full border border-piq-red px-3 py-[5px] text-[11.5px] font-bold text-piq-red transition-colors duration-200 hover:bg-piq-red/10"
           >
             Edit criteria
           </button>
         )}
       </div>
-      <ul className="mt-2 list-disc pl-6 text-sm text-on-surface">
+      <ul className="mb-2.5 mt-2.5 list-disc pl-[19px] text-[13.5px] text-piq-ink">
         {autoKills.map((k) => (
           <li key={k.code} data-auto-kill-item data-code={k.code}>
             {k.message}
           </li>
         ))}
       </ul>
-      <p
-        data-auto-kill-subtext
-        className="text-sm text-on-surface-variant mt-2"
-      >
+      <p data-auto-kill-subtext className="text-[12.5px] text-piq-body">
         This deal failed an auto-kill check. Override only if you understand the
         risk.
       </p>

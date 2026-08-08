@@ -4,7 +4,7 @@
 // mission, team, timeline, and data-source copy already written in
 // about/page.tsx, plus the shared coverage constants in validation-claims.ts.
 import type { Faq } from "@/lib/seo/faq-json-ld";
-import { COVERAGE_COPY } from "@/lib/data/validation-claims";
+import { COVERAGE_COPY, V4_CLAIMS } from "@/lib/data/validation-claims";
 
 export const ABOUT_FAQS: Faq[] = [
   {
@@ -20,12 +20,11 @@ export const ABOUT_FAQS: Faq[] = [
   {
     question: "When was PropertyIQ founded and who built it?",
     answer:
-      "PropertyIQ was founded in 2024 by a team of data scientists and real estate professionals with backgrounds spanning quantitative finance, real estate investment, and data engineering. The platform is led by founder Troy H, MBA, who built it after seeing how scattered and contradictory real estate data made it hard to see the full market picture without hours of manual research. The first scoring formula was built and validated in early 2025, and the platform reached public beta in 2026.",
+      "PropertyIQ was founded in 2024 by Troy H, MBA, and is built and maintained by its founder. He started it after seeing how scattered and contradictory real estate data made it hard to see the full market picture without hours of manual research. PropertyIQ is independent: it is not owned by a listing portal, brokerage, or lender, so no one can pay to have a market scored higher. The first scoring formula was built and validated in early 2025, and the platform reached public beta in 2026.",
   },
   {
     question: "What is the PropertyIQ Score and how was it validated?",
-    answer:
-      "The PropertyIQ Score is a single 1 to 99 market score that predicts how a market will perform versus its state over the next 3 years. It was validated out of sample against more than two decades of historical price data, reaching a 0.27 information coefficient at the metro level and staying positive in every validated year. PropertyIQ publishes these accuracy metrics openly, a level of transparency the company says most competitors do not offer.",
+    answer: `The PropertyIQ Score is a single 1 to 99 market score that predicts how a market will perform versus its state over the next 3 years. A score of 50 means the market is tracking its state average. It was validated out of sample against more than two decades of historical price data, reaching a ${V4_CLAIMS.ic3Y} information coefficient at the metro level over a 3-year horizon and staying positive in every validated year. PropertyIQ publishes these accuracy metrics openly, a level of transparency the company says most competitors do not offer.`,
   },
   {
     question: "How has PropertyIQ's market coverage grown over time?",

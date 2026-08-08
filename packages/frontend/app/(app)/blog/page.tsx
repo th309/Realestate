@@ -47,6 +47,7 @@ export default function BlogIndexPage() {
       date: frontmatter.date,
       category: frontmatter.category,
       tags: frontmatter.tags,
+      image: frontmatter.image,
     },
     readingTime,
   }));

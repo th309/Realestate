@@ -55,12 +55,13 @@ describe("KpiStrip", () => {
       <KpiStrip kpiSeries={kpiSeries} monthIndex={7} isStateScope={false} />,
     );
     const medianValueLabel = screen.getByText("Median value");
-    const priceCard = medianValueLabel.closest("div[style*='background']");
+    const priceCard = medianValueLabel.closest("[data-kpi-tile], div");
     expect(priceCard).toBeTruthy();
-    const badgesInPriceCard = priceCard?.querySelectorAll(
-      'span[style*="font-size: 11.5"]',
-    );
-    expect(badgesInPriceCard?.length).toBe(0);
+    // No delta chip anywhere in the price tile.
+    expect(
+      screen.queryAllByTestId("median-value-delta").length +
+        (priceCard?.querySelectorAll("[data-kpi-delta]").length ?? 0),
+    ).toBe(0);
   });
 
   it("suppresses delta badge when the value 6 months back is null", () => {
@@ -70,12 +71,13 @@ describe("KpiStrip", () => {
       <KpiStrip kpiSeries={kpiSeries} monthIndex={7} isStateScope={false} />,
     );
     const medianValueLabel = screen.getByText("Median value");
-    const priceCard = medianValueLabel.closest("div[style*='background']");
+    const priceCard = medianValueLabel.closest("[data-kpi-tile], div");
     expect(priceCard).toBeTruthy();
-    const badgesInPriceCard = priceCard?.querySelectorAll(
-      'span[style*="font-size: 11.5"]',
-    );
-    expect(badgesInPriceCard?.length).toBe(0);
+    // No delta chip anywhere in the price tile.
+    expect(
+      screen.queryAllByTestId("median-value-delta").length +
+        (priceCard?.querySelectorAll("[data-kpi-delta]").length ?? 0),
+    ).toBe(0);
   });
 
   it("suppresses delta badge when monthIndex is under 6 (no prior period a full 6 months back)", () => {
@@ -95,13 +97,10 @@ describe("KpiStrip", () => {
   it("colors an upward trend green with an up-triangle and a downward trend red with a down-triangle, with NO per-metric inversion — e.g. Days on Mkt rising (more days, worse) still reads as a plain 'up' badge, not a 'good/bad for this metric' judgment", () => {
     const rising = { ...baseKpiSeries, dom: [40, 40, 40, 40, 40, 40, 40, 50] };
     render(<KpiStrip kpiSeries={rising} monthIndex={7} isStateScope={false} />);
-    const domLabelRising = screen.getByText("Days on mkt");
-    const domCardRising = domLabelRising.closest("div[style*='background']")!;
-    const upBadge = domCardRising.querySelector(
-      'span[style*="font-size: 11.5"]',
-    )!;
+    const upBadge = document.querySelector('[data-kpi-delta][data-direction="up"]')!;
     expect(upBadge.textContent).toContain("▲");
-    expect(upBadge.getAttribute("style")).toContain("var(--md-tertiary)");
+    // Green comes from the tertiary token, never a literal.
+    expect(upBadge.className).toContain("tertiary");
 
     const falling = {
       ...baseKpiSeries,
@@ -110,12 +109,10 @@ describe("KpiStrip", () => {
     const { container: fallingContainer } = render(
       <KpiStrip kpiSeries={falling} monthIndex={7} isStateScope={false} />,
     );
-    const domLabelFalling = within(fallingContainer).getByText("Days on mkt");
-    const domCardFalling = domLabelFalling.closest("div[style*='background']")!;
-    const downBadge = domCardFalling.querySelector(
-      'span[style*="font-size: 11.5"]',
+    const downBadge = fallingContainer.querySelector(
+      '[data-kpi-delta][data-direction="down"]',
     )!;
     expect(downBadge.textContent).toContain("▼");
-    expect(downBadge.getAttribute("style")).toContain("var(--md-error)");
+    expect(downBadge.className).toContain("error");
   });
 });

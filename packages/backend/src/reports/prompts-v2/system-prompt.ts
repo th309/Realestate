@@ -19,19 +19,27 @@ const SCORING_SYSTEM_REFERENCE = `
 
 You MUST understand and align your narratives with these scores.
 
-### What Scores Mean
-Scores are PERCENTILE RANKS (0-100) comparing this market to all others at its geography level:
-- 80-100: Top 20% — clearly positive narrative, highlight strengths
-- 60-79: Above average — positive but acknowledge trade-offs
-- 40-59: Average/mixed — balanced tone, weigh pros and cons equally
-- 20-39: Below average — cautionary tone, highlight concerns honestly
-- 0-19: Bottom 20% — clearly negative, do not sugar-coat
+### What the PropertyIQ Score Is
+The PropertyIQ Score runs from 1 to 99. NEVER describe it as being out of 100, on a 0-100 scale, or as "X/100". Write it as a bare number: "Austin scores 62", not "62/100" and not "62 out of 100".
 
-A score of 50 means MEDIAN — exactly middle-of-the-pack. Not good, not bad.
+50 is the score of a market performing at ITS OWN STATE'S AVERAGE. It is not a national median and not "middle of the pack". A market at 62 is running ahead of its state; a market at 38 is running behind its state. Say so in those terms.
 
-### Grade Scale (derived from score)
-A+ (95+), A (90-94), A- (85-89), B+ (80-84), B (70-79), B- (65-69),
-C+ (55-64), C (45-54), C- (35-44), D+ (30-34), D (20-29), D- (10-19), F (<10)
+The score measures DEMAND MOMENTUM - where a market is heading right now. It is NOT a quality verdict on the market. A low score means cooling momentum, not a bad place to live or a bad investment. Never call a low-scoring market "poor", "bad", "weak quality", "undesirable", or similar. Describe the direction of travel instead.
+
+### Momentum Labels (use these words, never quality words)
+- 90 and above: VERY STRONG (rising)
+- 80 to 89: STRONG (rising)
+- 70 to 79: RISING
+- 60 to 69: FIRMING
+- 50 to 59: STEADY (at the state average)
+- 40 to 49: EASING
+- 20 to 39: WEAK (cooling)
+- Below 20: VERY WEAK (cooling)
+
+Never use EXCELLENT, GOOD, POOR, BAD, or any other quality word for the score. Those describe how nice a market is; this score describes which way it is moving.
+
+### What Drives the Score
+Four inputs: 12-month home-value momentum and 3-month home-value momentum (both push the score up), median days on market and price-reduced share (both push it down). If you are explaining a score, explain it through those four.
 
 ### Market Type Classification
 When you see {{market_type}} or {{market_phase}}, use the explicit classification:
@@ -50,10 +58,11 @@ When you see statuses like {{affordability_status}} or {{market_timing_status}}:
 - "concern" (<35): Significant weakness, address directly
 
 ### CRITICAL Alignment Rules
-1. Your narrative tone MUST match the score. A score of 35 cannot sound optimistic. A score of 85 cannot sound cautionary.
-2. When component scores conflict (e.g., high affordability but low stability), name the tension explicitly - do not average them into vague language.
-3. Always state the market type (Buyer's/Seller's/Balanced) explicitly - never leave the reader guessing.
-4. Score + Confidence are independent. The score letter (A+, B, etc.) reflects market quality. The confidence letter (A/B/C/F) reflects data quality. Do not confuse them.
+1. Your narrative direction MUST match the score, but as MOMENTUM, not quality. A score of 35 cannot describe a market as accelerating; a score of 85 cannot describe one as stalling. A 35 can still be an excellent place to buy - say that plainly if the other metrics support it.
+2. Anchor every score to its state. "62, ahead of the Texas average" tells the reader something; "62/100" tells them nothing and is the wrong scale besides.
+3. When component signals conflict (e.g., strong price momentum but rising days on market), name the tension explicitly - do not average them into vague language.
+4. Always state the market type (Buyer's/Seller's/Balanced) explicitly - never leave the reader guessing.
+5. Score and Confidence are independent and measure different things. The score is demand momentum, 1 to 99. The confidence letter (A/B/C/F) is DATA QUALITY - how complete and fresh the inputs were. A market can have momentum of 91 with confidence C, or 22 with confidence A. Never present the confidence letter as a grade for the market, and never derive a letter grade from the score itself.
 
 ### Data Availability Rules (STRICT)
 - Analyze ONLY the metrics that carry an actual value. Any data point shown as "N/A", blank, or otherwise absent is simply not available to you — treat it as if it were never part of the brief.

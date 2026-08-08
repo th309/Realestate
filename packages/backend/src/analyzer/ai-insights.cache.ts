@@ -1,14 +1,23 @@
 /**
- * AiInsightsCache — Redis cache for analyzer AI insights.
+ * AiInsightsCache — two-tier cache for analyzer AI insights.
  *
  * Composite key from rounded numeric inputs + sha1 hashes of piq + rentcast.avm
- * payloads. 24h TTL. Falls back to cache-miss when Redis is unavailable.
+ * payloads. Read order is redis (hot) -> AiInsightsStore (durable Postgres) ->
+ * caller regenerates. Writes go to both tiers.
+ *
+ * Entries are invalidated by KEY CHANGE, not by expiry: the key fingerprints
+ * the entire deal plus the PIQ scores by geography, so any input edit or the
+ * monthly rescore produces a different key and the old entry simply stops
+ * being read. The Redis TTL is therefore a memory bound, not a correctness
+ * mechanism — Postgres is what makes "same address, same scores, no rerun"
+ * hold across restarts, evictions, and Redis being absent entirely.
  */
 
 import { Injectable } from '@nestjs/common';
 import { createHash } from 'crypto';
 import { buildAiInsightsFingerprint } from '@propertyiq/analyzer-core';
 import { RedisService } from '../redis/redis.service';
+import { AiInsightsStore, type InsightRowMeta } from './ai-insights.store';
 
 export interface CachedInsight {
   text: string;
@@ -16,7 +25,15 @@ export interface CachedInsight {
   citedFacts: string[];
 }
 
-const TTL_SECONDS = 60 * 60 * 24; // 24h
+/**
+ * Redis retention. Was 24h back when Redis was the ONLY layer, which threw
+ * away ~29 days of still-valid narrative every month and re-billed the LLM
+ * for it. With Postgres behind it a Redis miss now costs one indexed
+ * primary-key lookup instead of an LLM call, so this is purely a
+ * hot-set/memory tradeoff. 7 days keeps a returning user's deals warm without
+ * letting the working set grow unbounded.
+ */
+const TTL_SECONDS = 60 * 60 * 24 * 7; // 7d
 
 /**
  * Prompt revision tag. Bump this whenever a prompt template change should
@@ -24,6 +41,12 @@ const TTL_SECONDS = 60 * 60 * 24; // 24h
  * a bump guarantees a fresh regeneration across every user/section without a
  * manual Redis flush.
  *
+ *  v10 (2026-08-05): recommendation_analysis must now reconcile the USER GOAL
+ *                    with the active STRATEGY in its opening sentence instead
+ *                    of announcing the goal as though it were the strategy.
+ *                    Fixes buy-and-hold analyses opening with "your goal is
+ *                    fast cash within 12 months". Bump regenerates v9
+ *                    narratives carrying the contradictory framing.
  *   v9 (2026-07-22): the cache key now covers the FULL DealInput /
  *                    RentalResult / FlipResult / BrrrrResult surface via the
  *                    shared analyzer-core fingerprint (buildAiInsightsFingerprint)
@@ -68,11 +91,14 @@ const TTL_SECONDS = 60 * 60 * 24; // 24h
  *                    Broke the narrative for some prompts — rolled back in v3.
  *   v1 (initial)
  */
-const PROMPT_REVISION = 'v9';
+const PROMPT_REVISION = 'v10';
 
 @Injectable()
 export class AiInsightsCache {
-  constructor(private readonly redis: RedisService) {}
+  constructor(
+    private readonly redis: RedisService,
+    private readonly store: AiInsightsStore,
+  ) {}
 
   computeKey(payload: any, sectionId: string): string {
     // Hash both the resolved-level PIQ context AND the per-geo PIQ scores so
@@ -155,16 +181,70 @@ export class AiInsightsCache {
     return `ai-insights:${PROMPT_REVISION}:${sectionId}:${strategy}:${goal}:${proj}:${rcHash}:${piqHash}:${figuresHash}`;
   }
 
-  async get(key: string): Promise<CachedInsight | null> {
-    const client = this.redis.getClient();
-    if (!client) return null; // Redis unavailable — cache miss
-    const raw = await client.get(key);
-    return raw ? JSON.parse(raw) : null;
+  /**
+   * Parse the metadata segments back off a composite key. Lives next to
+   * `computeKey` so the two can't drift on field order — a change to the key
+   * format has to touch both, in one file, or the tests here fail.
+   *
+   * `computeKey` writes the literal string 'none' for an absent strategy or
+   * goal; those become `null` columns rather than a magic string in the DB.
+   */
+  static parseKey(key: string, piqByGeo: unknown): InsightRowMeta {
+    const [, promptRevision, sectionId, strategy, goal] = key.split(':');
+    const denone = (v: string | undefined) => (v && v !== 'none' ? v : null);
+    return {
+      promptRevision: promptRevision ?? PROMPT_REVISION,
+      sectionId: sectionId ?? 'unknown',
+      strategy: denone(strategy),
+      goal: denone(goal),
+      piqByGeo,
+    };
   }
 
-  async set(key: string, value: CachedInsight): Promise<void> {
+  /**
+   * Read order: Redis, then Postgres. A durable hit is promoted back into
+   * Redis so the next read on this pod is hot again — that's what makes a
+   * cold start (or a Redis restart) cost one Postgres lookup rather than one
+   * LLM call per deal.
+   *
+   * Redis being unavailable is not an error here. `getClient()` returns null
+   * when REDIS_URL is unset (local dev), and the durable tier alone is enough
+   * to keep narratives stable across reloads.
+   */
+  async get(key: string): Promise<CachedInsight | null> {
     const client = this.redis.getClient();
-    if (!client) return;
-    await client.set(key, JSON.stringify(value), 'EX', TTL_SECONDS);
+    if (client) {
+      const raw = await client.get(key);
+      if (raw) return JSON.parse(raw);
+    }
+
+    const persisted = await this.store.get(key);
+    if (!persisted) return null;
+
+    if (client) {
+      // Re-warm. Failure here is irrelevant — we already have the value.
+      await client
+        .set(key, JSON.stringify(persisted), 'EX', TTL_SECONDS)
+        .catch(() => undefined);
+    }
+    return persisted;
+  }
+
+  /**
+   * Write both tiers. Postgres is awaited (it's the one that has to survive);
+   * `AiInsightsStore.set` already swallows its own failures, so a DB problem
+   * degrades this to Redis-only rather than failing the request that
+   * generated the narrative.
+   */
+  async set(
+    key: string,
+    value: CachedInsight,
+    piqByGeo?: unknown,
+  ): Promise<void> {
+    const client = this.redis.getClient();
+    if (client) {
+      await client.set(key, JSON.stringify(value), 'EX', TTL_SECONDS);
+    }
+    await this.store.set(key, value, AiInsightsCache.parseKey(key, piqByGeo));
   }
 }

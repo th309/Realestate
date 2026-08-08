@@ -10,6 +10,24 @@ import { DEFAULT_TRAFFIC_SEGMENT } from './traffic-segment';
 
 const CACHE_TTL_SECONDS = 300;
 
+/**
+ * When the evidence that classifies a session as human became available.
+ *
+ * Before this, `heartbeat_count` was never incremented by anything and
+ * `duration_seconds` was 0 for almost every session, because the 5s early
+ * heartbeat did not exist. Two of the six human-evidence signals were therefore
+ * unavailable, so a pre-boundary window can only surface humans that qualified
+ * via page_count > 1, a login, a signup, or a deliberate interaction.
+ *
+ * That makes a cross-boundary comparison meaningless in a specific, misleading
+ * direction: the older "human" set is biased toward MULTI-PAGE sessions, so its
+ * avg-session and pages-per-session read HIGHER and its conversion rate reads
+ * BETTER, while its headcount reads far lower. Live example — 692 human
+ * visitors this window against 247 in the previous one renders as "+180%
+ * growth" when nothing about the traffic changed; only the instrument did.
+ */
+const HUMAN_EVIDENCE_AVAILABLE_FROM = Date.parse('2026-07-28T21:59:18Z');
+
 @Injectable()
 export class OverviewAnalyticsService {
   private readonly logger = new Logger(OverviewAnalyticsService.name);
@@ -57,33 +75,51 @@ export class OverviewAnalyticsService {
       this.fetcher.fetchAnnotations(currentStart),
     ]);
 
+    // A delta across the instrumentation boundary compares two differently
+    // SELECTED populations, not two time periods. Suppressed rather than
+    // caveated: an arrow is read before any footnote is.
+    const trendsComparable =
+      previousStart.getTime() >= HUMAN_EVIDENCE_AVAILABLE_FROM ||
+      (filters.traffic ?? DEFAULT_TRAFFIC_SEGMENT) === 'all';
+
+    const trend = (cur: number, prev: number) =>
+      trendsComparable
+        ? buildMetricWithTrend(cur, prev)
+        : { current: cur, previous: prev, changePercent: null };
+
     const result: OverviewData = {
       kpis: {
-        uniqueVisitors: buildMetricWithTrend(
+        uniqueVisitors: trend(
           current?.unique_visitors ?? 0,
           previous?.unique_visitors ?? 0,
         ),
-        totalSessions: buildMetricWithTrend(
+        totalSessions: trend(
           current?.total_sessions ?? 0,
           previous?.total_sessions ?? 0,
         ),
-        avgSessionDuration: buildMetricWithTrend(
+        avgSessionDuration: trend(
           Math.round(Number(current?.avg_session_duration ?? 0)),
           Math.round(Number(previous?.avg_session_duration ?? 0)),
         ),
-        bounceRate: buildMetricWithTrend(
+        bounceRate: trend(
           Number(current?.bounce_rate ?? 0),
           Number(previous?.bounce_rate ?? 0),
         ),
-        pagesPerSession: buildMetricWithTrend(
+        pagesPerSession: trend(
           Number(current?.pages_per_session ?? 0),
           Number(previous?.pages_per_session ?? 0),
         ),
-        conversionRate: buildMetricWithTrend(
+        conversionRate: trend(
           Number(current?.conversion_rate ?? 0),
           Number(previous?.conversion_rate ?? 0),
         ),
       },
+      /**
+       * False when the comparison window predates human-evidence instrumentation,
+       * so the UI can hide the trend arrows instead of showing a change that is
+       * an artifact of coverage.
+       */
+      trendsComparable,
       sparklines: buildSparklines(daily),
       quickFunnel,
       topPages,

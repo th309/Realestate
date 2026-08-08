@@ -16,12 +16,12 @@ Primary market: {{geography_name}} ({{geography_type}})
 User type: {{user_type}}
 
 ## Primary Market Scores
-- PropertyIQ Score: {{propertyiq_score}}/100 ({{propertyiq_grade}})
+- PropertyIQ Score: {{propertyiq_score}} ({{propertyiq_grade}})
 - Market phase: {{market_phase}}
 
 ## Comparison Markets
 {{#each comparison_markets}}
-- {{name}}: PropertyIQ {{propertyiq_score}}/100 ({{propertyiq_grade}}) | ZHVI {{zhvi}} | YoY {{zhvi_yoy}}%
+- {{name}}: PropertyIQ {{propertyiq_score}} ({{propertyiq_grade}}) | ZHVI {{zhvi}} | YoY {{zhvi_yoy}}%
 {{/each}}
 
 {{#if winner_name}}
@@ -70,12 +70,12 @@ User type: {{user_type}}
 {{#if cash_on_cash_estimate}}- Cash-on-cash: {{cash_on_cash_estimate}}{{/if}}
 
 ## Primary Market Scores
-- PropertyIQ Score: {{propertyiq_score}}/100 ({{propertyiq_grade}})
+- PropertyIQ Score: {{propertyiq_score}} ({{propertyiq_grade}})
 
 ## Comparison Markets
 {{#each comparison_markets}}
 ### {{name}}
-- PropertyIQ Score: {{propertyiq_score}}/100 ({{propertyiq_grade}})
+- PropertyIQ Score: {{propertyiq_score}} ({{propertyiq_grade}})
 - ZHVI: {{zhvi}} | YoY: {{zhvi_yoy}}% | 3Y CAGR: {{zhvi_3y_cagr}}%
 - ZORI: {{zori}} | YoY: {{zori_yoy}}%
 - Days on market: {{days_on_market}}
@@ -133,7 +133,7 @@ Primary market: {{geography_name}}
 ## Comparison Markets
 {{#each comparison_markets}}
 ### {{name}}
-- PropertyIQ Score: {{propertyiq_score}}/100
+- PropertyIQ Score: {{propertyiq_score}}
 - ZHVI YoY: {{zhvi_yoy}}% | ZORI YoY: {{zori_yoy}}%
 - Days on market: {{days_on_market}}
 {{/each}}
@@ -168,9 +168,9 @@ Reader priorities: {{priorities_formatted}}
 User type: {{user_type}}
 
 ## Markets Compared
-- {{geography_name}}: PropertyIQ {{propertyiq_score}}/100 | ZHVI {{zhvi}} | Rent {{zori}}
+- {{geography_name}}: PropertyIQ {{propertyiq_score}} | ZHVI {{zhvi}} | Rent {{zori}}
 {{#each comparison_markets}}
-- {{name}}: PropertyIQ {{propertyiq_score}}/100 | ZHVI {{zhvi}} | Rent {{zori}}
+- {{name}}: PropertyIQ {{propertyiq_score}} | ZHVI {{zhvi}} | Rent {{zori}}
 {{/each}}
 
 You ALWAYS have enough to decide: every market above has a PropertyIQ score and

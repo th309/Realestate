@@ -1,0 +1,2707 @@
+<title>Market Screener — PropertyIQ</title>
+<style>
+  :root {
+    --canvas: #f5f6fa;
+    --white: #ffffff;
+    --line: #e4e7f2;
+    --soft: #edeff7;
+    --ink: #12141d;
+    --body: #5b6076;
+    --muted: #8b91a8;
+    --indigo: #3949ab;
+    --indigo-soft: #eef0fb;
+    --green: #00a84a;
+    --green-b: #00c853;
+    --green-soft: #e6f8ee;
+    --red: #b3261e;
+    --red-soft: #fdecea;
+    --amber: #e07b00;
+    --amber-soft: #fff3e0;
+    --violet: #7c4dff;
+    --violet-soft: #f1ecff;
+    --teal: #00838f;
+    --teal-soft: #e0f7fa;
+    --bar: #151828;
+    --bar-mute: #9aa1ba;
+    --bar-line: #272c40;
+    --sh: 0 1px 2px rgba(18, 20, 29, 0.05), 0 2px 8px rgba(18, 20, 29, 0.04);
+    --sans:
+      "Segoe UI Variable Display", -apple-system, BlinkMacSystemFont,
+      "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono:
+      "Roboto Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --canvas: #0f1119;
+      --white: #1a1d29;
+      --line: #2a2f42;
+      --soft: #232838;
+      --ink: #edeff7;
+      --body: #a5abc2;
+      --muted: #797f96;
+      --indigo: #8c9ae8;
+      --indigo-soft: #232841;
+      --green: #3dd87a;
+      --green-soft: #17301f;
+      --red: #f2b8b5;
+      --red-soft: #33201f;
+      --amber: #ffb74d;
+      --amber-soft: #33280f;
+      --violet: #b39dff;
+      --violet-soft: #241f38;
+      --teal: #4dd0e1;
+      --teal-soft: #13292e;
+      --bar: #0a0c14;
+      --bar-line: #1e2333;
+      --sh: 0 1px 2px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+  }
+  :root[data-theme="dark"] {
+    --canvas: #0f1119;
+    --white: #1a1d29;
+    --line: #2a2f42;
+    --soft: #232838;
+    --ink: #edeff7;
+    --body: #a5abc2;
+    --muted: #797f96;
+    --indigo: #8c9ae8;
+    --indigo-soft: #232841;
+    --green: #3dd87a;
+    --green-soft: #17301f;
+    --red: #f2b8b5;
+    --red-soft: #33201f;
+    --amber: #ffb74d;
+    --amber-soft: #33280f;
+    --violet: #b39dff;
+    --violet-soft: #241f38;
+    --teal: #4dd0e1;
+    --teal-soft: #13292e;
+    --bar: #0a0c14;
+    --bar-line: #1e2333;
+    --sh: 0 1px 2px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+  :root[data-theme="light"] {
+    --canvas: #f5f6fa;
+    --white: #ffffff;
+    --line: #e4e7f2;
+    --soft: #edeff7;
+    --ink: #12141d;
+    --body: #5b6076;
+    --muted: #8b91a8;
+    --indigo: #3949ab;
+    --indigo-soft: #eef0fb;
+    --green: #00a84a;
+    --green-b: #00c853;
+    --green-soft: #e6f8ee;
+    --red: #b3261e;
+    --red-soft: #fdecea;
+    --amber: #e07b00;
+    --amber-soft: #fff3e0;
+    --violet: #7c4dff;
+    --violet-soft: #f1ecff;
+    --teal: #00838f;
+    --teal-soft: #e0f7fa;
+    --bar: #151828;
+    --bar-mute: #9aa1ba;
+    --bar-line: #272c40;
+    --sh: 0 1px 2px rgba(18, 20, 29, 0.05), 0 2px 8px rgba(18, 20, 29, 0.04);
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+    background: var(--canvas);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  svg {
+    display: block;
+  }
+  .sprite {
+    position: absolute;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+  }
+  .ic {
+    width: 15px;
+    height: 15px;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    fill: none;
+    flex: none;
+  }
+  .n {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+  .lab {
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* ---------- app bar ---------- */
+  .bar {
+    position: sticky;
+    top: 0;
+    z-index: 60;
+    background: var(--bar);
+    height: 57px;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 0 18px;
+    border-bottom: 1px solid var(--bar-line);
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    flex: none;
+  }
+  .mark {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: #3949ab;
+    color: #fff;
+    display: grid;
+    place-items: center;
+    font-weight: 800;
+    font-size: 15px;
+    letter-spacing: -0.02em;
+  }
+  .bname {
+    color: #fff;
+    font-weight: 700;
+    font-size: 15.5px;
+    letter-spacing: -0.01em;
+  }
+  .bname i {
+    font-style: normal;
+    color: #8c9ae8;
+  }
+  .nav {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 6px;
+  }
+  .np {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 11px 6px 7px;
+    border-radius: 999px;
+    color: var(--bar-mute);
+    font-size: 12.5px;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .np .tile {
+    width: 18px;
+    height: 18px;
+    border-radius: 5px;
+    display: grid;
+    place-items: center;
+    color: #fff;
+    flex: none;
+  }
+  .np .tile .ic {
+    width: 11px;
+    height: 11px;
+    stroke-width: 2.4;
+  }
+  .np.on {
+    background: var(--indigo);
+    color: #fff;
+  }
+  .np.on .tile {
+    background: rgba(255, 255, 255, 0.25) !important;
+  }
+  .barR {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .prochip {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    padding: 5px 11px;
+    border-radius: 999px;
+  }
+  .iconb {
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+    display: grid;
+    place-items: center;
+    color: var(--bar-mute);
+    background: transparent;
+    border: 1px solid var(--bar-line);
+  }
+  .iconb .ic {
+    width: 16px;
+    height: 16px;
+  }
+  @media (max-width: 1150px) {
+    .lb {
+      display: none;
+    }
+    .np {
+      padding: 6px 8px;
+    }
+  }
+
+  /* ---------- control bar ---------- */
+  .ctrl {
+    position: sticky;
+    top: 57px;
+    z-index: 55;
+    background: var(--white);
+    border-bottom: 1px solid var(--line);
+    padding: 11px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .seg {
+    display: flex;
+    background: var(--canvas);
+    padding: 3px;
+    border-radius: 10px;
+    gap: 2px;
+  }
+  .seg button {
+    border: 0;
+    background: transparent;
+    color: var(--body);
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 5px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .seg button.on {
+    background: var(--white);
+    color: var(--indigo);
+    box-shadow: var(--sh);
+  }
+  .seg .segl {
+    display: grid;
+    place-items: center;
+    padding: 5px 8px 5px 10px;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+  .vr {
+    width: 1px;
+    height: 22px;
+    background: var(--line);
+  }
+  .sel {
+    appearance: none;
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 7px 28px 7px 11px;
+    cursor: pointer;
+  }
+  .selwrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  .selwrap .ic {
+    position: absolute;
+    right: 9px;
+    width: 13px;
+    height: 13px;
+    color: var(--muted);
+    pointer-events: none;
+  }
+  .tgl {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    border-radius: 999px;
+    border: 1px solid var(--indigo);
+    background: var(--indigo);
+    color: #fff;
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 6px 13px 6px 9px;
+    cursor: pointer;
+  }
+  .tgl .ic {
+    width: 14px;
+    height: 14px;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: var(--white);
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 7px 13px;
+    cursor: pointer;
+  }
+  .btn.pri {
+    background: var(--indigo);
+    border-color: var(--indigo);
+    color: #fff;
+  }
+  .ctrlR {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  /* ---------- page ---------- */
+  .wrap {
+    max-width: 1420px;
+    margin: 0 auto;
+    padding: 24px 20px 60px;
+  }
+  .head {
+    display: flex;
+    align-items: flex-end;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+  }
+  h1 {
+    font-size: 29px;
+    line-height: 1.12;
+    letter-spacing: -0.022em;
+    margin: 5px 0 6px;
+    font-weight: 700;
+  }
+  .head p {
+    margin: 0;
+    color: var(--body);
+    font-size: 13.5px;
+    max-width: 560px;
+  }
+  .stamp {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 6px 13px;
+    color: var(--body);
+    font-size: 11.5px;
+    font-weight: 600;
+    box-shadow: var(--sh);
+  }
+  .stamp .ic {
+    width: 13px;
+    height: 13px;
+    color: var(--indigo);
+  }
+
+  .card {
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    box-shadow: var(--sh);
+  }
+  .chead {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--line);
+  }
+  .ctile {
+    width: 25px;
+    height: 25px;
+    border-radius: 7px;
+    display: grid;
+    place-items: center;
+    flex: none;
+  }
+  .ctile .ic {
+    width: 14px;
+    height: 14px;
+  }
+  .ctitle {
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .cheadR {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .count {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 700;
+    background: var(--indigo);
+    color: #fff;
+    min-width: 17px;
+    height: 17px;
+    border-radius: 999px;
+    display: grid;
+    place-items: center;
+    padding: 0 5px;
+  }
+
+  /* ---------- screen panel ---------- */
+  .presets {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 14px 16px;
+    border-bottom: 1px dashed var(--line);
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--white);
+    color: var(--body);
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 6px 13px 6px 6px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .chip .ct {
+    width: 20px;
+    height: 20px;
+    border-radius: 6px;
+    display: grid;
+    place-items: center;
+    flex: none;
+  }
+  .chip .ct .ic {
+    width: 12px;
+    height: 12px;
+  }
+  .chip.on {
+    background: var(--violet);
+    border-color: var(--violet);
+    color: #fff;
+  }
+  .chip.on .ct {
+    background: rgba(255, 255, 255, 0.25) !important;
+    color: #fff !important;
+  }
+  .fgrid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 14px;
+    padding: 16px;
+  }
+  @media (max-width: 1240px) {
+    .fgrid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+  @media (max-width: 720px) {
+    .fgrid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  .fgrp {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+  .flab {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--ink);
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
+  }
+  .flab span {
+    font-weight: 500;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 10px;
+  }
+  .frow {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .fin {
+    width: 100%;
+    min-width: 0;
+    border: 1px solid var(--line);
+    background: var(--canvas);
+    border-radius: 9px;
+    padding: 7px 9px;
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 12px;
+    color: var(--ink);
+    text-align: right;
+  }
+  .fin::placeholder {
+    color: var(--muted);
+  }
+  .fin.set {
+    background: var(--violet-soft);
+    border-color: var(--violet);
+    color: var(--violet);
+    font-weight: 700;
+  }
+  .fdash {
+    color: var(--muted);
+    font-family: var(--mono);
+    flex: none;
+  }
+  .ffoot {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    flex-wrap: wrap;
+    padding: 0 16px 15px;
+  }
+  .acti {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: var(--violet-soft);
+    border: 1px solid var(--violet);
+    color: var(--violet);
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 700;
+    padding: 4px 9px 4px 11px;
+  }
+  .acti .ic {
+    width: 12px;
+    height: 12px;
+    opacity: 0.8;
+  }
+  .clear {
+    margin-left: auto;
+    background: none;
+    border: 0;
+    color: var(--indigo);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  /* ---------- table ---------- */
+  /* Above 1060px the table needs no scroll container, so the header can stick
+     to the page itself. Below it, the container scrolls and the header pins
+     to the container instead — either way the body never scrolls sideways. */
+  .tscroll {
+    border-radius: 0 0 14px 14px;
+  }
+  @media (max-width: 1060px) {
+    .tscroll {
+      overflow: auto;
+      max-height: min(72vh, 700px);
+    }
+    thead th {
+      top: 0 !important;
+    }
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    min-width: 900px;
+    font-size: 12.5px;
+  }
+  thead th {
+    position: sticky;
+    top: 116px;
+    z-index: 20;
+    background: var(--soft);
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 11px 12px;
+    text-align: right;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--line);
+  }
+  thead th:first-child,
+  thead th:nth-child(2) {
+    text-align: left;
+  }
+  thead th .sh {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    color: inherit;
+  }
+  thead th.sorted {
+    color: var(--indigo);
+  }
+  thead th .ic {
+    width: 11px;
+    height: 11px;
+    opacity: 0.7;
+  }
+  tbody td {
+    padding: 10px 12px;
+    text-align: right;
+    border-bottom: 1px solid var(--soft);
+    white-space: nowrap;
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+  }
+  tbody td.rk {
+    color: var(--muted);
+    font-size: 11px;
+    width: 44px;
+    text-align: right;
+  }
+  tbody td.mk {
+    text-align: left;
+    font-family: var(--sans);
+    font-weight: 600;
+    letter-spacing: 0;
+    width: 230px;
+  }
+  tbody td.mk a {
+    color: var(--indigo);
+    text-decoration: none;
+  }
+  tbody tr:hover td {
+    background: var(--canvas);
+  }
+  tbody td.na {
+    color: var(--muted);
+  }
+  td.act {
+    width: 38px;
+    text-align: center;
+    color: var(--muted);
+  }
+  td.act .ic {
+    width: 15px;
+    height: 15px;
+    margin: 0 auto;
+  }
+  .pos {
+    color: var(--green);
+  }
+  .neg {
+    color: var(--red);
+  }
+  .flat {
+    color: var(--muted);
+  }
+  .dl {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    justify-content: flex-end;
+  }
+  .dl .ic {
+    width: 11px;
+    height: 11px;
+    stroke-width: 2.6;
+  }
+
+  /* score pill */
+  .sp {
+    display: inline-grid;
+    place-items: center;
+    min-width: 38px;
+    height: 23px;
+    padding: 0 8px;
+    border-radius: 999px;
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    border: 1px solid transparent;
+  }
+  .sp.up {
+    background: var(--green-soft);
+    color: var(--green);
+    border-color: color-mix(in srgb, var(--green) 30%, transparent);
+  }
+  .sp.firm {
+    background: var(--teal-soft);
+    color: var(--teal);
+    border-color: color-mix(in srgb, var(--teal) 30%, transparent);
+  }
+  .sp.steady {
+    background: var(--indigo-soft);
+    color: var(--indigo);
+    border-color: color-mix(in srgb, var(--indigo) 30%, transparent);
+  }
+  .sp.ease {
+    background: var(--amber-soft);
+    color: var(--amber);
+    border-color: color-mix(in srgb, var(--amber) 35%, transparent);
+  }
+  .sp.weak {
+    background: var(--red-soft);
+    color: var(--red);
+    border-color: color-mix(in srgb, var(--red) 30%, transparent);
+  }
+
+  /* legend + menu */
+  .undertable {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    align-items: start;
+    gap: 16px;
+    margin-top: 16px;
+  }
+  @media (max-width: 1240px) {
+    .undertable {
+      grid-template-columns: 1fr;
+    }
+  }
+  .legrow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 14px 16px;
+  }
+  .lgi {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 11px;
+    color: var(--body);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 4px 11px 4px 5px;
+  }
+  .lgi b {
+    font-weight: 700;
+    color: var(--ink);
+    letter-spacing: 0.04em;
+    font-size: 9.5px;
+    text-transform: uppercase;
+  }
+  .foot-note {
+    padding: 0 16px 14px;
+    color: var(--muted);
+    font-size: 11px;
+  }
+  .menu {
+    padding: 6px;
+  }
+  .menu .mh {
+    padding: 9px 11px 8px;
+    border-bottom: 1px solid var(--soft);
+    margin-bottom: 4px;
+  }
+  .menu .mh b {
+    font-size: 12.5px;
+  }
+  .menu .mh div {
+    font-size: 10.5px;
+    color: var(--muted);
+  }
+  .mi {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 11px;
+    border-radius: 9px;
+    font-size: 12.5px;
+    color: var(--body);
+    cursor: pointer;
+  }
+  .mi:hover {
+    background: var(--canvas);
+    color: var(--ink);
+  }
+  .mi .ic {
+    width: 14px;
+    height: 14px;
+    color: var(--muted);
+  }
+  .mi .ch {
+    margin-left: auto;
+    width: 12px;
+    height: 12px;
+  }
+  .subm {
+    padding: 6px 11px 10px;
+  }
+  .subm .lab {
+    margin-bottom: 7px;
+    display: block;
+  }
+  .mchips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .mch {
+    border: 1px solid var(--line);
+    background: var(--canvas);
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--body);
+    padding: 4px 10px;
+  }
+
+  /* pager */
+  .pager {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 14px;
+  }
+  .pager .showing {
+    font-size: 12px;
+    color: var(--body);
+  }
+  .pager .showing b {
+    font-family: var(--mono);
+    color: var(--ink);
+  }
+  .pnav {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .pbtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid var(--line);
+    background: var(--white);
+    color: var(--muted);
+    border-radius: 999px;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 13px;
+  }
+  .pnum {
+    width: 30px;
+    height: 30px;
+    border-radius: 999px;
+    display: grid;
+    place-items: center;
+    background: var(--indigo);
+    color: #fff;
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  /* movers */
+  .two {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 1240px) {
+    .two {
+      grid-template-columns: 1fr;
+    }
+  }
+  .lb-row {
+    display: grid;
+    grid-template-columns: 26px 1fr auto 46px;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--soft);
+  }
+  .lb-row:last-child {
+    border-bottom: 0;
+  }
+  .lb-row:hover {
+    background: var(--canvas);
+  }
+  .lb-row .r {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--muted);
+    text-align: right;
+  }
+  .lb-row .m {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--indigo);
+  }
+  .lb-row .d {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 12px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .lb-row .d .ic {
+    width: 11px;
+    height: 11px;
+    stroke-width: 2.6;
+  }
+  .lb-row .s {
+    text-align: right;
+  }
+  .lb-row .sp {
+    min-width: 34px;
+    height: 21px;
+    font-size: 11.5px;
+  }
+
+  /* section titles */
+  .sect {
+    margin: 26px 0 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .sect h2 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+  }
+  .sect .rule {
+    flex: 1;
+    height: 1px;
+    background: var(--line);
+  }
+
+  /* faq */
+  .faqgrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 1240px) {
+    .faqgrid {
+      grid-template-columns: 1fr;
+    }
+  }
+  .faq {
+    padding: 15px 17px;
+  }
+  .faq h3 {
+    margin: 0 0 7px;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--indigo);
+    letter-spacing: -0.01em;
+    display: flex;
+    gap: 9px;
+    align-items: flex-start;
+  }
+  .faq h3 .ic {
+    width: 15px;
+    height: 15px;
+    flex: none;
+    margin-top: 2px;
+    color: var(--muted);
+  }
+  .faq p {
+    margin: 0 0 0 24px;
+    font-size: 12.5px;
+    color: var(--body);
+    line-height: 1.62;
+  }
+
+  /* notes */
+  .notes {
+    margin-top: 34px;
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    box-shadow: var(--sh);
+    padding: 20px 24px 24px;
+  }
+  .notes h2 {
+    margin: 0 0 4px;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+  }
+  .notes .lab {
+    display: block;
+    margin-bottom: 14px;
+  }
+  .notes ol {
+    margin: 0;
+    padding-left: 20px;
+    color: var(--body);
+    font-size: 13px;
+    line-height: 1.68;
+  }
+  .notes li {
+    margin-bottom: 9px;
+  }
+  .notes li b {
+    color: var(--ink);
+    font-weight: 700;
+  }
+  .notes code {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    background: var(--canvas);
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    padding: 1px 5px;
+  }
+
+  /* --- accent-fill contrast ---
+     --indigo and --violet flip from deep to pale in dark mode, so anything
+     filled with them needs dark text there, not white. */
+  @media (prefers-color-scheme: dark) {
+    .np.on,
+    .chip.on,
+    .tgl,
+    .btn.pri,
+    .count,
+    .pnum {
+      color: #12141d;
+    }
+    .np.on .tile,
+    .chip.on .ct {
+      background: rgba(0, 0, 0, 0.22) !important;
+      color: #12141d !important;
+    }
+  }
+  :root[data-theme="dark"] .np.on,
+  :root[data-theme="dark"] .chip.on,
+  :root[data-theme="dark"] .tgl,
+  :root[data-theme="dark"] .btn.pri,
+  :root[data-theme="dark"] .count,
+  :root[data-theme="dark"] .pnum {
+    color: #12141d;
+  }
+  :root[data-theme="dark"] .np.on .tile,
+  :root[data-theme="dark"] .chip.on .ct {
+    background: rgba(0, 0, 0, 0.22) !important;
+    color: #12141d !important;
+  }
+  :root[data-theme="light"] .np.on,
+  :root[data-theme="light"] .chip.on,
+  :root[data-theme="light"] .tgl,
+  :root[data-theme="light"] .btn.pri,
+  :root[data-theme="light"] .count,
+  :root[data-theme="light"] .pnum {
+    color: #fff;
+  }
+  :root[data-theme="light"] .np.on .tile,
+  :root[data-theme="light"] .chip.on .ct {
+    background: rgba(255, 255, 255, 0.25) !important;
+    color: #fff !important;
+  }
+</style>
+
+<svg class="sprite" aria-hidden="true">
+  <symbol id="i-dash" viewBox="0 0 24 24">
+    <rect x="3" y="3" width="7" height="9" rx="1" />
+    <rect x="14" y="3" width="7" height="5" rx="1" />
+    <rect x="14" y="12" width="7" height="9" rx="1" />
+    <rect x="3" y="16" width="7" height="5" rx="1" />
+  </symbol>
+  <symbol id="i-map" viewBox="0 0 24 24">
+    <path
+      d="M14.1 5.6a2 2 0 0 0 1.8 0l3.6-1.8A1 1 0 0 1 21 4.6v12.8a1 1 0 0 1-.6.9l-4.5 2.3a2 2 0 0 1-1.8 0l-4.2-2.1a2 2 0 0 0-1.8 0l-3.6 1.8A1 1 0 0 1 3 19.4V6.6a1 1 0 0 1 .6-.9l4.5-2.3a2 2 0 0 1 1.8 0Z"
+    />
+    <path d="M15 5.8v15M9 3.2v15" />
+  </symbol>
+  <symbol id="i-analyzer" viewBox="0 0 24 24">
+    <path d="M3 3v16a2 2 0 0 0 2 2h16" />
+    <path d="m7 15 4-6 4 3 5-7" />
+  </symbol>
+  <symbol id="i-screener" viewBox="0 0 24 24">
+    <path d="M21 4h-7M10 4H3M21 12h-5M12 12H3M21 20h-3M14 20H3" />
+    <circle cx="12" cy="4" r="2" />
+    <circle cx="14" cy="12" r="2" />
+    <circle cx="16" cy="20" r="2" />
+  </symbol>
+  <symbol id="i-report" viewBox="0 0 24 24">
+    <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+    <path d="M14 2v5h5M16 13H8M16 17H8M10 9H8" />
+  </symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24">
+    <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+    <path d="M10.3 21a1.9 1.9 0 0 0 3.4 0" />
+  </symbol>
+  <symbol id="i-user" viewBox="0 0 24 24">
+    <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+    <circle cx="12" cy="7" r="4" />
+  </symbol>
+  <symbol id="i-download" viewBox="0 0 24 24">
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+    <path d="m7 10 5 5 5-5M12 15V3" />
+  </symbol>
+  <symbol id="i-cdown" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" /></symbol>
+  <symbol id="i-cup" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6" /></symbol>
+  <symbol id="i-cleft" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6" /></symbol>
+  <symbol id="i-cright" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6" /></symbol>
+  <symbol id="i-sortable" viewBox="0 0 24 24">
+    <path d="m7 15 5 5 5-5M7 9l5-5 5 5" />
+  </symbol>
+  <symbol id="i-adown" viewBox="0 0 24 24">
+    <path d="M12 5v14M19 12l-7 7-7-7" />
+  </symbol>
+  <symbol id="i-aup" viewBox="0 0 24 24">
+    <path d="M12 19V5M5 12l7-7 7 7" />
+  </symbol>
+  <symbol id="i-building" viewBox="0 0 24 24">
+    <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z" />
+    <path
+      d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2M10 6h4M10 10h4M10 14h4"
+    />
+  </symbol>
+  <symbol id="i-dots" viewBox="0 0 24 24">
+    <circle cx="12" cy="5" r="1" />
+    <circle cx="12" cy="12" r="1" />
+    <circle cx="12" cy="19" r="1" />
+  </symbol>
+  <symbol id="i-heart" viewBox="0 0 24 24">
+    <path
+      d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z"
+    />
+  </symbol>
+  <symbol id="i-up" viewBox="0 0 24 24">
+    <path d="M16 7h6v6" />
+    <path d="m22 7-8.5 8.5-5-5L2 17" />
+  </symbol>
+  <symbol id="i-down" viewBox="0 0 24 24">
+    <path d="M16 17h6v-6" />
+    <path d="m22 17-8.5-8.5-5 5L2 7" />
+  </symbol>
+  <symbol id="i-flame" viewBox="0 0 24 24">
+    <path
+      d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.4-.5-2-1-3-1.1-2.1-.4-4.6 2-6-.4 2 .6 3.6 2 5 1.4 1.4 2 3 2 4.5a6 6 0 1 1-12 0c0-1 .2-2 .7-3 .5 1.3 1.2 2 2.3 2.5"
+    />
+  </symbol>
+  <symbol id="i-tag" viewBox="0 0 24 24">
+    <path
+      d="M12.6 2.6A2 2 0 0 0 11.2 2H4a2 2 0 0 0-2 2v7.2a2 2 0 0 0 .6 1.4l8.8 8.8a2 2 0 0 0 2.8 0l7.2-7.2a2 2 0 0 0 0-2.8Z"
+    />
+    <circle cx="7" cy="7" r="1" />
+  </symbol>
+  <symbol id="i-coins" viewBox="0 0 24 24">
+    <circle cx="8" cy="8" r="6" />
+    <path d="M18.1 12.9a6 6 0 0 1-8.9 6.7M7 6h1v4M9.9 16.1l.4.4" />
+  </symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 7v5l3 2" />
+  </symbol>
+  <symbol id="i-x" viewBox="0 0 24 24">
+    <path d="M18 6 6 18M6 6l12 12" />
+  </symbol>
+  <symbol id="i-filter" viewBox="0 0 24 24">
+    <path d="M22 3H2l8 9.5V19l4 2v-8.5Z" />
+  </symbol>
+  <symbol id="i-table" viewBox="0 0 24 24">
+    <rect x="3" y="3" width="18" height="18" rx="2" />
+    <path d="M3 9h18M3 15h18M9 3v18" />
+  </symbol>
+  <symbol id="i-help" viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="9" />
+    <path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01" />
+  </symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24">
+    <rect x="3" y="11" width="18" height="11" rx="2" />
+    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+  </symbol>
+  <symbol id="i-gauge" viewBox="0 0 24 24">
+    <path d="m12 14 4-4" />
+    <path d="M3.3 19a10 10 0 1 1 17.4 0" />
+  </symbol>
+</svg>
+
+<header class="bar">
+  <div class="brand">
+    <div class="mark">P</div>
+    <div class="bname">Property<i>IQ</i></div>
+  </div>
+  <nav class="nav">
+    <a class="np" href="#"
+      ><span class="tile" style="background: #3949ab"
+        ><svg class="ic"><use href="#i-dash" /></svg></span
+      ><span class="lb">Dashboard</span></a
+    >
+    <a class="np" href="#"
+      ><span class="tile" style="background: #00838f"
+        ><svg class="ic"><use href="#i-map" /></svg></span
+      ><span class="lb">Map</span></a
+    >
+    <a class="np" href="#"
+      ><span class="tile" style="background: #3949ab"
+        ><svg class="ic"><use href="#i-analyzer" /></svg></span
+      ><span class="lb">Analyzer</span></a
+    >
+    <a class="np on" href="#"
+      ><span class="tile" style="background: #7c4dff"
+        ><svg class="ic"><use href="#i-screener" /></svg></span
+      ><span class="lb">Screener</span></a
+    >
+    <a class="np" href="#"
+      ><span class="tile" style="background: #00c853"
+        ><svg class="ic"><use href="#i-report" /></svg></span
+      ><span class="lb">Reports</span></a
+    >
+  </nav>
+  <div class="barR">
+    <span class="prochip">Pro</span>
+    <button class="iconb">
+      <svg class="ic"><use href="#i-bell" /></svg>
+    </button>
+    <button class="iconb">
+      <svg class="ic"><use href="#i-user" /></svg>
+    </button>
+  </div>
+</header>
+
+<div class="ctrl">
+  <div class="seg">
+    <button class="on">
+      <svg class="ic" style="width: 13px; height: 13px">
+        <use href="#i-table" /></svg
+      >Screener
+    </button>
+    <button>
+      <svg class="ic" style="width: 13px; height: 13px">
+        <use href="#i-up" /></svg
+      >Movers
+    </button>
+  </div>
+  <div class="vr"></div>
+  <div class="seg">
+    <button class="on">Metro</button>
+    <button>County</button>
+    <button>
+      ZIP
+      <svg class="ic" style="width: 11px; height: 11px; opacity: 0.55">
+        <use href="#i-lock" />
+      </svg>
+    </button>
+  </div>
+  <div class="vr"></div>
+  <div class="seg">
+    <span class="segl">&#916;</span>
+    <button>1M</button><button class="on">3M</button><button>6M</button
+    ><button>1Y</button><button>3Y</button><button>5Y</button>
+  </div>
+  <div class="selwrap">
+    <select class="sel">
+      <option>All states</option>
+      <option>AL</option>
+      <option>AK</option>
+      <option>AZ</option>
+      <option>AR</option>
+      <option>CA</option>
+      <option>CO</option>
+      <option>CT</option>
+      <option>DE</option>
+      <option>DC</option>
+      <option>FL</option>
+      <option>GA</option>
+      <option>HI</option>
+      <option>ID</option>
+      <option>IL</option>
+      <option>IN</option>
+      <option>IA</option>
+      <option>KS</option>
+      <option>KY</option>
+      <option>LA</option>
+      <option>ME</option>
+      <option>MD</option>
+      <option>MA</option>
+      <option>MI</option>
+      <option>MN</option>
+      <option>MS</option>
+      <option>MO</option>
+      <option>MT</option>
+      <option>NE</option>
+      <option>NV</option>
+      <option>NH</option>
+      <option>NJ</option>
+      <option>NM</option>
+      <option>NY</option>
+      <option>NC</option>
+      <option>ND</option>
+      <option>OH</option>
+      <option>OK</option>
+      <option>OR</option>
+      <option>PA</option>
+      <option>RI</option>
+      <option>SC</option>
+      <option>SD</option>
+      <option>TN</option>
+      <option>TX</option>
+      <option>UT</option>
+      <option>VT</option>
+      <option>VA</option>
+      <option>WA</option>
+      <option>WV</option>
+      <option>WI</option>
+      <option>WY</option>
+    </select>
+    <svg class="ic"><use href="#i-cdown" /></svg>
+  </div>
+  <button class="tgl">
+    <svg class="ic"><use href="#i-building" /></svg>Major markets only
+  </button>
+  <div class="ctrlR">
+    <button class="btn">
+      <svg class="ic" style="width: 14px; height: 14px">
+        <use href="#i-download" /></svg
+      >Export CSV
+    </button>
+  </div>
+</div>
+
+<main class="wrap">
+  <div class="head">
+    <div>
+      <span class="lab">Market Intelligence</span>
+      <h1>Market Screener</h1>
+      <p>Screen and rank markets by score, price, cash-flow, and supply.</p>
+    </div>
+    <div class="stamp">
+      <svg class="ic"><use href="#i-clock" /></svg>Data as of Jun 30, 2026
+    </div>
+  </div>
+
+  <!-- ============ SCREEN DEFINITION ============ -->
+  <section class="card">
+    <div class="chead">
+      <div
+        class="ctile"
+        style="background: var(--violet-soft); color: var(--violet)"
+      >
+        <svg class="ic"><use href="#i-filter" /></svg>
+      </div>
+      <div class="ctitle">Filters</div>
+      <span class="count n">1</span>
+      <div class="cheadR">
+        <span class="lab">Cash-Flow preset applied</span>
+      </div>
+    </div>
+
+    <div class="presets">
+      <span class="lab" style="margin-right: 4px">Quick screens</span>
+      <button class="chip">
+        <span class="ct" style="background: var(--red-soft); color: var(--red)"
+          ><svg class="ic"><use href="#i-flame" /></svg></span
+        >Hottest Markets
+      </button>
+      <button class="chip">
+        <span
+          class="ct"
+          style="background: var(--teal-soft); color: var(--teal)"
+          ><svg class="ic"><use href="#i-tag" /></svg></span
+        >Undervalued + High Score
+      </button>
+      <button class="chip on">
+        <span
+          class="ct"
+          style="background: var(--green-soft); color: var(--green)"
+          ><svg class="ic"><use href="#i-coins" /></svg></span
+        >Cash-Flow
+      </button>
+      <button class="chip">
+        <span
+          class="ct"
+          style="background: var(--green-soft); color: var(--green)"
+          ><svg class="ic"><use href="#i-up" /></svg></span
+        >Biggest Gainers
+      </button>
+      <button class="chip">
+        <span class="ct" style="background: var(--red-soft); color: var(--red)"
+          ><svg class="ic"><use href="#i-down" /></svg></span
+        >Biggest Losers
+      </button>
+    </div>
+
+    <div class="fgrid">
+      <div class="fgrp">
+        <div class="flab">PIQ Score <span>0 &ndash; 99</span></div>
+        <div class="frow">
+          <input class="fin" placeholder="0" /><span class="fdash">&ndash;</span
+          ><input class="fin" placeholder="99" />
+        </div>
+      </div>
+      <div class="fgrp">
+        <div class="flab">Median Price <span>$</span></div>
+        <div class="frow">
+          <input class="fin" placeholder="100,000" /><span class="fdash"
+            >&ndash;</span
+          ><input class="fin" placeholder="2,000,000" />
+        </div>
+      </div>
+      <div class="fgrp">
+        <div class="flab">Cap Rate <span>%</span></div>
+        <div class="frow">
+          <input class="fin set" value="6" /><span class="fdash">&ndash;</span
+          ><input class="fin" placeholder="20" />
+        </div>
+      </div>
+      <div class="fgrp">
+        <div class="flab">Months of Supply <span>mo</span></div>
+        <div class="frow">
+          <input class="fin" placeholder="0" /><span class="fdash">&ndash;</span
+          ><input class="fin" placeholder="12" />
+        </div>
+      </div>
+      <div class="fgrp">
+        <div class="flab">Overvalued % <span>%</span></div>
+        <div class="frow">
+          <input class="fin" placeholder="&minus;50" /><span class="fdash"
+            >&ndash;</span
+          ><input class="fin" placeholder="100" />
+        </div>
+      </div>
+      <div class="fgrp">
+        <div class="flab">Score &#916; (3M) <span>pts</span></div>
+        <div class="frow">
+          <input class="fin" placeholder="&minus;20" /><span class="fdash"
+            >&ndash;</span
+          ><input class="fin" placeholder="20" />
+        </div>
+      </div>
+    </div>
+
+    <div class="ffoot">
+      <span class="lab">Active</span>
+      <span class="acti"
+        >Cap Rate &ge; 6%<svg class="ic"><use href="#i-x" /></svg
+      ></span>
+      <button class="clear">Clear all filters</button>
+    </div>
+  </section>
+
+  <!-- ============ RESULTS ============ -->
+  <div class="sect">
+    <h2>Results</h2>
+    <div class="rule"></div>
+    <span class="lab"
+      >26 matches from 935 scored metros &middot; sorted by cap rate, high to
+      low</span
+    >
+  </div>
+
+  <section class="card">
+    <div class="tscroll">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>
+              <span class="sh"
+                >Market <svg class="ic"><use href="#i-sortable" /></svg
+              ></span>
+            </th>
+            <th>
+              <span class="sh"
+                >Score <svg class="ic"><use href="#i-sortable" /></svg
+              ></span>
+            </th>
+            <th>
+              <span class="sh"
+                >&#916; 3M <svg class="ic"><use href="#i-sortable" /></svg
+              ></span>
+            </th>
+            <th>
+              <span class="sh"
+                >Median Price <svg class="ic"><use href="#i-sortable" /></svg
+              ></span>
+            </th>
+            <th>Rent</th>
+            <th class="sorted">
+              <span class="sh"
+                >Cap Rate <svg class="ic"><use href="#i-adown" /></svg
+              ></span>
+            </th>
+            <th>
+              <span class="sh"
+                >MOS <svg class="ic"><use href="#i-sortable" /></svg
+              ></span>
+            </th>
+            <th>
+              <span class="sh"
+                >Overvalued % <svg class="ic"><use href="#i-sortable" /></svg
+              ></span>
+            </th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="rk">1</td>
+            <td class="mk"><a href="#">Clarksdale, MS</a></td>
+            <td><span class="sp weak">6</span></td>
+            <td class="pos">
+              <span class="dl"
+                ><svg class="ic"><use href="#i-aup" /></svg>+5</span
+              >
+            </td>
+            <td>$50K</td>
+            <td class="na">&mdash;</td>
+            <td>13.6%</td>
+            <td>2.9</td>
+            <td class="pos">&minus;60.4%</td>
+            <td class="act">
+              <svg class="ic"><use href="#i-dots" /></svg>
+            </td>
+          </tr>
+          <tr>
+            <td class="rk">2</td>
+            <td class="mk"><a href="#">Greenville, MS</a></td>
+            <td><span class="sp weak">6</span></td>
+            <td class="neg">
+              <span class="dl"
+                ><svg class="ic"><use href="#i-adown" /></svg>&minus;6</span
+              >
+            </td>
+            <td>$60K</td>
+            <td class="na">&mdash;</td>
+            <td>10.2%</td>
+            <td>4.5</td>
+            <td class="pos">&minus;57.5%</td>
+            <td class="act">
+              <svg class="ic"><use href="#i-dots" /></svg>
+            </td>
+          </tr>
+          <tr>
+            <td class="rk">3</td>
+            <td class="mk"><a href="#">Meridian, MS</a></td>
+            <td><span class="sp weak">14</span></td>
+            <td class="pos">
+              <span class="dl"
+                ><svg class="ic"><use href="#i-aup" /></svg>+3</span
+              >
+            </td>
+            <td>$122K</td>
+            <td>$1,412</td>
+            <td>8.3%</td>
+            <td>2.1</td>
+            <td class="pos">&minus;29.0%</td>
+            <td class="act">
+              <svg class="ic"><use href="#i-dots" /></svg>
+            </td>
+          </tr>
+          <tr>
+            <td class="rk">4</td>
+            <td class="mk"><a href="#">Woodward, OK</a></td>
+            <td><span class="sp firm">61</span></td>
+            <td class="pos">
+              <span class="dl"
+                ><svg class="ic"><use href="#i-aup" /></svg>+18</span
+              >
+            </td>
+            <td>$133K</td>
+            <td>$1,508</td>
+            <td>8.1%</td>
+            <td>1.8</td>
+            <td class="pos">&minus;41.4%</td>
+            <td class="act">
+              <svg class="ic"><use href="#i-dots" /></svg>
+            </td>
+          </tr>
+          <tr>
+            <td class="rk">5</td>
+            <td class="mk"><a href="#">Forrest City, AR</a></td>
+            <td><span class="sp steady">56</span></td>
+            <td class="pos">
+              <span class="dl"
+                ><svg class="ic"><use href="#i-aup" /></svg>+38</span
+              >
+            </td>
+            <td>$84K</td>
+            <td class="na">&mdash;</td>
+            <td>7.8%</td>
+            <td>2.9</td>
+            <td class="pos">&minus;42.7%</td>
+            <td class="act">
+              <svg class="ic"><use href="#i-dots" /></svg>
+            </td>
+          </tr>
+          <tr>
+            <td class="rk">6</td>
+            <td class="mk"><a href="#">Pampa, TX</a></td>
+            <td><span class="sp firm">60</span></td>
+            <td class="pos">
+              <span class="dl"
+                ><svg class="ic"><use href="#i-aup" /></svg>+55</span
+              >
+            </td>
+            <td>$107K</td>
+            <td class="na">&mdash;</td>
+            <td>7.0%</td>
+            <td>5.5</td>
+            <td class="pos">&minus;45.9%</td>
+            <td class="act">
+              <svg class="ic"><use href="#i-dots" /></svg>
+            </td>
+          </tr>
+          <tr>
+            <td class="rk">7</td>
+            <td class="mk"><a href="#">Roanoke Rapids, NC</a></td>
+            <td><span class="sp up">72</span></td>
+            <td class="pos">
+              <span class="dl"
+                ><svg class="ic"><use href="#i-aup" /></svg>+23</span
+              >
+            </td>
+            <td>$107K</td>
+            <td>$1,048</td>
+            <td>7.0%</td>
+            <td>2.1</td>
+            <td class="pos">&minus;33.1%</td>
+            <td class="act">
+              <svg class="ic"><use href="#i-dots" /></svg>
+            </td>
+          </tr>
+          <tr>
+            <td class="rk">8</td>
+            <td class="mk"><a href="#">Kingsville, TX</a></td>
+            <td><span class="sp weak">14</span></td>
+            <td class="neg">
+              <span class="dl"
+                ><svg class="ic"><use href="#i-adown" /></svg>&minus;27</span
+              >
+            </td>
+            <td>$149K</td>
+            <td>$1,426</td>
+            <td>6.9%</td>
+            <td>3.3</td>
+            <td class="pos">&minus;26.3%</td>
+            <td class="act">
+              <svg class="ic"><use href="#i-dots" /></svg>
+            </td>
+          </tr>
+          <tr>
+            <td class="rk">9</td>
+            <td class="mk"><a href="#">Macomb, IL</a></td>
+            <td><span class="sp weak">23</span></td>
+            <td class="pos">
+              <span class="dl"
+                ><svg class="ic"><use href="#i-aup" /></svg>+7</span
+              >
+            </td>
+            <td>$99K</td>
+            <td>$919</td>
+            <td>6.7%</td>
+            <td>3.4</td>
+            <td class="pos">&minus;43.8%</td>
+            <td class="act">
+              <svg class="ic"><use href="#i-dots" /></svg>
+            </td>
+          </tr>
+          <tr>
+            <td class="rk">10</td>
+            <td class="mk"><a href="#">Vernon, TX</a></td>
+            <td><span class="sp weak">33</span></td>
+            <td class="neg">
+              <span class="dl"
+                ><svg class="ic"><use href="#i-adown" /></svg>&minus;7</span
+              >
+            </td>
+            <td>$107K</td>
+            <td class="na">&mdash;</td>
+            <td>6.7%</td>
+            <td>5.0</td>
+            <td class="pos">&minus;40.9%</td>
+            <td class="act">
+              <svg class="ic"><use href="#i-dots" /></svg>
+            </td>
+          </tr>
+          <tr>
+            <td class="rk">11</td>
+            <td class="mk"><a href="#">Selma, AL</a></td>
+            <td><span class="sp ease">46</span></td>
+            <td class="neg">
+              <span class="dl"
+                ><svg class="ic"><use href="#i-adown" /></svg>&minus;10</span
+              >
+            </td>
+            <td>$91K</td>
+            <td class="na">&mdash;</td>
+            <td>6.6%</td>
+            <td>2.2</td>
+            <td class="pos">&minus;29.5%</td>
+            <td class="act">
+              <svg class="ic"><use href="#i-dots" /></svg>
+            </td>
+          </tr>
+          <tr>
+            <td class="rk">12</td>
+            <td class="mk"><a href="#">Middlesborough, KY</a></td>
+            <td><span class="sp weak">1</span></td>
+            <td class="flat">0</td>
+            <td>$94K</td>
+            <td class="na">&mdash;</td>
+            <td>6.6%</td>
+            <td>3.7</td>
+            <td class="pos">&minus;16.8%</td>
+            <td class="act">
+              <svg class="ic"><use href="#i-dots" /></svg>
+            </td>
+          </tr>
+          <tr>
+            <td class="rk">13</td>
+            <td class="mk"><a href="#">Greenwood, MS</a></td>
+            <td><span class="sp weak">1</span></td>
+            <td class="neg">
+              <span class="dl"
+                ><svg class="ic"><use href="#i-adown" /></svg>&minus;1</span
+              >
+            </td>
+            <td>$94K</td>
+            <td class="na">&mdash;</td>
+            <td>6.4%</td>
+            <td>4.0</td>
+            <td class="pos">&minus;28.7%</td>
+            <td class="act">
+              <svg class="ic"><use href="#i-dots" /></svg>
+            </td>
+          </tr>
+          <tr>
+            <td class="rk">14</td>
+            <td class="mk"><a href="#">Danville, IL</a></td>
+            <td><span class="sp ease">41</span></td>
+            <td class="neg">
+              <span class="dl"
+                ><svg class="ic"><use href="#i-adown" /></svg>&minus;30</span
+              >
+            </td>
+            <td>$99K</td>
+            <td>$881</td>
+            <td>6.4%</td>
+            <td>3.2</td>
+            <td class="pos">&minus;48.4%</td>
+            <td class="act">
+              <svg class="ic"><use href="#i-dots" /></svg>
+            </td>
+          </tr>
+          <tr>
+            <td class="rk">15</td>
+            <td class="mk"><a href="#">Houghton, MI</a></td>
+            <td><span class="sp up">80</span></td>
+            <td class="pos">
+              <span class="dl"
+                ><svg class="ic"><use href="#i-aup" /></svg>+6</span
+              >
+            </td>
+            <td>$198K</td>
+            <td>$1,769</td>
+            <td>6.4%</td>
+            <td>2.5</td>
+            <td class="neg">+0.5%</td>
+            <td class="act">
+              <svg class="ic"><use href="#i-dots" /></svg>
+            </td>
+          </tr>
+          <tr>
+            <td class="rk">16</td>
+            <td class="mk"><a href="#">Abilene, TX</a></td>
+            <td><span class="sp up">94</span></td>
+            <td class="neg">
+              <span class="dl"
+                ><svg class="ic"><use href="#i-adown" /></svg>&minus;2</span
+              >
+            </td>
+            <td>$220K</td>
+            <td>$1,935</td>
+            <td>6.3%</td>
+            <td>0.6</td>
+            <td class="pos">&minus;5.5%</td>
+            <td class="act">
+              <svg class="ic"><use href="#i-dots" /></svg>
+            </td>
+          </tr>
+          <tr>
+            <td class="rk">17</td>
+            <td class="mk"><a href="#">Kennett, MO</a></td>
+            <td><span class="sp up">84</span></td>
+            <td class="neg">
+              <span class="dl"
+                ><svg class="ic"><use href="#i-adown" /></svg>&minus;9</span
+              >
+            </td>
+            <td>$101K</td>
+            <td class="na">&mdash;</td>
+            <td>6.3%</td>
+            <td>3.4</td>
+            <td class="pos">&minus;39.2%</td>
+            <td class="act">
+              <svg class="ic"><use href="#i-dots" /></svg>
+            </td>
+          </tr>
+          <tr>
+            <td class="rk">18</td>
+            <td class="mk"><a href="#">Enid, OK</a></td>
+            <td><span class="sp weak">28</span></td>
+            <td class="neg">
+              <span class="dl"
+                ><svg class="ic"><use href="#i-adown" /></svg>&minus;10</span
+              >
+            </td>
+            <td>$144K</td>
+            <td>$1,266</td>
+            <td>6.3%</td>
+            <td>2.1</td>
+            <td class="pos">&minus;38.8%</td>
+            <td class="act">
+              <svg class="ic"><use href="#i-dots" /></svg>
+            </td>
+          </tr>
+          <tr>
+            <td class="rk">19</td>
+            <td class="mk"><a href="#">Altus, OK</a></td>
+            <td><span class="sp firm">60</span></td>
+            <td class="pos">
+              <span class="dl"
+                ><svg class="ic"><use href="#i-aup" /></svg>+46</span
+              >
+            </td>
+            <td>$114K</td>
+            <td>$980</td>
+            <td>6.2%</td>
+            <td>1.8</td>
+            <td class="pos">&minus;47.0%</td>
+            <td class="act">
+              <svg class="ic"><use href="#i-dots" /></svg>
+            </td>
+          </tr>
+          <tr>
+            <td class="rk">20</td>
+            <td class="mk"><a href="#">Opelousas, LA</a></td>
+            <td><span class="sp weak">4</span></td>
+            <td class="pos">
+              <span class="dl"
+                ><svg class="ic"><use href="#i-aup" /></svg>+2</span
+              >
+            </td>
+            <td>$133K</td>
+            <td>$1,129</td>
+            <td>6.1%</td>
+            <td>3.6</td>
+            <td class="pos">&minus;16.7%</td>
+            <td class="act">
+              <svg class="ic"><use href="#i-dots" /></svg>
+            </td>
+          </tr>
+          <tr>
+            <td class="rk">21</td>
+            <td class="mk"><a href="#">Lumberton, NC</a></td>
+            <td><span class="sp steady">53</span></td>
+            <td class="pos">
+              <span class="dl"
+                ><svg class="ic"><use href="#i-aup" /></svg>+40</span
+              >
+            </td>
+            <td>$140K</td>
+            <td>$1,187</td>
+            <td>6.1%</td>
+            <td>2.6</td>
+            <td class="pos">&minus;0.8%</td>
+            <td class="act">
+              <svg class="ic"><use href="#i-dots" /></svg>
+            </td>
+          </tr>
+          <tr>
+            <td class="rk">22</td>
+            <td class="mk"><a href="#">Sault Ste. Marie, MI</a></td>
+            <td><span class="sp up">86</span></td>
+            <td class="pos">
+              <span class="dl"
+                ><svg class="ic"><use href="#i-aup" /></svg>+25</span
+              >
+            </td>
+            <td>$201K</td>
+            <td>$1,700</td>
+            <td>6.1%</td>
+            <td>3.6</td>
+            <td class="pos">&minus;5.4%</td>
+            <td class="act">
+              <svg class="ic"><use href="#i-dots" /></svg>
+            </td>
+          </tr>
+          <tr>
+            <td class="rk">23</td>
+            <td class="mk"><a href="#">Charleston, WV</a></td>
+            <td><span class="sp up">89</span></td>
+            <td class="pos">
+              <span class="dl"
+                ><svg class="ic"><use href="#i-aup" /></svg>+37</span
+              >
+            </td>
+            <td>$154K</td>
+            <td>$1,300</td>
+            <td>6.1%</td>
+            <td>1.3</td>
+            <td class="pos">&minus;24.1%</td>
+            <td class="act">
+              <svg class="ic"><use href="#i-dots" /></svg>
+            </td>
+          </tr>
+          <tr>
+            <td class="rk">24</td>
+            <td class="mk"><a href="#">Coffeyville, KS</a></td>
+            <td><span class="sp up">91</span></td>
+            <td class="pos">
+              <span class="dl"
+                ><svg class="ic"><use href="#i-aup" /></svg>+37</span
+              >
+            </td>
+            <td>$104K</td>
+            <td>$875</td>
+            <td>6.1%</td>
+            <td>3.0</td>
+            <td class="pos">&minus;60.7%</td>
+            <td class="act">
+              <svg class="ic"><use href="#i-dots" /></svg>
+            </td>
+          </tr>
+          <tr>
+            <td class="rk">25</td>
+            <td class="mk"><a href="#">Ozark, AL</a></td>
+            <td><span class="sp steady">52</span></td>
+            <td class="neg">
+              <span class="dl"
+                ><svg class="ic"><use href="#i-adown" /></svg>&minus;9</span
+              >
+            </td>
+            <td>$165K</td>
+            <td>$1,383</td>
+            <td>6.0%</td>
+            <td>2.5</td>
+            <td class="pos">&minus;12.6%</td>
+            <td class="act">
+              <svg class="ic"><use href="#i-dots" /></svg>
+            </td>
+          </tr>
+          <tr>
+            <td class="rk">26</td>
+            <td class="mk"><a href="#">Pine Bluff, AR</a></td>
+            <td><span class="sp ease">46</span></td>
+            <td class="neg">
+              <span class="dl"
+                ><svg class="ic"><use href="#i-adown" /></svg>&minus;4</span
+              >
+            </td>
+            <td>$103K</td>
+            <td>$863</td>
+            <td>6.0%</td>
+            <td>4.4</td>
+            <td class="pos">&minus;39.5%</td>
+            <td class="act">
+              <svg class="ic"><use href="#i-dots" /></svg>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="pager">
+    <span class="showing">Showing <b>1&ndash;26</b> of <b>26</b></span>
+    <div class="pnav">
+      <span class="pbtn"
+        ><svg class="ic" style="width: 12px; height: 12px">
+          <use href="#i-cleft" /></svg
+        >Prev</span
+      >
+      <span class="pnum">1</span>
+      <span class="pbtn"
+        >Next<svg class="ic" style="width: 12px; height: 12px">
+          <use href="#i-cright" /></svg
+      ></span>
+    </div>
+  </div>
+
+  <div class="undertable">
+    <section class="card">
+      <div class="chead">
+        <div
+          class="ctile"
+          style="background: var(--indigo-soft); color: var(--indigo)"
+        >
+          <svg class="ic"><use href="#i-gauge" /></svg>
+        </div>
+        <div class="ctitle">Reading the score column</div>
+        <div class="cheadR">
+          <span class="lab">1&ndash;99 &middot; 50 = state average</span>
+        </div>
+      </div>
+      <div class="legrow">
+        <span class="lgi"
+          ><span class="sp up">70+</span
+          ><b>Rising &middot; Strong &middot; Very strong</b></span
+        >
+        <span class="lgi"
+          ><span class="sp firm">60&ndash;69</span><b>Firming</b></span
+        >
+        <span class="lgi"
+          ><span class="sp steady">50&ndash;59</span><b>Steady</b></span
+        >
+        <span class="lgi"
+          ><span class="sp ease">40&ndash;49</span><b>Easing</b></span
+        >
+        <span class="lgi"
+          ><span class="sp weak">&lt;40</span
+          ><b>Weak &middot; Very weak</b></span
+        >
+      </div>
+      <p class="foot-note">
+        Momentum, not quality &mdash; a low score means cooling demand, not a
+        bad market. <b>MOS</b> = months of supply. <b>&#916; 3M</b> = points of
+        PropertyIQ Score gained or lost over the selected window. A dash means
+        no rent estimate is published for that market.
+      </p>
+    </section>
+
+    <section class="card">
+      <div class="chead">
+        <div class="ctile" style="background: var(--soft); color: var(--body)">
+          <svg class="ic"><use href="#i-dots" /></svg>
+        </div>
+        <div class="ctitle">Row menu</div>
+      </div>
+      <div class="menu">
+        <div class="mh">
+          <b>Clarksdale, MS</b>
+          <div>Metro</div>
+        </div>
+        <div class="mi">
+          <svg class="ic"><use href="#i-heart" /></svg>Favorite
+        </div>
+        <div class="mi">
+          <svg class="ic"><use href="#i-map" /></svg>View on Map
+        </div>
+        <div class="mi">
+          <svg class="ic"><use href="#i-report" /></svg>Generate Report
+        </div>
+        <div class="mi">
+          <svg class="ic"><use href="#i-bell" /></svg>Set Alert<svg
+            class="ic ch"
+          >
+            <use href="#i-cright" />
+          </svg>
+        </div>
+        <div class="subm">
+          <span class="lab">Set an alert on&hellip;</span>
+          <div class="mchips">
+            <span class="mch">PropertyIQ Score</span
+            ><span class="mch">Median Price</span
+            ><span class="mch">Cap Rate</span
+            ><span class="mch">Months of Supply</span
+            ><span class="mch">Overvalued %</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ============ MOVERS ============ -->
+  <div class="sect">
+    <h2>Movers</h2>
+    <div class="rule"></div>
+    <span class="lab"
+      >Second tab &middot; same geography, state and market-size settings</span
+    >
+  </div>
+
+  <div class="two">
+    <section class="card">
+      <div class="chead">
+        <div
+          class="ctile"
+          style="background: var(--green-soft); color: var(--green)"
+        >
+          <svg class="ic"><use href="#i-up" /></svg>
+        </div>
+        <div class="ctitle">Top gainers &mdash; 3M</div>
+        <div class="cheadR"><span class="lab">25 metros</span></div>
+      </div>
+      <div class="lb-row">
+        <span class="r">1</span><span class="m">Johnstown, PA</span
+        ><span class="d pos"
+          ><svg class="ic"><use href="#i-aup" /></svg>+97</span
+        ><span class="s"><span class="sp up">99</span></span>
+      </div>
+      <div class="lb-row">
+        <span class="r">2</span><span class="m">Pecos, TX</span
+        ><span class="d pos"
+          ><svg class="ic"><use href="#i-aup" /></svg>+92</span
+        ><span class="s"><span class="sp up">98</span></span>
+      </div>
+      <div class="lb-row">
+        <span class="r">3</span><span class="m">McComb, MS</span
+        ><span class="d pos"
+          ><svg class="ic"><use href="#i-aup" /></svg>+72</span
+        ><span class="s"><span class="sp up">94</span></span>
+      </div>
+      <div class="lb-row">
+        <span class="r">4</span><span class="m">Elkins, WV</span
+        ><span class="d pos"
+          ><svg class="ic"><use href="#i-aup" /></svg>+70</span
+        ><span class="s"><span class="sp up">74</span></span>
+      </div>
+      <div class="lb-row">
+        <span class="r">5</span><span class="m">Bainbridge, GA</span
+        ><span class="d pos"
+          ><svg class="ic"><use href="#i-aup" /></svg>+62</span
+        ><span class="s"><span class="sp firm">66</span></span>
+      </div>
+      <div class="lb-row">
+        <span class="r">6</span><span class="m">Plattsburgh, NY</span
+        ><span class="d pos"
+          ><svg class="ic"><use href="#i-aup" /></svg>+58</span
+        ><span class="s"><span class="sp up">96</span></span>
+      </div>
+      <div class="lb-row">
+        <span class="r">7</span><span class="m">Clarksburg, WV</span
+        ><span class="d pos"
+          ><svg class="ic"><use href="#i-aup" /></svg>+57</span
+        ><span class="s"><span class="sp up">74</span></span>
+      </div>
+      <div class="lb-row">
+        <span class="r">8</span><span class="m">Paris, TN</span
+        ><span class="d pos"
+          ><svg class="ic"><use href="#i-aup" /></svg>+56</span
+        ><span class="s"><span class="sp up">72</span></span>
+      </div>
+      <div class="lb-row">
+        <span class="r">9</span><span class="m">Miami, OK</span
+        ><span class="d pos"
+          ><svg class="ic"><use href="#i-aup" /></svg>+56</span
+        ><span class="s"><span class="sp firm">62</span></span>
+      </div>
+      <div class="lb-row">
+        <span class="r">10</span><span class="m">Bangor, ME</span
+        ><span class="d pos"
+          ><svg class="ic"><use href="#i-aup" /></svg>+55</span
+        ><span class="s"><span class="sp up">83</span></span>
+      </div>
+      <div class="lb-row">
+        <span class="r">11</span><span class="m">Pampa, TX</span
+        ><span class="d pos"
+          ><svg class="ic"><use href="#i-aup" /></svg>+55</span
+        ><span class="s"><span class="sp firm">60</span></span>
+      </div>
+      <div class="lb-row">
+        <span class="r">12</span><span class="m">Riverton, WY</span
+        ><span class="d pos"
+          ><svg class="ic"><use href="#i-aup" /></svg>+54</span
+        ><span class="s"><span class="sp up">79</span></span>
+      </div>
+      <div class="lb-row">
+        <span class="r">13</span><span class="m">Meadville, PA</span
+        ><span class="d pos"
+          ><svg class="ic"><use href="#i-aup" /></svg>+54</span
+        ><span class="s"><span class="sp up">71</span></span>
+      </div>
+      <div class="lb-row">
+        <span class="r">14</span><span class="m">Vidalia, GA</span
+        ><span class="d pos"
+          ><svg class="ic"><use href="#i-aup" /></svg>+54</span
+        ><span class="s"><span class="sp up">70</span></span>
+      </div>
+      <div class="lb-row">
+        <span class="r">15</span><span class="m">Susanville, CA</span
+        ><span class="d pos"
+          ><svg class="ic"><use href="#i-aup" /></svg>+53</span
+        ><span class="s"><span class="sp firm">66</span></span>
+      </div>
+      <div class="lb-row">
+        <span class="r">16</span><span class="m">Ogdensburg, NY</span
+        ><span class="d pos"
+          ><svg class="ic"><use href="#i-aup" /></svg>+52</span
+        ><span class="s"><span class="sp up">96</span></span>
+      </div>
+      <div class="lb-row">
+        <span class="r">17</span><span class="m">Nantucket, MA</span
+        ><span class="d pos"
+          ><svg class="ic"><use href="#i-aup" /></svg>+51</span
+        ><span class="s"><span class="sp up">84</span></span>
+      </div>
+      <div class="lb-row">
+        <span class="r">18</span><span class="m">Los Alamos, NM</span
+        ><span class="d pos"
+          ><svg class="ic"><use href="#i-aup" /></svg>+51</span
+        ><span class="s"><span class="sp steady">59</span></span>
+      </div>
+      <div class="lb-row">
+        <span class="r">19</span><span class="m">Kingston, NY</span
+        ><span class="d pos"
+          ><svg class="ic"><use href="#i-aup" /></svg>+50</span
+        ><span class="s"><span class="sp up">81</span></span>
+      </div>
+      <div class="lb-row">
+        <span class="r">20</span><span class="m">Laurinburg, NC</span
+        ><span class="d pos"
+          ><svg class="ic"><use href="#i-aup" /></svg>+50</span
+        ><span class="s"><span class="sp firm">61</span></span>
+      </div>
+      <div class="lb-row">
+        <span class="r">21</span><span class="m">Oneonta, NY</span
+        ><span class="d pos"
+          ><svg class="ic"><use href="#i-aup" /></svg>+49</span
+        ><span class="s"><span class="sp up">95</span></span>
+      </div>
+      <div class="lb-row">
+        <span class="r">22</span><span class="m">Gadsden, AL</span
+        ><span class="d pos"
+          ><svg class="ic"><use href="#i-aup" /></svg>+49</span
+        ><span class="s"><span class="sp firm">67</span></span>
+      </div>
+      <div class="lb-row">
+        <span class="r">23</span><span class="m">Mount Airy, NC</span
+        ><span class="d pos"
+          ><svg class="ic"><use href="#i-aup" /></svg>+48</span
+        ><span class="s"><span class="sp firm">68</span></span>
+      </div>
+      <div class="lb-row">
+        <span class="r">24</span><span class="m">Dyersburg, TN</span
+        ><span class="d pos"
+          ><svg class="ic"><use href="#i-aup" /></svg>+48</span
+        ><span class="s"><span class="sp firm">60</span></span>
+      </div>
+      <div class="lb-row">
+        <span class="r">25</span><span class="m">Emporia, KS</span
+        ><span class="d pos"
+          ><svg class="ic"><use href="#i-aup" /></svg>+47</span
+        ><span class="s"><span class="sp up">91</span></span>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="chead">
+        <div
+          class="ctile"
+          style="background: var(--red-soft); color: var(--red)"
+        >
+          <svg class="ic"><use href="#i-down" /></svg>
+        </div>
+        <div class="ctitle">Top losers &mdash; 3M</div>
+        <div class="cheadR"><span class="lab">25 metros</span></div>
+      </div>
+      <div class="lb-row">
+        <span class="r">1</span><span class="m">Vermillion, SD</span
+        ><span class="d neg"
+          ><svg class="ic"><use href="#i-adown" /></svg>&minus;83</span
+        ><span class="s"><span class="sp weak">9</span></span>
+      </div>
+      <div class="lb-row">
+        <span class="r">2</span><span class="m">Winnemucca, NV</span
+        ><span class="d neg"
+          ><svg class="ic"><use href="#i-adown" /></svg>&minus;72</span
+        ><span class="s"><span class="sp weak">5</span></span>
+      </div>
+      <div class="lb-row">
+        <span class="r">3</span><span class="m">Raymondville, TX</span
+        ><span class="d neg"
+          ><svg class="ic"><use href="#i-adown" /></svg>&minus;65</span
+        ><span class="s"><span class="sp weak">2</span></span>
+      </div>
+      <div class="lb-row">
+        <span class="r">4</span><span class="m">Arecibo, PR</span
+        ><span class="d neg"
+          ><svg class="ic"><use href="#i-adown" /></svg>&minus;63</span
+        ><span class="s"><span class="sp weak">11</span></span>
+      </div>
+      <div class="lb-row">
+        <span class="r">5</span><span class="m">Mount Vernon, IL</span
+        ><span class="d neg"
+          ><svg class="ic"><use href="#i-adown" /></svg>&minus;62</span
+        ><span class="s"><span class="sp weak">23</span></span>
+      </div>
+      <div class="lb-row">
+        <span class="r">6</span><span class="m">Snyder, TX</span
+        ><span class="d neg"
+          ><svg class="ic"><use href="#i-adown" /></svg>&minus;61</span
+        ><span class="s"><span class="sp weak">37</span></span>
+      </div>
+      <div class="lb-row">
+        <span class="r">7</span><span class="m">Coldwater, MI</span
+        ><span class="d neg"
+          ><svg class="ic"><use href="#i-adown" /></svg>&minus;54</span
+        ><span class="s"><span class="sp ease">40</span></span>
+      </div>
+      <div class="lb-row">
+        <span class="r">8</span><span class="m">Borger, TX</span
+        ><span class="d neg"
+          ><svg class="ic"><use href="#i-adown" /></svg>&minus;52</span
+        ><span class="s"><span class="sp weak">30</span></span>
+      </div>
+      <div class="lb-row">
+        <span class="r">9</span><span class="m">San Jose, CA</span
+        ><span class="d neg"
+          ><svg class="ic"><use href="#i-adown" /></svg>&minus;51</span
+        ><span class="s"><span class="sp weak">18</span></span>
+      </div>
+      <div class="lb-row">
+        <span class="r">10</span><span class="m">Mayfield, KY</span
+        ><span class="d neg"
+          ><svg class="ic"><use href="#i-adown" /></svg>&minus;51</span
+        ><span class="s"><span class="sp weak">3</span></span>
+      </div>
+      <div class="lb-row">
+        <span class="r">11</span><span class="m">Plainview, TX</span
+        ><span class="d neg"
+          ><svg class="ic"><use href="#i-adown" /></svg>&minus;49</span
+        ><span class="s"><span class="sp weak">23</span></span>
+      </div>
+      <div class="lb-row">
+        <span class="r">12</span><span class="m">Columbus, MS</span
+        ><span class="d neg"
+          ><svg class="ic"><use href="#i-adown" /></svg>&minus;44</span
+        ><span class="s"><span class="sp weak">18</span></span>
+      </div>
+      <div class="lb-row">
+        <span class="r">13</span><span class="m">Russellville, AL</span
+        ><span class="d neg"
+          ><svg class="ic"><use href="#i-adown" /></svg>&minus;44</span
+        ><span class="s"><span class="sp weak">18</span></span>
+      </div>
+      <div class="lb-row">
+        <span class="r">14</span><span class="m">Liberal, KS</span
+        ><span class="d neg"
+          ><svg class="ic"><use href="#i-adown" /></svg>&minus;44</span
+        ><span class="s"><span class="sp weak">5</span></span>
+      </div>
+      <div class="lb-row">
+        <span class="r">15</span><span class="m">Rexburg, ID</span
+        ><span class="d neg"
+          ><svg class="ic"><use href="#i-adown" /></svg>&minus;43</span
+        ><span class="s"><span class="sp ease">48</span></span>
+      </div>
+      <div class="lb-row">
+        <span class="r">16</span><span class="m">Waycross, GA</span
+        ><span class="d neg"
+          ><svg class="ic"><use href="#i-adown" /></svg>&minus;43</span
+        ><span class="s"><span class="sp weak">19</span></span>
+      </div>
+      <div class="lb-row">
+        <span class="r">17</span><span class="m">Oak Harbor, WA</span
+        ><span class="d neg"
+          ><svg class="ic"><use href="#i-adown" /></svg>&minus;42</span
+        ><span class="s"><span class="sp weak">35</span></span>
+      </div>
+      <div class="lb-row">
+        <span class="r">18</span><span class="m">Hobbs, NM</span
+        ><span class="d neg"
+          ><svg class="ic"><use href="#i-adown" /></svg>&minus;41</span
+        ><span class="s"><span class="sp ease">43</span></span>
+      </div>
+      <div class="lb-row">
+        <span class="r">19</span><span class="m">Greencastle, IN</span
+        ><span class="d neg"
+          ><svg class="ic"><use href="#i-adown" /></svg>&minus;41</span
+        ><span class="s"><span class="sp weak">26</span></span>
+      </div>
+      <div class="lb-row">
+        <span class="r">20</span><span class="m">Pierre, SD</span
+        ><span class="d neg"
+          ><svg class="ic"><use href="#i-adown" /></svg>&minus;41</span
+        ><span class="s"><span class="sp weak">21</span></span>
+      </div>
+      <div class="lb-row">
+        <span class="r">21</span><span class="m">Alpena, MI</span
+        ><span class="d neg"
+          ><svg class="ic"><use href="#i-adown" /></svg>&minus;40</span
+        ><span class="s"><span class="sp steady">58</span></span>
+      </div>
+      <div class="lb-row">
+        <span class="r">22</span><span class="m">Centralia, WA</span
+        ><span class="d neg"
+          ><svg class="ic"><use href="#i-adown" /></svg>&minus;40</span
+        ><span class="s"><span class="sp weak">26</span></span>
+      </div>
+      <div class="lb-row">
+        <span class="r">23</span><span class="m">Detroit Lakes, MN</span
+        ><span class="d neg"
+          ><svg class="ic"><use href="#i-adown" /></svg>&minus;40</span
+        ><span class="s"><span class="sp weak">22</span></span>
+      </div>
+      <div class="lb-row">
+        <span class="r">24</span><span class="m">Seattle, WA</span
+        ><span class="d neg"
+          ><svg class="ic"><use href="#i-adown" /></svg>&minus;40</span
+        ><span class="s"><span class="sp weak">16</span></span>
+      </div>
+      <div class="lb-row">
+        <span class="r">25</span><span class="m">Glasgow, KY</span
+        ><span class="d neg"
+          ><svg class="ic"><use href="#i-adown" /></svg>&minus;40</span
+        ><span class="s"><span class="sp weak">11</span></span>
+      </div>
+    </section>
+  </div>
+
+  <!-- ============ FAQ ============ -->
+  <div class="sect">
+    <h2>Frequently Asked Questions</h2>
+    <div class="rule"></div>
+  </div>
+
+  <div class="faqgrid">
+    <section class="card faq">
+      <h3>
+        <svg class="ic"><use href="#i-help" /></svg>What is the PropertyIQ
+        market screener?
+      </h3>
+      <p>
+        The market screener lets you filter and rank every scored PropertyIQ
+        market by PropertyIQ Score, price, cap rate, months of supply, and
+        overvaluation, across metro, county, and ZIP geography levels. It turns
+        thousands of markets into a sortable table so you can find the ones that
+        match a specific investing or buying strategy in seconds.
+      </p>
+    </section>
+    <section class="card faq">
+      <h3>
+        <svg class="ic"><use href="#i-help" /></svg>What can I filter markets by
+        in the screener?
+      </h3>
+      <p>
+        You can set a minimum and maximum range for PropertyIQ Score, median
+        price, cap rate, months of supply, and overvalued percentage, then
+        combine any of those with a state filter to narrow results further. A
+        market size toggle also lets you hide smaller metros, counties, and ZIPs
+        so the table defaults to markets with enough population to matter, while
+        still letting you switch it off to see every market size.
+      </p>
+    </section>
+    <section class="card faq">
+      <h3>
+        <svg class="ic"><use href="#i-help" /></svg>What quick-start presets
+        does the screener offer?
+      </h3>
+      <p>
+        Five one-click presets are available. Hottest Markets sorts by
+        PropertyIQ Score, Undervalued + High Score surfaces markets scoring 70
+        or above that are not overvalued, and Cash-Flow filters to markets with
+        an estimated cap rate of 6 percent or higher. Biggest Gainers and
+        Biggest Losers sort markets by how much their PropertyIQ Score has
+        changed over the selected time window.
+      </p>
+    </section>
+    <section class="card faq">
+      <h3>
+        <svg class="ic"><use href="#i-help" /></svg>What is the difference
+        between the Screener tab and the Movers tab?
+      </h3>
+      <p>
+        The Screener tab shows a full sortable, filterable table of every
+        market, while the Movers tab shows two side-by-side leaderboards of the
+        top markets whose PropertyIQ Score rose or fell the most over your
+        selected time window. Both tabs share the same geography level, state
+        filter, and market size setting, and the window can be set to 1 month, 3
+        months, 6 months, 1 year, 3 years, or 5 years.
+      </p>
+    </section>
+    <section class="card faq">
+      <h3>
+        <svg class="ic"><use href="#i-help" /></svg>Is ZIP-level screening and
+        CSV export free?
+      </h3>
+      <p>
+        Screening at the metro and county level is available on the free tier,
+        but ZIP-level results require a Pro plan, and switching the geography
+        selector to ZIP without Pro access shows an upgrade prompt instead of
+        results. Exporting the current table to CSV is also a Pro feature, so
+        free-tier users see a locked Export CSV button in the page header.
+      </p>
+    </section>
+    <section class="card faq">
+      <h3>
+        <svg class="ic"><use href="#i-help" /></svg>How current is the data in
+        the screener?
+      </h3>
+      <p>
+        Every row in the screener comes from the same monthly snapshot, and the
+        exact date is shown as a Data as of stamp next to the page title. When a
+        new PropertyIQ Score run completes each month, the screener table, its
+        Movers leaderboards, and its CSV export all reflect the new snapshot
+        automatically.
+      </p>
+    </section>
+  </div>
+
+  <!-- ============ NOTES ============ -->
+  <section class="notes">
+    <h2>What changed, and why</h2>
+    <span class="lab"
+      >Restyle only &mdash; every filter, column, preset, control and FAQ from
+      the live page is preserved</span
+    >
+    <ol>
+      <li>
+        <b>Collapsed three stacked control rows into one app-level bar.</b> The
+        live page stacks a global nav, a breadcrumb, a Screener/Movers + window
+        row, and a geo + state + market-size + presets row &mdash; four bands of
+        chrome before any data appears, pushing the first result row to roughly
+        440px down the page. Tabs, geography, the &#916; window, state, and the
+        market-size toggle now sit in a single light bar under the app bar, so
+        the only chrome above the page title is a 57px app bar and one control
+        row.
+      </li>
+      <li>
+        <b>Moved the five presets inside the Filters card.</b> On the live page
+        the preset chips sit in the chrome row while the six range inputs hide
+        in a separate collapsed accordion below, so clicking
+        <code>Cash-Flow</code> silently writes <code>capRateMin=6</code> into a
+        panel you cannot see. Presets and inputs are now one panel, and the
+        preset that wrote the value is visibly active above the input it
+        changed.
+      </li>
+      <li>
+        <b>Made the applied filter legible.</b> Live feedback is a bare count
+        badge next to the word &ldquo;Filters&rdquo; &mdash; you get
+        <code>1</code>, not <em>which</em> one. The panel now shows the filled
+        input in violet plus a removable <code>Cap Rate &ge; 6%</code> chip on
+        the footer row beside <em>Clear all filters</em>.
+      </li>
+      <li>
+        <b>Rebuilt the score column as a banded pill.</b> Live scores are bare
+        coloured digits on a continuous rainbow ramp: 33, 41 and 46 render as
+        three near-identical oranges, and the warm-to-cool gradient reads as a
+        heat map of market <em>quality</em>. Five discrete pills now map to the
+        momentum bands &mdash; 70+ rising/strong, 60&ndash;69 firming,
+        50&ndash;59 steady, 40&ndash;49 easing, under 40 weak &mdash; with 50
+        (the state average) sitting on brand indigo so the reference point is
+        visible in the scale itself.
+      </li>
+      <li>
+        <b>Added a legend that names the momentum bands.</b> Nothing on the live
+        screener says what a score of 6 means, and the number alone invites
+        reading it as a grade. The legend spells out the labels and states
+        outright that a low score is cooling momentum, not a bad market &mdash;
+        matching what the market detail page shows (Clarksdale, MS: 6, VERY
+        WEAK).
+      </li>
+      <li>
+        <b>Sticky header, one number format per column, true minus signs.</b>
+        The live header scrolls out of view within one wheel gesture on a 50-row
+        page and never comes back. Every numeric cell is now mono tabular and
+        right-aligned, negatives use &minus; rather than a hyphen, and the
+        header stays pinned while you scroll 50 rows.
+      </li>
+      <li>
+        <b>Made sortability and sort state visible.</b> Live headers carry a
+        faint double chevron that is easy to miss, and Rent silently has none
+        because it is not sortable. Sortable headers now carry the chevron pair;
+        the active column turns indigo with a single direction arrow, and Rent
+        stays plain so the difference is obvious.
+      </li>
+      <li>
+        <b>Surfaced the row menu instead of hiding it behind a &#8942;.</b>
+        Favorite, View on Map, Generate Report and Set Alert &mdash; plus the
+        five metrics an alert can watch &mdash; are only discoverable by
+        clicking the overflow dot on a row. The same menu is documented as a
+        panel beside the legend so the actions are visible without a click.
+      </li>
+      <li>
+        <b>Gave the results a header that states what you are looking at.</b>
+        The live table has no title or result summary above it; the only context
+        is a <em>Showing 1&ndash;26 of 26</em> line under the last row. The card
+        header now names the match count, the universe it came from, and the
+        active sort before the first row.
+      </li>
+      <li>
+        <b>Kept the FAQ but stopped it running the page width.</b> Six
+        full-width prose cards stretch each answer across the whole page. Two-up
+        above 1240px brings each answer to a readable measure without cutting a
+        word.
+      </li>
+    </ol>
+    <h2 style="margin-top: 22px">Found on the live page</h2>
+    <ol>
+      <li>
+        <b
+          >The state filter has no Puerto Rico option, but PR metros are in the
+          results.</b
+        >
+        The select lists 50 states plus DC; <em>Arecibo, PR</em> ranks fourth on
+        the 3M Top Losers board. There is no way to filter to it.
+      </li>
+      <li>
+        <b>Clicking a market name navigates away with no warning.</b> Market
+        names are links to <code>/market/{id}</code>. Clicking one from a screen
+        you spent time building discards the whole filter and sort state &mdash;
+        there is no back-to-results affordance on the destination page.
+      </li>
+      <li>
+        <b>The default landing state is not neutral.</b>
+        <code>/screener?geo=metro</code> redirects to
+        <code>?geo=metro&amp;preset=hottest</code>, so the page always opens
+        with a preset already applied &mdash; but the Filters badge shows no
+        count, because Hottest Markets only sets a sort, not a filter.
+      </li>
+      <li>
+        <b>Rent is missing for a third of the Cash-Flow matches.</b> Nine of the
+        26 rows show a dash for Rent, including the two highest-cap-rate markets
+        (Clarksdale, MS at 13.6% and Greenville, MS at 10.2%) &mdash; yet Cap
+        Rate, the very column the preset filters on, still prints a value for
+        every one of them. Nothing on the row says where that cap rate came
+        from.
+      </li>
+    </ol>
+  </section>
+</main>

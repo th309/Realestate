@@ -13,9 +13,9 @@ import type { AnalysisSnapshotDto } from '../dto/analysis-snapshot.dto';
  * distinct supabase call chains depending on the path taken:
  *   - find:   `.from().select().eq().eq().maybeSingle()`
  *   - insert: `.from().insert().select().single()`
- *   - update: `.from().update().eq().eq().select().single()` (owner_id then id
- *     — the service-role client bypasses RLS, so this double-`.eq()` is the
- *     only enforcement that an update can't cross owners; see
+ *   - update: `.from().update().eq().eq().select().maybeSingle()` (owner_id
+ *     then id — the service-role client bypasses RLS, so this double-`.eq()`
+ *     is the only enforcement that an update can't cross owners; see
  *     `updateExisting()`'s doc comment)
  * The `mockFindExistingChain` / `mockInsertChain` / `mockUpdateChain`
  * helpers below build one of these chains in isolation so each test only
@@ -53,17 +53,21 @@ function mockInsertChain(result: { data: unknown; error: unknown }) {
 }
 
 /**
- * Builds the `.update().eq('owner_id', ...).eq('id', ...).select().single()`
+ * Builds the `.update().eq('owner_id', ...).eq('id', ...).select().maybeSingle()`
  * chain used by updateExisting. Returns both `eq` calls so tests can assert
  * on the owner_id scoping (`eqOwner`) as well as the id scoping (`eqId`).
+ * Exposes both `single` and `maybeSingle` on `select`'s return — Task 12
+ * switched `updateExisting` from `.single()` to `.maybeSingle()` so a
+ * non-matching id resolves to `null` instead of throwing.
  */
 function mockUpdateChain(result: { data: unknown; error: unknown }) {
   const single = jest.fn().mockResolvedValue(result);
-  const select = jest.fn().mockReturnValue({ single });
+  const maybeSingle = jest.fn().mockResolvedValue(result);
+  const select = jest.fn().mockReturnValue({ single, maybeSingle });
   const eqId = jest.fn().mockReturnValue({ select });
   const eqOwner = jest.fn().mockReturnValue({ eq: eqId });
   const update = jest.fn().mockReturnValue({ eq: eqOwner });
-  return { update, eqOwner, eqId, select, single };
+  return { update, eqOwner, eqId, select, single, maybeSingle };
 }
 
 describe('AnalyzerPersistenceService save & share', () => {

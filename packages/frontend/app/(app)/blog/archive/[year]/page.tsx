@@ -35,6 +35,7 @@ const toSummary = (post: BlogPost): BlogPostSummary => ({
     date: post.frontmatter.date,
     category: post.frontmatter.category,
     tags: post.frontmatter.tags,
+    image: post.frontmatter.image,
   },
   readingTime: post.readingTime,
 });

@@ -6,10 +6,19 @@ interface AdvisoriesStripProps {
   advisories: AdvisoryResult[];
 }
 
+/**
+ * Semantic tokens, not literals. These were hardcoded as #00C853 / #FFB300 /
+ * #E53935 — values that stayed fixed in dark mode and, in the amber's case,
+ * sat at 1.9:1 on a white pill. They escaped the "analyzer: 0 hex" audit
+ * because the hex guard only matches Tailwind arbitrary values (`[#...]`), not
+ * hex inside a style object. They now point at the analyzer palette directly
+ * rather than at the M3 tokens, so the chips are right whether or not the
+ * `data-piq-theme` scope is above them.
+ */
 const STATUS_COLOR: Record<AdvisoryResult["status"], string> = {
-  pass: "#00C853",
-  marginal: "#FFB300",
-  fail: "#E53935",
+  pass: "var(--piq-green)",
+  marginal: "var(--piq-amber)",
+  fail: "var(--piq-red)",
 };
 
 function StatusIcon({ status }: { status: AdvisoryResult["status"] }) {
@@ -80,12 +89,18 @@ export function AdvisoriesStrip({ advisories }: AdvisoriesStripProps) {
             data-advisory-key={a.key}
             data-status={a.status}
             aria-label={`${a.label} status: ${a.status}, value: ${formatted}`}
-            className="rounded-full px-3 py-1.5 text-xs flex items-center gap-1.5 bg-surface text-on-surface"
-            style={{ border: `1.75px solid ${color}`, color }}
+            // Mockup `.rule`: pill tinted by status — border at 40% of the
+            // status colour, label in the status colour, mono value.
+            className="inline-flex items-center gap-[7px] rounded-full bg-piq-surface px-[13px] py-1.5 text-[12.5px] font-semibold shadow-piq"
+            style={{
+              border: `1px solid color-mix(in srgb, ${color} 45%, transparent)`,
+              color,
+            }}
           >
             <StatusIcon status={a.status} />
-            <span className="text-on-surface">
-              {a.label} · {formatted}
+            <span>
+              {a.label} ·{" "}
+              <span className="font-mono tabular-nums">{formatted}</span>
             </span>
           </span>
         );

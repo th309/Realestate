@@ -10,10 +10,10 @@ interface MobileInputSheetProps {
 }
 
 /**
- * Mobile-only slide-up sheet that hosts the InputPanel (address + property
- * details). Opened from the empty-state CTA or the "Edit inputs" bar — there is
- * no floating action button. Hidden on md+ where the sticky sidebar handles
- * inputs.
+ * Slide-up sheet that hosts the InputPanel (address + property details) below
+ * the 1140px two-column breakpoint. Opened from the empty-state CTA or the
+ * "Edit inputs" bar — there is no floating action button. Hidden above 1140px,
+ * where the sticky sidebar handles inputs.
  */
 export function MobileInputSheet({
   open,
@@ -34,7 +34,7 @@ export function MobileInputSheet({
   if (!open) return null;
 
   return (
-    <div className="md:hidden">
+    <div className="min-[1140px]:hidden">
       <div
         // z-50/z-[55] (mirrors MobileMenu's z-[60] convention) so the sheet
         // covers BottomNavBar (z-40) instead of leaving it tappable through

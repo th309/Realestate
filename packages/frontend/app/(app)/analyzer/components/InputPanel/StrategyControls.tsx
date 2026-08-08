@@ -99,7 +99,7 @@ export function StrategyControls({
       )}
       {mode === "focused" && isCommercial && (
         <div className="pt-1 text-[10px] text-on-surface-variant leading-snug">
-          Commercial MF (5+ units) is held long-term — flip and BRRRR don't
+          Commercial MF (5+ units) is held long-term — flip and BRRRR don&apos;t
           apply.
         </div>
       )}

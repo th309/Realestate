@@ -14,9 +14,9 @@ import { useEntitlements } from "@/lib/entitlements";
 import { GeoLockCard } from "@/components/entitlements/GeoLockCard";
 import { downloadCsv } from "@/lib/export";
 import { GeoSegmentedControl } from "./components/GeoSegmentedControl";
-import { PresetChips, PRESETS } from "./components/PresetChips";
+import { PRESETS } from "./components/PresetChips";
 import type { PresetId, Preset } from "./components/PresetChips";
-import { FilterRail } from "./components/FilterRail";
+import { ScreenerFilters } from "./components/ScreenerFilters";
 import { ScreenerTable } from "./components/ScreenerTable";
 import { Pagination } from "./components/Pagination";
 import { StateSelect } from "./components/StateSelect";
@@ -342,12 +342,6 @@ export function ScreenerPageInner() {
           hideSmallMarkets={hideSmallMarkets}
           onChange={handleHideSmallMarketsChange}
         />
-        {tab === "screener" && (
-          <PresetChips
-            activePreset={activePreset}
-            onSelect={handlePresetSelect}
-          />
-        )}
       </div>
 
       {/* ── ZIP lock gate ── */}
@@ -367,11 +361,14 @@ export function ScreenerPageInner() {
         />
       ) : (
         <>
-          <FilterRail
+          <ScreenerFilters
             filters={filters}
             changeWindow={changeWindow}
             onChange={handleFilterChange}
             onReset={handleFilterReset}
+            activePreset={activePreset}
+            onPresetSelect={handlePresetSelect}
+            activeFilters={activeFilters}
           />
           <ScreenerTable
             rows={rows}

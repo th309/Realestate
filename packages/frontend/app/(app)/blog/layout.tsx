@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { SeoPageConversionBar } from "@/app/components/seo/SeoPageConversionBar";
+import { CONTAINER, RHYTHM } from "@/app/components/marketing";
 
 export const metadata: Metadata = {
   title: "Blog - Housing Market Insights & Analysis",
@@ -35,7 +36,7 @@ export default function BlogLayout({
 }) {
   return (
     <>
-      <div className="w-full max-w-7xl mx-auto px-4 py-8">{children}</div>
+      <div className={`${CONTAINER} ${RHYTHM.tight}`}>{children}</div>
       <SeoPageConversionBar context="blog" />
     </>
   );
