@@ -19,23 +19,40 @@ export type SaveStatus = "idle" | "saving" | "saved" | "error";
  * currently the only call site, and it happens to spread fields in a fixed
  * order — this function is what makes that an implementation detail rather
  * than a load-bearing contract. Arrays keep their existing order, since
- * order is semantically meaningful there. `JSON.stringify` returning
- * `undefined` (for `undefined`, functions, symbols) is normalized to the
- * literal string `"undefined"` so it still participates in the fingerprint
- * instead of silently vanishing.
+ * order is semantically meaningful there.
+ *
+ * It must agree with `JSON.stringify` on what is REPRESENTABLE, because the
+ * fingerprint's only job is to predict whether a write would change stored
+ * content — and the content that reaches Postgres goes through
+ * `JSON.stringify`. A key that JSON drops must not participate here, or two
+ * states that persist identically will compare as different.
  */
 function canonicalStringify(value: unknown): string {
   if (Array.isArray(value)) {
-    return `[${value.map(canonicalStringify).join(",")}]`;
+    // JSON.stringify renders an undefined element as null, not as a hole.
+    return `[${value
+      .map((v) => (v === undefined ? "null" : canonicalStringify(v)))
+      .join(",")}]`;
   }
   if (value !== null && typeof value === "object") {
     const obj = value as Record<string, unknown>;
-    const keys = Object.keys(obj).sort();
+    // Undefined-valued keys are OMITTED, exactly as JSON.stringify omits
+    // them. This is load-bearing, not tidiness. The restored deal state
+    // comes back from Postgres through JSON, which already dropped these
+    // keys; the rebuilt state still carries them, because the input-sync
+    // effect assigns `capexReserveAnnualPerUnit: isCommercial ? x :
+    // undefined` and likewise `financing.amortizationYears`. Keeping them
+    // made two semantically identical states serialize differently, so
+    // every OPEN of a saved deal armed the debounce and issued a PATCH
+    // that wrote byte-identical content.
+    const keys = Object.keys(obj)
+      .filter((k) => obj[k] !== undefined)
+      .sort();
     return `{${keys
       .map((k) => `${JSON.stringify(k)}:${canonicalStringify(obj[k])}`)
       .join(",")}}`;
   }
-  return JSON.stringify(value) ?? "undefined";
+  return JSON.stringify(value) ?? "null";
 }
 
 /**
@@ -130,6 +147,7 @@ export function useDealAutosave({
       return;
     }
     if (fingerprint === lastSavedFingerprintRef.current) return;
+
     if (!enabled || !dealId) return;
     if (failuresRef.current >= MAX_CONSECUTIVE_FAILURES) return;
 

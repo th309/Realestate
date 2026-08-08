@@ -254,6 +254,42 @@ describe("useDealAutosave", () => {
     expect(patchDealState).not.toHaveBeenCalled();
   });
 
+  it("does not treat an undefined-valued key as an edit — JSON drops it, so persisted content is identical", () => {
+    // The exact shape that made every OPEN of a saved deal issue a PATCH.
+    // Restored state comes back from Postgres through JSON, which already
+    // dropped undefined-valued keys. The rebuilt state still carries them,
+    // because the input-sync effect assigns
+    // `capexReserveAnnualPerUnit: isCommercial ? x : undefined` and
+    // `financing.amortizationYears` the same way. Both persist identically,
+    // so neither may count as an edit.
+    const restored = {
+      v: 2,
+      input: { price: 300000, financing: { termYears: 30 } },
+    } as unknown as DealStateV2;
+
+    const rebuilt = {
+      v: 2,
+      input: {
+        price: 300000,
+        capexReserveAnnualPerUnit: undefined,
+        financing: { termYears: 30, amortizationYears: undefined },
+      },
+    } as unknown as DealStateV2;
+
+    // Precondition: the two really do persist identically.
+    expect(JSON.stringify(rebuilt)).toBe(JSON.stringify(restored));
+
+    const { rerender } = renderHook(
+      ({ s }) => useDealAutosave({ dealId: "row-1", state: s, enabled: true }),
+      { initialProps: { s: restored } },
+    );
+    rerender({ s: rebuilt });
+    act(() => {
+      vi.advanceTimersByTime(AUTOSAVE_DEBOUNCE_MS * 2);
+    });
+    expect(patchDealState).not.toHaveBeenCalled();
+  });
+
   it("resets the failure budget when dealId changes, so an abandoned deal's failures don't count against a freshly-opened deal", async () => {
     patchDealState.mockRejectedValue(new Error("500"));
     const { result, rerender } = renderHook(
