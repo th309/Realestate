@@ -1025,164 +1025,120 @@ git commit -m "feat(analyzer): add property imagery panel with street and aerial
 
 ### Task 6: Wire the panel into the Analyzer
 
-**Files:**
+**Reality check that reshaped this task.** The original draft assumed the Analyzer page
+renders `<Hero>`. It does not. `AnalyzerClient.tsx` composes `PropertyHeader` +
+`StrategyKPI`; `<Hero>` is used only by the saved-analysis view (`saved/[id]/SavedClient.tsx`),
+and that file has no `lat`/`lon` in scope at all. Adding imagery props to `Hero` would
+therefore create surface nothing can supply. `Hero` is left untouched, and imagery on the
+saved-analysis view is deferred (see Deferred section) until coordinates are plumbed there.
 
-- Modify: `packages/frontend/app/(app)/analyzer/components/Hero/Hero.tsx`
-- Test: `packages/frontend/app/(app)/analyzer/components/Hero/__tests__/Hero.test.tsx`
+Placement (user-selected): directly beneath the address strip, above the two-column grid —
+capped at `max-w-2xl` so it reads as a panel rather than a banner, and visible on mobile
+(unlike the left sidebar, which is `hidden md:block`).
+
+**Files:**
+- Modify: `packages/frontend/app/(app)/analyzer/components/PropertyImagery/PropertyImagery.tsx`
+  (add an explicit aspect ratio — closes the deferred sizing gap from Task 5 review)
+- Modify: `packages/frontend/app/(app)/analyzer/AnalyzerClient.tsx:239-241` (insert the panel
+  after the `PropertyHeader` block)
+- Test: `packages/frontend/app/(app)/analyzer/components/PropertyImagery/__tests__/PropertyImagery.test.tsx`
 
 **Interfaces:**
+- Consumes: `<PropertyImagery lat lon address />` from Task 5.
+- Produces: nothing new. This is pure composition.
 
-- Consumes: `<PropertyImagery/>` from Task 5.
-- Produces: `Hero` gains three optional props — `lat?: number | null`, `lon?: number | null`, `address?: string`. When all are present the media panel renders in a left column beside the verdict.
+**Why an aspect ratio.** The panel root has no height and its `<img>` uses `h-full`; a
+percentage height against an auto-height ancestor resolves to `auto`, so the panel's
+proportions currently float with whatever wraps it. Both image sources are 640x400 — exactly
+16:10 — so pinning `aspect-[16/10]` matches both and guarantees `object-cover` never crops.
+It also guarantees the attribution scrim always has its ~48px of vertical clearance.
 
 - [ ] **Step 1: Write the failing test**
 
-Append to `packages/frontend/app/(app)/analyzer/components/Hero/__tests__/Hero.test.tsx`:
+Append to `__tests__/PropertyImagery.test.tsx`, inside the existing `describe` block:
 
 ```tsx
-it("renders the property imagery panel when coordinates are supplied", () => {
-  render(
-    <Hero
-      verdict="strong"
-      lat={40.4574}
-      lon={-88.9931}
-      address="200 Orlando Ave"
-    />,
-  );
-  expect(document.querySelector("[data-property-imagery]")).toBeTruthy();
-});
-
-it("omits the imagery panel when coordinates are absent", () => {
-  render(<Hero verdict="strong" />);
-  expect(document.querySelector("[data-property-imagery]")).toBeNull();
-});
-```
-
-Add this mock near the top of the file, beside the existing imports:
-
-```tsx
-vi.mock("@/lib/data", () => ({
-  usePropertyImagery: () => ({
-    data: {
-      available: true,
-      url: "https://maps.googleapis.com/street.jpg",
-      panoId: "P1",
-      capturedAt: "2023-10",
-    },
-    isLoading: false,
-  }),
-}));
+  it("pins a 16:10 aspect ratio so both 640x400 sources fill without cropping", () => {
+    const { container } = render(
+      <PropertyImagery lat={40.4} lon={-88.9} address="200 Orlando Ave" />,
+    );
+    const panel = container.querySelector("[data-property-imagery]");
+    expect(panel?.className).toContain("aspect-[16/10]");
+  });
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd packages/frontend && npx vitest run "app/(app)/analyzer/components/Hero/__tests__/Hero.test.tsx"`
-Expected: FAIL — no element matches `[data-property-imagery]`.
+Run: `cd packages/frontend && npx vitest run "app/(app)/analyzer/components/PropertyImagery/__tests__/PropertyImagery.test.tsx"`
+Expected: FAIL on the new test only — the other 6 still pass.
 
-- [ ] **Step 3: Modify Hero**
+- [ ] **Step 3: Add the aspect ratio**
 
-In `Hero.tsx`, add the import:
+In `PropertyImagery.tsx`, on the root `<div data-property-imagery ...>`, add `aspect-[16/10]`
+to the existing className, leaving every other class in place:
 
 ```tsx
-import { PropertyImagery } from "../PropertyImagery";
+      className="relative aspect-[16/10] overflow-hidden rounded-xl border border-outline-variant bg-surface-container-low"
 ```
 
-Extend `HeroProps`:
+- [ ] **Step 4: Run tests to verify all pass**
+
+Run: `cd packages/frontend && npx vitest run "app/(app)/analyzer/components/PropertyImagery/__tests__/PropertyImagery.test.tsx"`
+Expected: PASS, 7 tests.
+
+- [ ] **Step 5: Wire it into AnalyzerClient**
+
+Add the import alongside the other component imports near the top of `AnalyzerClient.tsx`:
 
 ```tsx
-interface HeroProps {
-  verdict: Verdict;
-  aiText?: string | null;
-  aiIsStreaming?: boolean;
-  /** Legacy KPI tiles. Omit when rendering <StrategyKPI/> as a sibling instead. */
-  kpiTiles?: KPITileProps[];
-  /** Subject coordinates. When absent the media panel is omitted entirely. */
-  lat?: number | null;
-  lon?: number | null;
-  /** Resolved address, used for image alt text. */
-  address?: string;
-}
+import { PropertyImagery } from "./components/PropertyImagery";
 ```
 
-Replace the component body's grid so the media panel occupies a left column when present:
+Then, immediately after the existing `PropertyHeader` block (currently lines 239-241), insert:
 
 ```tsx
-export function Hero({
-  verdict,
-  aiText,
-  aiIsStreaming,
-  kpiTiles,
-  lat,
-  lon,
-  address,
-}: HeroProps) {
-  const showImagery = lat != null && lon != null && Boolean(address);
-
-  return (
-    <section
-      data-hero
-      className="rounded-2xl bg-surface border border-outline-variant p-6 md:p-8"
-    >
-      <div
-        className={`grid grid-cols-1 gap-6 items-center ${
-          showImagery
-            ? "md:grid-cols-[280px_200px_1fr]"
-            : "md:grid-cols-[200px_1fr]"
-        } ${kpiTiles ? "mb-6" : ""}`}
-      >
-        {showImagery && (
-          <PropertyImagery
-            lat={lat as number}
-            lon={lon as number}
-            address={address as string}
-          />
+        {displayAddress && (
+          <div className="max-w-2xl">
+            <PropertyImagery
+              lat={subjectLat}
+              lon={subjectLon}
+              address={displayAddress}
+            />
+          </div>
         )}
-        <div className="flex justify-center md:justify-start">
-          <VerdictBadge verdict={verdict} />
-        </div>
-        <div>
-          <AIQuoteHeader text={aiText} isStreaming={aiIsStreaming} />
-        </div>
-      </div>
-      {kpiTiles && <KPIStrip tiles={kpiTiles} />}
-    </section>
-  );
-}
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+`subjectLat` and `subjectLon` are already destructured from `compsView` (around line 200) and
+`displayAddress` is computed around line 121 — no new data plumbing is required. The panel
+returns `null` on its own when coordinates are absent, so the `displayAddress` guard is only
+about alt text, not about coordinate availability.
 
-Run: `cd packages/frontend && npx vitest run "app/(app)/analyzer/components/Hero/__tests__/Hero.test.tsx"`
-Expected: PASS, including the two new tests and all pre-existing ones.
-
-- [ ] **Step 5: Pass coordinates from the Analyzer page**
-
-Find the `<Hero ... />` usage in the Analyzer page (search: `cd packages/frontend && grep -rn "<Hero" "app/(app)/analyzer"`). The same component already computes `subjectLat` / `subjectLon` / `displayAddress` for the analyzer snapshot — pass those through:
-
-```tsx
-<Hero
-  /* ...existing props unchanged... */
-  lat={subjectLat}
-  lon={subjectLon}
-  address={displayAddress ?? ""}
-/>
-```
-
-If the values live under different local names in that file, use whatever local variables feed `AnalyzerSnapshotDerived.subjectLat` / `subjectLon` / `displayAddress`.
-
-- [ ] **Step 6: Verify in the running app**
-
-Start the dev servers, open `http://localhost:3000/analyzer?address=200+Orlando+Ave,+Normal,+IL+61761`, and confirm:
-the panel renders beside the verdict, defaults to Street, the Aerial toggle switches the image, and "Google Maps" is legible over the Street image.
+- [ ] **Step 6: Verify types and file size**
 
 Run: `cd packages/frontend && npx tsc --noEmit`
-Expected: no errors.
+Expected: exit 0.
 
-- [ ] **Step 7: Commit**
+Run: `wc -l "packages/frontend/app/(app)/analyzer/AnalyzerClient.tsx"`
+AnalyzerClient was 388 lines before this change and the hard limit is 400 (CLAUDE.md §1.3).
+Report the new count. If it exceeds 400, STOP and report rather than splitting the file
+unilaterally — the split is a separate decision.
+
+- [ ] **Step 7: Verify in the running app**
+
+The dev servers may already be running from the user's own terminal. Note that port 3001
+serves a DIFFERENT worktree (`.claude/worktrees/feat+site-redesign`), so do not assume it
+reflects this checkout — start this checkout's frontend on a free port if needed.
+
+Load `/analyzer?address=200+Orlando+Ave,+Normal,+IL+61761` and confirm:
+the panel renders beneath the address strip, defaults to Street, the Aerial toggle swaps the
+image, "Google Maps" is legible over the Street image, and the panel holds a 16:10 box rather
+than collapsing or stretching.
+
+- [ ] **Step 8: Commit**
 
 ```bash
-git add "packages/frontend/app/(app)/analyzer/components/Hero"
-git commit -m "feat(analyzer): show property imagery in the hero"
+git add "packages/frontend/app/(app)/analyzer/components/PropertyImagery/PropertyImagery.tsx" "packages/frontend/app/(app)/analyzer/components/PropertyImagery/__tests__/PropertyImagery.test.tsx" "packages/frontend/app/(app)/analyzer/AnalyzerClient.tsx"
+git commit -m "feat(analyzer): show property imagery beneath the address header"
 ```
 
 ---
