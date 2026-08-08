@@ -1384,6 +1384,972 @@ curl -s "https://backend-production-ee4d.up.railway.app/api/street-view/resolve?
 
 Expected: `"available": false` with `"url": null`. Confirm in the UI that this address shows the Aerial view with no Street tab, and no error.
 
+- [x] **Step 7: Cap billing exposure (required, not advisory)** — DONE
+
+Google's signing scheme has no expiry, so a signed URL is replayable indefinitely
+and every replay is a billed image request. On the public share page that URL sits
+in the page source. Our per-IP throttler limits only URL *minting* — replay traffic
+goes straight to Google and never touches our infrastructure.
+
+The Street View Static API exposes these quotas; only the image ones are billed
+(metadata is explicitly free — "no quota is consumed when you request metadata"):
+
+| Quota | Billed | Set to |
+| --- | --- | --- |
+| `Requests with a signature per day` | yes | **300** |
+| `Unsigned requests (if URL signing secret is defined) per day` | yes | **100** |
+| `Metadata requests per day` | no | left Unlimited |
+| any `per minute` / `per user` row | — | left at default |
+
+300/day keeps the month under the 10,000 free allowance (300 x 30 = 9,000), so a
+sustained full cap still bills $0. Exceeding a cap degrades imagery to unavailable,
+which the UI already renders as a hidden tile rather than an error.
+
+**The unsigned quota is the one that closes the real hole.** Signing does NOT make a
+lifted key useless: Google still honours unsigned requests carrying that key, by
+default up to 25,000/day, even when a signing secret is configured. Our code never
+sends unsigned requests, so capping this low costs nothing and removes the abuse
+path for a key harvested from a share page.
+
+Geocoding is a separate SKU (10,000/month free, then $5/1k) and deserves the same
+treatment. Budget alerts are configured as a secondary signal.
+
+- [ ] **Step 8: Document the env vars**
+
+Append to `packages/backend/.env.example`:
+
+```
+# Google Maps Platform — Street View Static API (Analyzer property imagery).
+# Both are read at boot and the app fails fast if either is missing.
+# API key:        https://console.cloud.google.com/project/_/google/maps-apis/credentials
+# Signing secret: same page, "Secret Generator" card (per-project, console-only)
+GOOGLE_MAPS_API_KEY=
+GOOGLE_MAPS_SIGNING_SECRET=
+```
+
+Then set real values in your local `packages/backend/.env` so the backend boots.
+
+- [ ] **Step 9: Verify types and boot**
+
+Run: `cd packages/backend && npx tsc --noEmit`
+Expected: no errors.
+
+Run: `cd packages/backend && npm run start:dev`, then in another shell:
+`curl "http://localhost:3001/api/street-view/resolve?lat=40.4574&lon=-88.9931"`
+Expected: JSON with `"available": true` and a `url` containing `signature=`.
+
+Also confirm validation rejects bad input:
+`curl -i "http://localhost:3001/api/street-view/resolve?lat=999&lon=-88.9931"`
+Expected: HTTP 400.
+
+- [ ] **Step 10: Commit**
+
+```bash
+git add packages/backend/src/street-view packages/backend/src/app.module.ts packages/backend/.env.example
+git commit -m "feat(street-view): add signed Street View resolve endpoint"
+```
+
+---
+
+### Task 3: Frontend data layer — fetcher and hook
+
+**Files:**
+
+- Create: `packages/frontend/lib/data/fetchers/street-view.ts`
+- Create: `packages/frontend/lib/data/hooks/usePropertyImagery.ts`
+- Modify: `packages/frontend/lib/data/fetchers/index.ts` (add export)
+- Modify: `packages/frontend/lib/data/hooks/index.ts` (add export)
+- Modify: `packages/frontend/lib/data/index.ts` (add `usePropertyImagery` to the
+  hand-maintained hooks whitelist ending in `} from "./hooks";`) — **required**:
+  fetchers are re-exported by wildcard, but hooks are a named allowlist, so a hook
+  omitted here compiles fine yet is unreachable from `@/lib/data`
+- Test: `packages/frontend/lib/data/fetchers/__tests__/street-view.test.ts`
+
+**Interfaces:**
+
+- Consumes: `GET /api/street-view/resolve` from Task 2; `fetchAPI<T>` from `./base`.
+- Produces:
+  - `interface StreetViewResolution { available: boolean; url: string | null; panoId: string | null; capturedAt: string | null; }`
+  - `fetchStreetView(lat: number, lon: number): Promise<StreetViewResolution>`
+  - `usePropertyImagery(lat: number | null, lon: number | null)` → `{ data, isLoading }`
+
+- [ ] **Step 1: Write the failing test**
+
+```ts
+// packages/frontend/lib/data/fetchers/__tests__/street-view.test.ts
+import { describe, it, expect, vi, afterEach } from "vitest";
+import { fetchStreetView } from "../street-view";
+import * as base from "../base";
+
+describe("fetchStreetView", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("requests the resolve endpoint with lat and lon query params", async () => {
+    const spy = vi.spyOn(base, "fetchAPI").mockResolvedValue({
+      available: true,
+      url: "https://maps.googleapis.com/x",
+      panoId: "P1",
+      capturedAt: "2023-10",
+    });
+
+    await fetchStreetView(40.4574, -88.9931);
+
+    expect(spy).toHaveBeenCalledWith(
+      "/api/street-view/resolve?lat=40.4574&lon=-88.9931",
+    );
+  });
+
+  it("returns an unavailable resolution when the request fails", async () => {
+    vi.spyOn(base, "fetchAPI").mockRejectedValue(new Error("500"));
+
+    await expect(fetchStreetView(40.4574, -88.9931)).resolves.toEqual({
+      available: false,
+      url: null,
+      panoId: null,
+      capturedAt: null,
+    });
+  });
+});
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `cd packages/frontend && npx vitest run lib/data/fetchers/__tests__/street-view.test.ts`
+Expected: FAIL — cannot resolve `../street-view`.
+
+- [ ] **Step 3: Write the fetcher**
+
+```ts
+// packages/frontend/lib/data/fetchers/street-view.ts
+/**
+ * STREET VIEW FETCHER
+ *
+ * Resolves a signed Google Street View image URL for a coordinate. The Google
+ * key and signing secret live on the backend; this only ever sees the signed
+ * URL. Imagery is never stored — Google's policy forbids caching the bytes.
+ */
+
+import { fetchAPI } from "./base";
+
+export interface StreetViewResolution {
+  available: boolean;
+  url: string | null;
+  panoId: string | null;
+  capturedAt: string | null;
+}
+
+const UNAVAILABLE: StreetViewResolution = {
+  available: false,
+  url: null,
+  panoId: null,
+  capturedAt: null,
+};
+
+/**
+ * Never rejects. Imagery is decorative relative to the analysis, so a failure
+ * degrades to "no photo" rather than surfacing an error to the user.
+ */
+export async function fetchStreetView(
+  lat: number,
+  lon: number,
+): Promise<StreetViewResolution> {
+  try {
+    return await fetchAPI<StreetViewResolution>(
+      `/api/street-view/resolve?lat=${lat}&lon=${lon}`,
+    );
+  } catch {
+    return UNAVAILABLE;
+  }
+}
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `cd packages/frontend && npx vitest run lib/data/fetchers/__tests__/street-view.test.ts`
+Expected: PASS, 2 tests.
+
+- [ ] **Step 5: Write the hook**
+
+```ts
+// packages/frontend/lib/data/hooks/usePropertyImagery.ts
+/**
+ * USE PROPERTY IMAGERY HOOK
+ *
+ * Resolves Street View availability for the subject property.
+ *
+ * Caching note: this caches the metadata resolution (availability + pano id +
+ * signed URL), never image bytes. Google's policy exempts panorama IDs from the
+ * caching prohibition; it does not exempt imagery.
+ */
+
+import { useQuery } from "@tanstack/react-query";
+import {
+  fetchStreetView,
+  type StreetViewResolution,
+} from "../fetchers/street-view";
+
+const TWO_HOURS = 1000 * 60 * 60 * 2;
+
+export function usePropertyImagery(lat: number | null, lon: number | null) {
+  return useQuery<StreetViewResolution>({
+    queryKey: ["street-view", lat, lon],
+    queryFn: () => fetchStreetView(lat as number, lon as number),
+    enabled: lat != null && lon != null,
+    staleTime: TWO_HOURS,
+    gcTime: TWO_HOURS,
+    retry: false,
+  });
+}
+```
+
+- [ ] **Step 6: Add the barrel exports**
+
+Append to `packages/frontend/lib/data/fetchers/index.ts`:
+
+```ts
+export * from "./street-view";
+```
+
+Append to `packages/frontend/lib/data/hooks/index.ts`:
+
+```ts
+export * from "./usePropertyImagery";
+```
+
+- [ ] **Step 7: Verify the public export resolves**
+
+Run: `cd packages/frontend && npx tsc --noEmit`
+Expected: no errors. `fetchStreetView` and `usePropertyImagery` are now importable from `@/lib/data`.
+
+- [ ] **Step 8: Commit**
+
+```bash
+git add packages/frontend/lib/data/fetchers/street-view.ts packages/frontend/lib/data/fetchers/index.ts packages/frontend/lib/data/hooks/usePropertyImagery.ts packages/frontend/lib/data/hooks/index.ts packages/frontend/lib/data/fetchers/__tests__/street-view.test.ts
+git commit -m "feat(data): add street view fetcher and property imagery hook"
+```
+
+---
+
+### Task 4: Aerial URL builder
+
+Mapbox burns its own attribution into the static image by default. Unlike
+`StaticCompsMap.tsx:49`, this builder does **not** pass `logo=false&attribution=false`,
+so the returned image is attribution-compliant on its own.
+
+**Files:**
+
+- Create: `packages/frontend/app/(app)/analyzer/components/PropertyImagery/buildAerialUrl.ts`
+- Test: `packages/frontend/app/(app)/analyzer/components/PropertyImagery/__tests__/buildAerialUrl.test.ts`
+
+**Interfaces:**
+
+- Consumes: `process.env.NEXT_PUBLIC_MAPBOX_TOKEN`.
+- Produces: `buildAerialUrl(lat: number, lon: number): string | null`.
+
+- [ ] **Step 1: Write the failing test**
+
+```ts
+// packages/frontend/app/(app)/analyzer/components/PropertyImagery/__tests__/buildAerialUrl.test.ts
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { buildAerialUrl } from "../buildAerialUrl";
+
+const ORIGINAL = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+
+describe("buildAerialUrl", () => {
+  beforeEach(() => {
+    process.env.NEXT_PUBLIC_MAPBOX_TOKEN = "pk.test-token";
+  });
+  afterEach(() => {
+    process.env.NEXT_PUBLIC_MAPBOX_TOKEN = ORIGINAL;
+  });
+
+  it("builds a satellite static image centred on the property", () => {
+    const url = buildAerialUrl(40.4574, -88.9931) as string;
+    expect(url).toContain("/styles/v1/mapbox/satellite-streets-v12/static/");
+    expect(url).toContain("-88.9931,40.4574,18");
+    expect(url).toContain("640x400@2x");
+    expect(url).toContain("access_token=pk.test-token");
+  });
+
+  it("places an indigo subject pin at the property", () => {
+    const url = buildAerialUrl(40.4574, -88.9931) as string;
+    expect(url).toContain("pin-s+3949AB(-88.9931,40.4574)");
+  });
+
+  it("keeps Mapbox attribution burned into the image", () => {
+    const url = buildAerialUrl(40.4574, -88.9931) as string;
+    expect(url).not.toContain("attribution=false");
+    expect(url).not.toContain("logo=false");
+  });
+
+  it("returns null when the Mapbox token is absent", () => {
+    delete process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+    expect(buildAerialUrl(40.4574, -88.9931)).toBeNull();
+  });
+});
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `cd packages/frontend && npx vitest run "app/(app)/analyzer/components/PropertyImagery/__tests__/buildAerialUrl.test.ts"`
+Expected: FAIL — cannot resolve `../buildAerialUrl`.
+
+- [ ] **Step 3: Write the implementation**
+
+```ts
+// packages/frontend/app/(app)/analyzer/components/PropertyImagery/buildAerialUrl.ts
+/**
+ * Mapbox Static Images URL for the property's aerial view.
+ *
+ * Deliberately does NOT disable Mapbox's built-in logo/attribution: the burned-in
+ * credit is what keeps this image compliant without extra markup.
+ *
+ * https://docs.mapbox.com/api/maps/static-images/
+ */
+
+const STYLE = "mapbox/satellite-streets-v12";
+const ZOOM = 18;
+const WIDTH = 640;
+const HEIGHT = 400;
+const PIN_HEX = "3949AB"; // PropertyIQ indigo
+
+export function buildAerialUrl(lat: number, lon: number): string | null {
+  const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+  if (!token) return null;
+
+  const pin = `pin-s+${PIN_HEX}(${lon},${lat})`;
+
+  return (
+    `https://api.mapbox.com/styles/v1/${STYLE}/static/` +
+    `${pin}/${lon},${lat},${ZOOM}/${WIDTH}x${HEIGHT}@2x` +
+    `?access_token=${encodeURIComponent(token)}`
+  );
+}
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `cd packages/frontend && npx vitest run "app/(app)/analyzer/components/PropertyImagery/__tests__/buildAerialUrl.test.ts"`
+Expected: PASS, 4 tests.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add "packages/frontend/app/(app)/analyzer/components/PropertyImagery/buildAerialUrl.ts" "packages/frontend/app/(app)/analyzer/components/PropertyImagery/__tests__/buildAerialUrl.test.ts"
+git commit -m "feat(analyzer): add Mapbox aerial static image URL builder"
+```
+
+---
+
+### Task 5: PropertyImagery panel component
+
+**Files:**
+
+- Create: `packages/frontend/app/(app)/analyzer/components/PropertyImagery/PropertyImagery.tsx`
+- Create: `packages/frontend/app/(app)/analyzer/components/PropertyImagery/index.ts`
+- Test: `packages/frontend/app/(app)/analyzer/components/PropertyImagery/__tests__/PropertyImagery.test.tsx`
+
+**Interfaces:**
+
+- Consumes: `usePropertyImagery` (Task 3), `buildAerialUrl` (Task 4).
+- Produces: `<PropertyImagery lat={number|null} lon={number|null} address={string} />`.
+
+- [ ] **Step 1: Write the failing test**
+
+```tsx
+// packages/frontend/app/(app)/analyzer/components/PropertyImagery/__tests__/PropertyImagery.test.tsx
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { PropertyImagery } from "../PropertyImagery";
+
+const mockUse = vi.fn();
+vi.mock("@/lib/data", () => ({
+  usePropertyImagery: (...args: unknown[]) => mockUse(...args),
+}));
+
+const ORIGINAL = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+const AVAILABLE = {
+  data: {
+    available: true,
+    url: "https://maps.googleapis.com/street.jpg",
+    panoId: "P1",
+    capturedAt: "2023-10",
+  },
+  isLoading: false,
+};
+
+describe("PropertyImagery", () => {
+  beforeEach(() => {
+    process.env.NEXT_PUBLIC_MAPBOX_TOKEN = "pk.test-token";
+    mockUse.mockReturnValue(AVAILABLE);
+  });
+  afterEach(() => {
+    process.env.NEXT_PUBLIC_MAPBOX_TOKEN = ORIGINAL;
+    vi.clearAllMocks();
+  });
+
+  it("renders nothing when coordinates are missing", () => {
+    const { container } = render(
+      <PropertyImagery lat={null} lon={null} address="200 Orlando Ave" />,
+    );
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("shows both tabs and defaults to Street when a panorama exists", () => {
+    render(
+      <PropertyImagery lat={40.4} lon={-88.9} address="200 Orlando Ave" />,
+    );
+    expect(screen.getByRole("tab", { name: /street/i })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(screen.getByRole("tab", { name: /aerial/i })).toBeInTheDocument();
+    expect(
+      screen.getByAltText(/street view of 200 orlando ave/i),
+    ).toBeInTheDocument();
+  });
+
+  it("displays Google attribution while Street View is shown", () => {
+    render(
+      <PropertyImagery lat={40.4} lon={-88.9} address="200 Orlando Ave" />,
+    );
+    expect(screen.getByText("Google Maps")).toBeInTheDocument();
+  });
+
+  it("switches to the aerial image when the Aerial tab is clicked", async () => {
+    render(
+      <PropertyImagery lat={40.4} lon={-88.9} address="200 Orlando Ave" />,
+    );
+    await userEvent.click(screen.getByRole("tab", { name: /aerial/i }));
+    expect(
+      screen.getByAltText(/aerial view of 200 orlando ave/i),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Google Maps")).not.toBeInTheDocument();
+  });
+
+  it("hides the Street tab entirely when no panorama exists", () => {
+    mockUse.mockReturnValue({
+      data: { available: false, url: null, panoId: null, capturedAt: null },
+      isLoading: false,
+    });
+    render(
+      <PropertyImagery lat={40.4} lon={-88.9} address="200 Orlando Ave" />,
+    );
+    expect(
+      screen.queryByRole("tab", { name: /street/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByAltText(/aerial view of 200 orlando ave/i),
+    ).toBeInTheDocument();
+  });
+
+  it("renders nothing when neither source is available", () => {
+    delete process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+    mockUse.mockReturnValue({
+      data: { available: false, url: null, panoId: null, capturedAt: null },
+      isLoading: false,
+    });
+    const { container } = render(
+      <PropertyImagery lat={40.4} lon={-88.9} address="200 Orlando Ave" />,
+    );
+    expect(container).toBeEmptyDOMElement();
+  });
+});
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `cd packages/frontend && npx vitest run "app/(app)/analyzer/components/PropertyImagery/__tests__/PropertyImagery.test.tsx"`
+Expected: FAIL — cannot resolve `../PropertyImagery`.
+
+- [ ] **Step 3: Write the component**
+
+```tsx
+// packages/frontend/app/(app)/analyzer/components/PropertyImagery/PropertyImagery.tsx
+"use client";
+
+import { useState } from "react";
+import { usePropertyImagery } from "@/lib/data";
+import { buildAerialUrl } from "./buildAerialUrl";
+
+type Mode = "street" | "aerial";
+
+interface PropertyImageryProps {
+  lat: number | null;
+  lon: number | null;
+  /** Resolved address, used for image alt text. */
+  address: string;
+}
+
+/**
+ * Hero media panel: the property's Street View exterior and its aerial context,
+ * behind a two-option toggle. Only the active mode's image is requested, so a
+ * user who never opens Aerial costs exactly one Street View call.
+ *
+ * Degrades in both directions — no panorama hides the Street tab, no Mapbox
+ * token hides Aerial, and neither renders nothing at all rather than an empty box.
+ */
+export function PropertyImagery({ lat, lon, address }: PropertyImageryProps) {
+  const { data } = usePropertyImagery(lat, lon);
+  const [chosen, setChosen] = useState<Mode | null>(null);
+
+  if (lat == null || lon == null) return null;
+
+  const streetUrl = data?.available ? data.url : null;
+  const aerialUrl = buildAerialUrl(lat, lon);
+
+  if (!streetUrl && !aerialUrl) return null;
+
+  // Availability arrives async, so derive the active mode rather than syncing
+  // state in an effect.
+  const mode: Mode = chosen ?? (streetUrl ? "street" : "aerial");
+  const active = mode === "street" && streetUrl ? "street" : "aerial";
+
+  return (
+    <div
+      data-property-imagery
+      className="relative overflow-hidden rounded-xl border border-outline-variant bg-surface-container-low"
+    >
+      <div
+        role="tablist"
+        aria-label="Property imagery"
+        className="absolute left-3 top-3 z-10 flex gap-1 rounded-full bg-surface/90 p-1 shadow-sm"
+      >
+        {streetUrl && (
+          <button
+            role="tab"
+            aria-selected={active === "street"}
+            onClick={() => setChosen("street")}
+            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors duration-200 ${
+              active === "street"
+                ? "bg-primary text-on-primary"
+                : "text-on-surface-variant"
+            }`}
+          >
+            Street
+          </button>
+        )}
+        {aerialUrl && (
+          <button
+            role="tab"
+            aria-selected={active === "aerial"}
+            onClick={() => setChosen("aerial")}
+            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors duration-200 ${
+              active === "aerial"
+                ? "bg-primary text-on-primary"
+                : "text-on-surface-variant"
+            }`}
+          >
+            Aerial
+          </button>
+        )}
+      </div>
+
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={(active === "street" ? streetUrl : aerialUrl) as string}
+        alt={
+          active === "street"
+            ? `Street View of ${address}`
+            : `Aerial view of ${address}`
+        }
+        className="block h-full w-full object-cover"
+      />
+
+      {/* Google requires visible, unmodified attribution on Street View imagery.
+          Mapbox burns its own attribution into the aerial raster. */}
+      {active === "street" && (
+        <span className="absolute bottom-2 left-3 text-[11px] font-medium text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
+          Google Maps
+        </span>
+      )}
+    </div>
+  );
+}
+```
+
+```ts
+// packages/frontend/app/(app)/analyzer/components/PropertyImagery/index.ts
+export { PropertyImagery } from "./PropertyImagery";
+export { buildAerialUrl } from "./buildAerialUrl";
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `cd packages/frontend && npx vitest run "app/(app)/analyzer/components/PropertyImagery/__tests__/PropertyImagery.test.tsx"`
+Expected: PASS, 6 tests.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add "packages/frontend/app/(app)/analyzer/components/PropertyImagery"
+git commit -m "feat(analyzer): add property imagery panel with street and aerial views"
+```
+
+---
+
+### Task 6: Wire the panel into the Analyzer
+
+**Reality check that reshaped this task.** The original draft assumed the Analyzer page
+renders `<Hero>`. It does not. `AnalyzerClient.tsx` composes `PropertyHeader` +
+`StrategyKPI`; `<Hero>` is used only by the saved-analysis view (`saved/[id]/SavedClient.tsx`),
+and that file has no `lat`/`lon` in scope at all. Adding imagery props to `Hero` would
+therefore create surface nothing can supply. `Hero` is left untouched, and imagery on the
+saved-analysis view is deferred (see Deferred section) until coordinates are plumbed there.
+
+Placement (user-selected): directly beneath the address strip, above the two-column grid —
+capped at `max-w-2xl` so it reads as a panel rather than a banner, and visible on mobile
+(unlike the left sidebar, which is `hidden md:block`).
+
+**Files:**
+- Modify: `packages/frontend/app/(app)/analyzer/components/PropertyImagery/PropertyImagery.tsx`
+  (add an explicit aspect ratio — closes the deferred sizing gap from Task 5 review)
+- Modify: `packages/frontend/app/(app)/analyzer/AnalyzerClient.tsx:239-241` (insert the panel
+  after the `PropertyHeader` block)
+- Test: `packages/frontend/app/(app)/analyzer/components/PropertyImagery/__tests__/PropertyImagery.test.tsx`
+
+**Interfaces:**
+- Consumes: `<PropertyImagery lat lon address />` from Task 5.
+- Produces: nothing new. This is pure composition.
+
+**Why an aspect ratio.** The panel root has no height and its `<img>` uses `h-full`; a
+percentage height against an auto-height ancestor resolves to `auto`, so the panel's
+proportions currently float with whatever wraps it. Both image sources are 640x400 — exactly
+16:10 — so pinning `aspect-[16/10]` matches both and guarantees `object-cover` never crops.
+It also guarantees the attribution scrim always has its ~48px of vertical clearance.
+
+- [ ] **Step 1: Write the failing test**
+
+Append to `__tests__/PropertyImagery.test.tsx`, inside the existing `describe` block:
+
+```tsx
+  it("pins a 16:10 aspect ratio so both 640x400 sources fill without cropping", () => {
+    const { container } = render(
+      <PropertyImagery lat={40.4} lon={-88.9} address="200 Orlando Ave" />,
+    );
+    const panel = container.querySelector("[data-property-imagery]");
+    expect(panel?.className).toContain("aspect-[16/10]");
+  });
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `cd packages/frontend && npx vitest run "app/(app)/analyzer/components/PropertyImagery/__tests__/PropertyImagery.test.tsx"`
+Expected: FAIL on the new test only — the other 6 still pass.
+
+- [ ] **Step 3: Add the aspect ratio**
+
+In `PropertyImagery.tsx`, on the root `<div data-property-imagery ...>`, add `aspect-[16/10]`
+to the existing className, leaving every other class in place:
+
+```tsx
+      className="relative aspect-[16/10] overflow-hidden rounded-xl border border-outline-variant bg-surface-container-low"
+```
+
+- [ ] **Step 4: Run tests to verify all pass**
+
+Run: `cd packages/frontend && npx vitest run "app/(app)/analyzer/components/PropertyImagery/__tests__/PropertyImagery.test.tsx"`
+Expected: PASS, 7 tests.
+
+- [ ] **Step 5: Wire it into AnalyzerClient**
+
+Add the import alongside the other component imports near the top of `AnalyzerClient.tsx`:
+
+```tsx
+import { PropertyImagery } from "./components/PropertyImagery";
+```
+
+Then, immediately after the existing `PropertyHeader` block (currently lines 239-241), insert:
+
+```tsx
+        {displayAddress && (
+          <div className="max-w-2xl">
+            <PropertyImagery
+              lat={subjectLat}
+              lon={subjectLon}
+              address={displayAddress}
+            />
+          </div>
+        )}
+```
+
+`subjectLat` and `subjectLon` are already destructured from `compsView` (around line 200) and
+`displayAddress` is computed around line 121 — no new data plumbing is required. The panel
+returns `null` on its own when coordinates are absent, so the `displayAddress` guard is only
+about alt text, not about coordinate availability.
+
+- [ ] **Step 6: Verify types and file size**
+
+Run: `cd packages/frontend && npx tsc --noEmit`
+Expected: exit 0.
+
+Run: `wc -l "packages/frontend/app/(app)/analyzer/AnalyzerClient.tsx"`
+AnalyzerClient was 388 lines before this change and the hard limit is 400 (CLAUDE.md §1.3).
+Report the new count. If it exceeds 400, STOP and report rather than splitting the file
+unilaterally — the split is a separate decision.
+
+- [ ] **Step 7: Verify in the running app**
+
+The dev servers may already be running from the user's own terminal. Note that port 3001
+serves a DIFFERENT worktree (`.claude/worktrees/feat+site-redesign`), so do not assume it
+reflects this checkout — start this checkout's frontend on a free port if needed.
+
+Load `/analyzer?address=200+Orlando+Ave,+Normal,+IL+61761` and confirm:
+the panel renders beneath the address strip, defaults to Street, the Aerial toggle swaps the
+image, "Google Maps" is legible over the Street image, and the panel holds a 16:10 box rather
+than collapsing or stretching.
+
+- [ ] **Step 8: Commit**
+
+```bash
+git add "packages/frontend/app/(app)/analyzer/components/PropertyImagery/PropertyImagery.tsx" "packages/frontend/app/(app)/analyzer/components/PropertyImagery/__tests__/PropertyImagery.test.tsx" "packages/frontend/app/(app)/analyzer/AnalyzerClient.tsx"
+git commit -m "feat(analyzer): show property imagery beneath the address header"
+```
+
+---
+
+### Task 7: Share page and PDF variant
+
+The share page renders through Puppeteer for the PDF, which does not reliably hydrate client state — so this variant has no toggle and stacks both images.
+
+**Files:**
+
+- Create: `packages/frontend/app/(app)/shared/analysis/[token]/components/StaticPropertyImagery.tsx`
+- Test: `packages/frontend/app/(app)/shared/analysis/[token]/components/__tests__/StaticPropertyImagery.test.tsx`
+- Modify: the share page that renders `<StaticCompsMap/>` (find with `grep -rn "StaticCompsMap" "packages/frontend/app/(app)/shared"`)
+
+**Interfaces:**
+
+- Consumes: `buildAerialUrl` (Task 4), `fetchStreetView` (Task 3).
+- Produces: `<StaticPropertyImagery streetUrl={string|null} lat={number|null} lon={number|null} address={string} />`.
+
+- [ ] **Step 1: Write the failing test**
+
+```tsx
+// packages/frontend/app/(app)/shared/analysis/[token]/components/__tests__/StaticPropertyImagery.test.tsx
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { StaticPropertyImagery } from "../StaticPropertyImagery";
+
+const ORIGINAL = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+
+describe("StaticPropertyImagery", () => {
+  beforeEach(() => {
+    process.env.NEXT_PUBLIC_MAPBOX_TOKEN = "pk.test-token";
+  });
+  afterEach(() => {
+    process.env.NEXT_PUBLIC_MAPBOX_TOKEN = ORIGINAL;
+  });
+
+  it("renders nothing without coordinates", () => {
+    const { container } = render(
+      <StaticPropertyImagery
+        streetUrl={null}
+        lat={null}
+        lon={null}
+        address="200 Orlando Ave"
+      />,
+    );
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("stacks street and aerial images with Google attribution", () => {
+    render(
+      <StaticPropertyImagery
+        streetUrl="https://maps.googleapis.com/street.jpg"
+        lat={40.4}
+        lon={-88.9}
+        address="200 Orlando Ave"
+      />,
+    );
+    expect(
+      screen.getByAltText(/street view of 200 orlando ave/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByAltText(/aerial view of 200 orlando ave/i),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Google Maps")).toBeInTheDocument();
+  });
+
+  it("renders aerial only when street view is unavailable", () => {
+    render(
+      <StaticPropertyImagery
+        streetUrl={null}
+        lat={40.4}
+        lon={-88.9}
+        address="200 Orlando Ave"
+      />,
+    );
+    expect(screen.queryByAltText(/street view/i)).not.toBeInTheDocument();
+    expect(screen.getByAltText(/aerial view/i)).toBeInTheDocument();
+    expect(screen.queryByText("Google Maps")).not.toBeInTheDocument();
+  });
+});
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `cd packages/frontend && npx vitest run "app/(app)/shared/analysis/[token]/components/__tests__/StaticPropertyImagery.test.tsx"`
+Expected: FAIL — cannot resolve `../StaticPropertyImagery`.
+
+- [ ] **Step 3: Write the component**
+
+```tsx
+// packages/frontend/app/(app)/shared/analysis/[token]/components/StaticPropertyImagery.tsx
+import { buildAerialUrl } from "@/app/analyzer/components/PropertyImagery";
+
+interface Props {
+  /** Signed Street View URL resolved server-side; null when no panorama exists. */
+  streetUrl: string | null;
+  lat: number | null;
+  lon: number | null;
+  address: string;
+}
+
+/**
+ * Print/share variant of the property imagery. No toggle and no client state —
+ * Puppeteer doesn't reliably hydrate, which is the same reason StaticCompsMap
+ * exists alongside the interactive Mapbox map.
+ */
+export function StaticPropertyImagery({ streetUrl, lat, lon, address }: Props) {
+  if (lat == null || lon == null) return null;
+
+  const aerialUrl = buildAerialUrl(lat, lon);
+  if (!streetUrl && !aerialUrl) return null;
+
+  return (
+    <div className="grid grid-cols-2 gap-3" data-static-property-imagery>
+      {streetUrl && (
+        <div className="relative">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={streetUrl}
+            alt={`Street View of ${address}`}
+            className="w-full rounded-xl"
+          />
+          <span className="absolute bottom-2 left-3 text-[11px] font-medium text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
+            Google Maps
+          </span>
+        </div>
+      )}
+      {aerialUrl && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={aerialUrl}
+          alt={`Aerial view of ${address}`}
+          className="w-full rounded-xl"
+        />
+      )}
+    </div>
+  );
+}
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `cd packages/frontend && npx vitest run "app/(app)/shared/analysis/[token]/components/__tests__/StaticPropertyImagery.test.tsx"`
+Expected: PASS, 3 tests.
+
+- [ ] **Step 5: Wire into the share page**
+
+In the share page that renders `<StaticCompsMap/>`, resolve the Street View URL server-side and render the new component above the existing comps map. The page already has the saved analysis row, which carries `lat` and `lon`:
+
+```tsx
+import { fetchStreetView } from "@/lib/data";
+import { StaticPropertyImagery } from "./components/StaticPropertyImagery";
+
+// inside the async server component, before the return:
+const streetView =
+  analysis.lat != null && analysis.lon != null
+    ? await fetchStreetView(analysis.lat, analysis.lon)
+    : null;
+
+// in the JSX, above <StaticCompsMap/>:
+<StaticPropertyImagery
+  streetUrl={streetView?.available ? streetView.url : null}
+  lat={analysis.lat}
+  lon={analysis.lon}
+  address={analysis.address_full ?? ""}
+/>;
+```
+
+Use whatever local variable already holds the saved analysis row in that file.
+
+- [ ] **Step 6: Verify the share page and PDF**
+
+Open a share link locally and confirm both images render. Then export the PDF and confirm the images appear in the rendered document — a blank space means Puppeteer raced the image load, which is fixed by awaiting network idle in the PDF renderer, not by changing this component.
+
+Run: `cd packages/frontend && npx tsc --noEmit`
+Expected: no errors.
+
+- [ ] **Step 7: Commit**
+
+```bash
+git add "packages/frontend/app/(app)/shared/analysis/[token]"
+git commit -m "feat(share): add property imagery to the shared analysis and PDF"
+```
+
+---
+
+### Task 8: Production credentials and end-to-end verification
+
+This is where the signature is validated against the only authority that matters. A malformed signature returns HTTP 403 from Google.
+
+**Files:**
+
+- No source changes. Railway configuration and verification only.
+
+**Interfaces:**
+
+- Consumes: everything above.
+- Produces: working imagery on `propertyiq.up.railway.app`.
+
+- [ ] **Step 1: Enable the API in Google Cloud**
+
+Project: `propertyiq-488415`. Enable `street-view-image-backend.googleapis.com` at
+`https://console.cloud.google.com/apis/library/street-view-image-backend.googleapis.com?project=propertyiq-488415`
+(or `gcloud services enable street-view-image-backend.googleapis.com --project=propertyiq-488415`).
+
+- [ ] **Step 2: Create and restrict the API key**
+
+At `https://console.cloud.google.com/project/_/google/maps-apis/credentials` → Create credentials → API key.
+
+- Application restrictions: **None** (requests originate from the Railway backend; an HTTP-referrer restriction would reject server-issued signed URLs).
+- API restrictions: **Restrict key → Street View Static API** only.
+
+- [ ] **Step 3: Copy the signing secret**
+
+Same page, **Secret Generator** card → **Current secret**. Per-project and console-only; there is no `gcloud` equivalent.
+
+- [ ] **Step 4: Set the Railway backend variables**
+
+Set `GOOGLE_MAPS_API_KEY` and `GOOGLE_MAPS_SIGNING_SECRET` on the Railway **backend** service. Set them via file substitution rather than echoing values into the shell, and do not dump the variable list afterwards.
+
+- [ ] **Step 5: Verify the signature against Google**
+
+After the backend redeploys:
+
+```bash
+curl -s "https://backend-production-ee4d.up.railway.app/api/street-view/resolve?lat=40.4574&lon=-88.9931"
+```
+
+Expected: `"available": true` with a signed `url`. Then fetch that URL and check the status:
+
+```bash
+curl -s -o /dev/null -w '%{http_code}\n' "<the url from the previous response>"
+```
+
+Expected: `200`. A `403` means the signature is wrong — almost always the secret being HMAC'd as a string instead of decoded to bytes (Task 1, Step 3).
+
+- [ ] **Step 6: Verify a no-panorama address degrades**
+
+```bash
+curl -s "https://backend-production-ee4d.up.railway.app/api/street-view/resolve?lat=64.9631&lon=-19.0208"
+```
+
+Expected: `"available": false` with `"url": null`. Confirm in the UI that this address shows the Aerial view with no Street tab, and no error.
+
 - [ ] **Step 7: Cap billing exposure (required, not advisory)**
 
 Google's signing scheme has no expiry parameter, so a signed URL is **replayable
