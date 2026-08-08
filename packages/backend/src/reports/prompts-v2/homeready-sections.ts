@@ -20,7 +20,7 @@ export const HOMEREADY_V2_SECTIONS: Record<string, NarrativePromptConfig> = {
     prompt_template: `You are writing the opening hook for a homebuyer market brief on {{geography_name}}.
 
 Data snapshot:
-- PropertyIQ Score: {{propertyiq_score}}/100 ({{propertyiq_grade}})
+- PropertyIQ Score: {{propertyiq_score}} ({{propertyiq_grade}})
 - Market phase: {{market_phase}}
 - Key tension: {{key_tension}}
 - Monthly payment: {{monthly_payment_estimate}}
@@ -36,7 +36,7 @@ Write 2-3 sentences that a homebuyer would remember and quote to their partner. 
 This is a VERDICT, not a summary. Take a position. The market classification (buyer/seller/neutral) must appear in the first or second sentence — readers need this immediately.
 
 BAD: "The market shows mixed signals with moderate growth and reasonable prices."
-GOOD: "At {{propertyiq_score}}/100, {{geography_name}} is a market where the math works — barely. Your {{monthly_payment_estimate}} payment is {{dti_at_median_income}}, but {{key_tension}} means timing your entry matters more than usual."
+GOOD: "At {{propertyiq_score}} against a state average of 50, {{geography_name}} is a market where the math works, barely. Your {{monthly_payment_estimate}} payment is {{dti_at_median_income}}, but {{key_tension}} means timing your entry matters more than usual."
 
 Rules:
 - Exactly 2-3 sentences
@@ -144,7 +144,7 @@ Rules:
 - User type: {{user_type}}
 
 ## Market Context (from deep dive — reference, don't repeat)
-- PropertyIQ Score: {{propertyiq_score}}/100
+- PropertyIQ Score: {{propertyiq_score}}
 - Monthly payment: {{monthly_payment_estimate}}
 - DTI: {{dti_at_median_income}}
 - Market phase: {{market_phase}}
@@ -196,7 +196,7 @@ Rules:
 {{/if}}
 
 ## Market Summary
-- PropertyIQ Score: {{propertyiq_score}}/100 ({{propertyiq_grade}})
+- PropertyIQ Score: {{propertyiq_score}} ({{propertyiq_grade}})
 - Market phase: {{market_phase}}
 - Monthly payment: {{monthly_payment_estimate}}
 - DTI: {{dti_at_median_income}}

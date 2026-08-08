@@ -27,6 +27,12 @@ export interface CompsViewProps {
   /** null when neither property-record nor comp centroid is available. */
   subjectLat: number | null;
   subjectLon: number | null;
+  /**
+   * Average position of the comps. Useful for framing a map, never for placing
+   * the subject — it is an average of *other* buildings.
+   */
+  compsCentroidLat: number | null;
+  compsCentroidLon: number | null;
   mapboxToken: string;
 }
 
@@ -94,8 +100,15 @@ export function buildCompsViewProps(
     yourPricePerSqft,
     subjectPrice: inputPrice,
     salesCompPrices,
-    subjectLat: propertyLat ?? centroidLat,
-    subjectLon: propertyLon ?? centroidLon,
+    // Only the property record's own coordinates count as the subject's
+    // position. The previous `?? centroidLat` fallback averaged the comps —
+    // for comps spread across neighbouring towns that lands kilometres away
+    // (observed: 7.8km, in a different city and ZIP), silently mislocating the
+    // subject pin and any imagery. Callers supply a geocoded fallback instead.
+    subjectLat: propertyLat ?? null,
+    subjectLon: propertyLon ?? null,
+    compsCentroidLat: centroidLat,
+    compsCentroidLon: centroidLon,
     mapboxToken: process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "",
   };
 }

@@ -43,6 +43,12 @@ export type PoolRow = HeroMarket & { asOf: string };
 export type HeroContrast = {
   cooler: HeroMarket;
   riser: HeroMarket;
+  /**
+   * The whole pool, ranked by score descending — the hero monitor's mini
+   * leaderboard. It is the same rows the contrast is selected from, so
+   * rendering it costs no extra request.
+   */
+  ranked: HeroMarket[];
   /** Effective score date, for the required "as of" attribution. */
   asOf: string;
 };
@@ -80,6 +86,7 @@ export function selectContrast(rows: PoolRow[]): HeroContrast | null {
   return {
     cooler: toMarket(cooler),
     riser: toMarket(riser),
+    ranked: byScore.map(toMarket),
     asOf: cooler.asOf,
   };
 }

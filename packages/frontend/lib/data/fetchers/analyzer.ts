@@ -4,7 +4,9 @@
  * Data layer for the Deal Analyzer feature.
  * - Market context (geo-aware metric summary for an address)
  * - AI verdict (SSE stream of model output)
- * - Save / list / share user-saved analyses
+ * - Save / list / share user-saved analyses (re-exported from
+ *   `./analyzer-saved`, which is also where the Save-vs-Publish payload
+ *   split lives)
  *
  * Uses the shared `API_URL` resolver from `./base` so production builds
  * route to the correct backend host (see base.ts).
@@ -156,75 +158,20 @@ export async function* streamAiVerdict(payload: {
 }
 
 // ============================================================================
-// SAVED ANALYSES
+// SAVED ANALYSES + SHARING
 // ============================================================================
 
-export interface SavedAnalysis {
-  id: string;
-  share_token: string;
-  label: string | null;
-  address_full: string | null;
-  address_city: string;
-  address_state: string;
-  address_zip: string | null;
-  lat: number | null;
-  lon: number | null;
-  input_snapshot: Record<string, unknown>;
-  result_snapshot: Record<string, unknown>;
-  market_context: Record<string, unknown> | null;
-  ai_verdict: Record<string, unknown> | null;
-  created_at: string;
-}
-
-export type SaveAnalysisPayload = Omit<
-  SavedAnalysis,
-  "id" | "share_token" | "created_at"
->;
-
-export async function saveAnalysis(
-  payload: SaveAnalysisPayload,
-): Promise<{ id: string; share_token: string }> {
-  const authHeaders = await getAuthHeaders();
-  const res = await fetch(`${API_URL}/api/analyzer/save`, {
-    method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": "application/json", ...authHeaders },
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) throw new Error(`save failed: ${res.status}`);
-  return res.json();
-}
-
-export async function fetchSavedAnalyses(): Promise<SavedAnalysis[]> {
-  const authHeaders = await getAuthHeaders();
-  const res = await fetch(`${API_URL}/api/analyzer/saved`, {
-    credentials: "include",
-    headers: { ...authHeaders },
-  });
-  if (!res.ok) return [];
-  return res.json();
-}
-
-export async function fetchSharedAnalysis(
-  token: string,
-): Promise<SavedAnalysis | null> {
-  // Public endpoint — no auth headers needed; share token is the capability.
-  const res = await fetch(`${API_URL}/api/analyzer/share/${token}`);
-  if (!res.ok) return null;
-  return res.json();
-}
-
-export async function fetchSavedAnalysis(
-  id: string,
-): Promise<SavedAnalysis | null> {
-  const authHeaders = await getAuthHeaders();
-  const res = await fetch(`${API_URL}/api/analyzer/saved/${id}`, {
-    credentials: "include",
-    headers: { ...authHeaders },
-  });
-  if (!res.ok) return null;
-  return res.json();
-}
+export {
+  saveDealState,
+  publishAnalysis,
+  fetchSavedAnalyses,
+  fetchSharedAnalysis,
+  fetchSavedAnalysis,
+  patchDealState,
+  type SavedAnalysis,
+  type DealStatePayload,
+  type PublishedArtifactPayload,
+} from "./analyzer-saved";
 
 export {
   fetchSharedAnalysisBranding,

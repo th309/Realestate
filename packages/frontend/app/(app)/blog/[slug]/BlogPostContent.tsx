@@ -61,7 +61,7 @@ export function BlogPostContent({ post }: BlogPostContentProps) {
       </header>
 
       {/* MDX Content */}
-      <div className="prose prose-lg max-w-none">
+      <div className="prose prose-lg max-w-none font-serif [&_:is(h1,h2,h3,h4)]:font-sans">
         <MDXRemote
           source={post.content}
           components={mdxComponents}

@@ -177,16 +177,16 @@ export function MapShowcase() {
             transition: "opacity 0.6s ease, transform 0.6s ease",
           }}
         >
-          <span className="text-xs font-semibold text-[#C5CAE9] uppercase tracking-[0.15em] mb-3 block">
+          <span className="text-xs font-semibold text-inverse-primary uppercase tracking-[0.15em] mb-3 block">
             Explore the Data
           </span>
           <h2
             id="map-showcase-heading"
-            className="text-2xl md:text-3xl lg:text-4xl font-bold text-white tracking-tight leading-tight mb-4 font-[family-name:var(--font-source-serif)]"
+            className="text-2xl md:text-3xl lg:text-4xl font-bold text-inverse-on-surface tracking-tight leading-tight mb-4 font-[family-name:var(--font-source-serif)]"
           >
             Every market, visualized
           </h2>
-          <p className="text-base text-[#C5CAE9] leading-relaxed">
+          <p className="text-base text-inverse-primary leading-relaxed">
             Explore home values, rents, appreciation, and 40+ metrics across
             every metro, county, and ZIP code in America.
           </p>
@@ -242,7 +242,7 @@ export function MapShowcase() {
         >
           <a
             href="/map"
-            className="inline-flex items-center gap-2 text-sm font-semibold text-[#C5CAE9] hover:text-white transition-colors"
+            className="inline-flex items-center gap-2 text-sm font-semibold text-inverse-primary hover:text-inverse-on-surface transition-colors"
           >
             Open full map experience →
           </a>

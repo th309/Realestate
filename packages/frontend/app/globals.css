@@ -21,9 +21,20 @@
 
   /* PropertyIQ Tertiary — Accent Green (brand spec §3.2) */
   --md-tertiary: #00c853;
-  --md-on-tertiary: #ffffff;
+  /* Near-black green, not white. #00c853 is a bright FILL colour: white on it
+     is 2.24:1, so every green button failed AA. */
+  --md-on-tertiary: #04220f;
   --md-tertiary-container: #e8f5e9;
   --md-on-tertiary-container: #1b5e20;
+  /* The same accent, darkened until it is legible as TEXT on a pale surface.
+     The brand green is tuned for fills and bars; as body copy or a kicker on
+     `surface` it lands at 2.04:1. Use `text-tertiary` on fills and dark bands,
+     `text-tertiary-text` for green words on a light band.
+
+     Deep enough to clear 4.5:1 against the MIDDLE of the homepage fade, not
+     just against `surface`. The section eyebrows sit there, and a green tuned
+     only for near-white dropped to 2.88:1 once the fade went in. */
+  --md-tertiary-text: #00571f;
 
   /* PropertyIQ Error — matches brand spec §3.2 */
   --md-error: #b3261e;
@@ -36,6 +47,34 @@
   --md-on-warning: #ffffff;
   --md-warning-container: #fff3e0;
   --md-on-warning-container: #663800;
+
+  /* Marketing hero wash — pale mint to pale lavender, the neutral ends of the
+     indigo range. Used only by the homepage hero band. */
+  --md-hero-from: #f4f8f8;
+  --md-hero-to: #efeefa;
+
+  /* The homepage's long indigo fade, running from the bottom of the hero to
+     the foot of the page as ONE continuous wash. Sections below it carry no
+     fill of their own so it reads uninterrupted; their cards supply the
+     separation instead.
+
+     Three stops, not two, and the shoulder sits early on purpose. A straight
+     run from saturated indigo to pale leaves a wide middle where NEITHER white
+     nor the navy on-surface token clears 4.5:1 — around a fifth of the page
+     would have had no legible text colour. Reaching `mid` quickly keeps that
+     dead zone inside the first section, where an opaque card covers it. */
+  --md-page-fade-from: #3949ab;
+  --md-page-fade-mid: #c5cae9;
+  --md-page-fade-to: #e8eaf6;
+
+  /* Decorative accents. The homepage tints each icon tile a different hue so a
+     six-card grid reads as six things rather than one striped block. Indigo,
+     green, amber and red already have roles (primary / tertiary / warning /
+     error); violet and teal exist only for this, and are never semantic. */
+  --md-accent-violet: #7c4dff;
+  --md-accent-violet-container: #f1ecff;
+  --md-accent-teal: #00838f;
+  --md-accent-teal-container: #e0f7fa;
 
   /* PropertyIQ Surfaces — Light Mode (indigo-tinted, visible on all screens) */
   --md-surface: #f3f4fc;
@@ -63,23 +102,69 @@
   --foreground: var(--md-on-surface);
 
   /* ===========================================================================
-     PROPERTYIQ ANALYZER PALETTE (Robinhood-grade polish layer)
-     Scoped to app/analyzer/components/primitives/* — distinct from M3 tokens.
-     Slate-text + sharp accent palette for headline metrics and charts.
+     PROPERTYIQ ANALYZER PALETTE
+     Scoped to app/(app)/analyzer/** — distinct from the M3 tokens above.
+     Values are taken from docs/superpowers/mockups/2026-08-02/piq-analyzer-mockup.html,
+     which is the approved visual spec for the Deal Analyzer. The neutrals are
+     indigo-tinted rather than slate so the dashboard sits in the brand's hue
+     family; the accents are tuned dark enough to read as TEXT on a pale card,
+     which the old bright-fill values (#ffb300 amber at 1.9:1, #00c853 green at
+     2.0:1) were not.
+
+     Three-part accent pattern, mirroring M3's colour/on-colour/container:
+       --piq-X         the accent as text or a stroke on a pale surface
+       --piq-X-soft    its tinted container fill (badges, tiles, callouts)
+       --piq-green-bright  the saturated FILL green, for bars only — never text
      ========================================================================= */
-  --piq-indigo: #3949ab;
-  --piq-indigo-dark: #1a237e;
-  --piq-green: #00c853;
-  --piq-red: #e53935;
-  --piq-amber: #ffb300;
-  --piq-teal: #00acc1;
-  --piq-orange: #fb8c00;
+
+  /* Neutrals — canvas is the page, surface is a card, soft is a recessed well */
+  --piq-canvas: #f5f6fa;
   --piq-surface: #ffffff;
   --piq-surface-dark: #1a1a2e;
-  --piq-canvas: #f8fafc;
-  --piq-text-primary: #0f172a;
-  --piq-text-muted: #64748b;
-  --piq-border: #e2e8f0;
+  --piq-soft: #edeff7;
+  --piq-border: #e4e7f2;
+
+  /* Text ramp: ink for headings and figures, body for prose, muted for labels.
+     `muted` is the spec's #8b91a8 nudged one step darker: at the original it
+     measured 2.90:1 on the page canvas, just under the 3:1 floor for UI text,
+     and micro-labels sit on canvas as often as on a card. */
+  --piq-text-primary: #12141d;
+  --piq-text-body: #5b6076;
+  --piq-text-muted: #8389a2;
+
+  /* Accents */
+  --piq-indigo: #3949ab;
+  /* Foreground for anything FILLED with --piq-indigo. Indigo flips from deep
+     to pale in dark mode, so white text on it drops to a 2.66:1 ratio. */
+  --piq-on-indigo: #ffffff;
+  --piq-indigo-dark: #1a237e;
+  --piq-indigo-soft: #eef0fb;
+  /* Green and amber are one step darker than the spec's #00a84a / #e07b00.
+     Those two are the only accents in the set that don't clear AA as text on
+     a white card (3.13:1 and 3.00:1) or inside their own container (2.84:1
+     and 2.73:1) — and both carry real copy: the market-adjustment row, the
+     grade pills, the positive-figure treatment. Darkening them also fixes the
+     jump-bar tiles, which put white on the same fills at 3.1:1. The hue and
+     saturation are unchanged; only lightness moved. The saturated spec green
+     survives as `--piq-green-bright` for bar fills, where the 3:1 non-text
+     floor applies instead. */
+  --piq-green: #008139;
+  --piq-green-bright: #00c853;
+  --piq-green-soft: #e6f8ee;
+  --piq-red: #b3261e;
+  --piq-red-soft: #fdecea;
+  --piq-amber: #a95d00;
+  --piq-amber-soft: #fff3e0;
+  --piq-orange: #d2691e;
+  --piq-violet: #7c4dff;
+  --piq-violet-soft: #f1ecff;
+  --piq-teal: #00838f;
+  --piq-teal-soft: #e0f7fa;
+
+  /* Card elevation. Two stacked low-opacity layers, not a single blur — the
+     tight one draws the edge, the wide one gives it lift off the canvas. */
+  --piq-shadow:
+    0 1px 2px rgba(18, 20, 29, 0.05), 0 2px 8px rgba(18, 20, 29, 0.04);
 }
 
 /* PropertyIQ Dark Mode (brand spec §3.4) */
@@ -87,7 +172,10 @@
   :root {
     /* Primary — lightened indigo for dark backgrounds */
     --md-primary: #7986cb;
-    --md-on-primary: #1a237e;
+    /* Near-black navy, not #1a237e. Against the lightened #7986cb primary the
+       brand navy only reached 3.84:1, so every filled button, badge and chip
+       in dark mode failed AA — the CTA included. This pairing is 5.33:1. */
+    --md-on-primary: #0d1033;
     --md-primary-container: #283593;
     --md-on-primary-container: #c5cae9;
 
@@ -99,9 +187,12 @@
 
     /* Tertiary — accent green (same hue, adjusted lightness) */
     --md-tertiary: #69f0ae;
-    --md-on-tertiary: #1b5e20;
+    --md-on-tertiary: #04220f;
     --md-tertiary-container: #2e7d32;
     --md-on-tertiary-container: #e8f5e9;
+    /* On a dark band the bright accent is already legible, so text and fill
+       are the same green here — the split only exists for light surfaces. */
+    --md-tertiary-text: #69f0ae;
 
     /* Error — lightened for dark surfaces */
     --md-error: #f2b8b5;
@@ -114,6 +205,26 @@
     --md-on-warning: #663800;
     --md-warning-container: #663800;
     --md-on-warning-container: #fff3e0;
+
+    /* Hero wash — near-black navy/violet so the band reads as depth, not glare */
+    --md-hero-from: #101520;
+    --md-hero-to: #14131f;
+
+    /* The page fade, deepened. It still runs indigo to the page surface, so
+       the top stays dark enough for the same light copy the light theme uses
+       there — the band is dark in BOTH schemes, which is why that copy is a
+       fixed white rather than an inverting token. */
+    --md-page-fade-from: #242c5e;
+    --md-page-fade-mid: #1e2140;
+    --md-page-fade-to: #1a1a2e;
+
+    /* Decorative accents — lightened hue, darkened container, same as every
+       other pair here. Without these the tiles keep their light-mode fills and
+       glare out of a dark band (the bug that made the analyzer chips 1.05:1). */
+    --md-accent-violet: #b39dff;
+    --md-accent-violet-container: #2a2140;
+    --md-accent-teal: #4dd0e1;
+    --md-accent-teal-container: #10333a;
 
     /* Surfaces — deep navy (brand spec §3.4) */
     --md-surface: #1a1a2e;
@@ -136,6 +247,46 @@
     --md-inverse-on-surface: #1a237e;
     --md-inverse-primary: #3949ab;
 
+    /* PropertyIQ analyzer palette — dark values.
+       These were once defined ONLY in :root, so in dark mode
+       --piq-text-primary stayed near-black and --piq-surface stayed white.
+       Every analyzer primitive built on this palette rendered dark text on a
+       dark surface: the inactive strategy chips ("Fix & Flip", "BRRRR")
+       measured a 1.05 contrast ratio, i.e. invisible. Every token in the light
+       block above must therefore have a value here too.
+
+       The accents invert: on a dark card the pale tint is the readable text
+       colour and the deep one becomes the container. --piq-green-bright is the
+       exception — it is a bar fill, so it stays saturated in both schemes. */
+    --piq-canvas: #0f1119;
+    --piq-surface: #1a1d29;
+    --piq-surface-dark: #0f1119;
+    --piq-soft: #232838;
+    --piq-border: #2a2f42;
+
+    --piq-text-primary: #edeff7;
+    --piq-text-body: #a5abc2;
+    --piq-text-muted: #797f96;
+
+    --piq-indigo: #8c9ae8;
+    --piq-on-indigo: #12141d;
+    --piq-indigo-dark: #5c6bc0;
+    --piq-indigo-soft: #232841;
+    --piq-green: #3dd87a;
+    --piq-green-bright: #00c853;
+    --piq-green-soft: #17301f;
+    --piq-red: #f2b8b5;
+    --piq-red-soft: #33201f;
+    --piq-amber: #ffb74d;
+    --piq-amber-soft: #33280f;
+    --piq-orange: #ffa726;
+    --piq-violet: #b39dff;
+    --piq-violet-soft: #241f38;
+    --piq-teal: #4dd0e1;
+    --piq-teal-soft: #13292e;
+
+    --piq-shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
+
     /* Legacy mappings */
     --background: var(--md-surface);
     --foreground: var(--md-on-surface);
@@ -157,6 +308,7 @@
 
   --color-tertiary: var(--md-tertiary);
   --color-on-tertiary: var(--md-on-tertiary);
+  --color-tertiary-text: var(--md-tertiary-text);
   --color-tertiary-container: var(--md-tertiary-container);
   --color-on-tertiary-container: var(--md-on-tertiary-container);
 
@@ -169,6 +321,17 @@
   --color-on-warning: var(--md-on-warning);
   --color-warning-container: var(--md-warning-container);
   --color-on-warning-container: var(--md-on-warning-container);
+
+  --color-hero-from: var(--md-hero-from);
+  --color-hero-to: var(--md-hero-to);
+  --color-page-fade-from: var(--md-page-fade-from);
+  --color-page-fade-mid: var(--md-page-fade-mid);
+  --color-page-fade-to: var(--md-page-fade-to);
+
+  --color-accent-violet: var(--md-accent-violet);
+  --color-accent-violet-container: var(--md-accent-violet-container);
+  --color-accent-teal: var(--md-accent-teal);
+  --color-accent-teal-container: var(--md-accent-teal-container);
 
   --color-surface: var(--md-surface);
   --color-surface-dim: var(--md-surface-dim);
@@ -192,6 +355,38 @@
   --color-background: var(--md-surface);
   --color-foreground: var(--md-on-surface);
 
+  /* Analyzer palette as Tailwind utilities — `bg-piq-surface`, `text-piq-ink`,
+     `border-piq-line`, `shadow-piq`, `rounded-piq`. The analyzer is styled
+     against these rather than the M3 set; mixing the two is what produced
+     lavender `outline-variant` hairlines and navy headings on a spec that
+     calls for near-black on a fine indigo-grey rule. */
+  --color-piq-canvas: var(--piq-canvas);
+  --color-piq-surface: var(--piq-surface);
+  --color-piq-soft: var(--piq-soft);
+  --color-piq-line: var(--piq-border);
+  --color-piq-ink: var(--piq-text-primary);
+  --color-piq-body: var(--piq-text-body);
+  --color-piq-muted: var(--piq-text-muted);
+  --color-piq-indigo: var(--piq-indigo);
+  --color-piq-on-indigo: var(--piq-on-indigo);
+  --color-piq-indigo-soft: var(--piq-indigo-soft);
+  --color-piq-green: var(--piq-green);
+  --color-piq-green-bright: var(--piq-green-bright);
+  --color-piq-green-soft: var(--piq-green-soft);
+  --color-piq-red: var(--piq-red);
+  --color-piq-red-soft: var(--piq-red-soft);
+  --color-piq-amber: var(--piq-amber);
+  --color-piq-amber-soft: var(--piq-amber-soft);
+  --color-piq-violet: var(--piq-violet);
+  --color-piq-violet-soft: var(--piq-violet-soft);
+  --color-piq-teal: var(--piq-teal);
+  --color-piq-teal-soft: var(--piq-teal-soft);
+
+  --shadow-piq: var(--piq-shadow);
+  /* The spec's card radius. Between Tailwind's rounded-xl (12) and 2xl (16),
+     so it needs its own token rather than the nearest default. */
+  --radius-piq: 14px;
+
   /* M3 Typography - Roboto */
   --font-sans: var(--font-roboto);
   --font-mono: var(--font-roboto-mono);
@@ -214,6 +409,60 @@ body {
 }
 
 /* =============================================================================
+   ANALYZER THEME SCOPE
+   Re-points the M3 neutrals at the piq palette for the subtree marked
+   `data-piq-theme` — the Deal Analyzer.
+
+   Why a scoped remap rather than restyling components: the analyzer shares
+   KpiTile, JumpBar and DataTable with the map, markets and screener. Rewriting
+   those in piq tokens would drag three other pages along; forking them would
+   duplicate the shells. Overriding the tokens underneath them instead means a
+   shared component renders in the analyzer's palette inside the analyzer and
+   its normal M3 palette everywhere else, with no per-component branching.
+
+   The page background is NOT part of this. M3 uses one `surface` for both the
+   page and its cards, which is why the analyzer's cards used to sit flat on
+   the canvas; the spec separates them (#f5f6fa page, #ffffff card). So
+   `--md-surface` becomes the CARD white here, and the page element carries
+   `bg-piq-canvas` explicitly.
+   ============================================================================= */
+[data-piq-theme] {
+  --md-surface: var(--piq-surface);
+  --md-surface-bright: var(--piq-surface);
+  --md-surface-container-lowest: var(--piq-canvas);
+  --md-surface-container-low: var(--piq-canvas);
+  --md-surface-container: var(--piq-soft);
+  --md-surface-container-high: var(--piq-soft);
+  --md-surface-container-highest: var(--piq-soft);
+  --md-surface-dim: var(--piq-canvas);
+
+  --md-on-surface: var(--piq-text-primary);
+  /* Body, not muted. The spec's `--muted` (#8b91a8) is a 2.9:1 label colour it
+     uses only for 10px uppercase eyebrows; `on-surface-variant` also carries
+     real prose here, so it maps to `--body` (#5b6076, 6.0:1) and micro-labels
+     ask for `text-piq-muted` explicitly. */
+  --md-on-surface-variant: var(--piq-text-body);
+
+  --md-outline-variant: var(--piq-border);
+  --md-outline: var(--piq-text-muted);
+
+  --md-primary: var(--piq-indigo);
+  --md-on-primary: var(--piq-on-indigo);
+  --md-primary-container: var(--piq-indigo-soft);
+  --md-on-primary-container: var(--piq-indigo);
+
+  --md-tertiary: var(--piq-green);
+  --md-tertiary-text: var(--piq-green);
+  --md-tertiary-container: var(--piq-green-soft);
+
+  --md-error: var(--piq-red);
+  --md-error-container: var(--piq-red-soft);
+
+  --md-warning: var(--piq-amber);
+  --md-warning-container: var(--piq-amber-soft);
+}
+
+/* =============================================================================
    MOBILE SAFE-AREA UTILITIES
    env(safe-area-inset-*) only resolves to non-zero when viewport-fit=cover is
    set (see app/layout.tsx viewport export). Use .pb-safe on fixed bottom bars
@@ -228,6 +477,67 @@ body {
 }
 .pt-safe {
   padding-top: env(safe-area-inset-top);
+}
+
+/* =============================================================================
+   ANALYZER RANGE INPUT
+   The spec's `.trk` — a 5px rail with an indigo fill and a white knob ringed
+   in indigo. `accent-color` alone gets the hue right but keeps the platform's
+   solid thumb and thicker rail, which reads heavier than the rest of the
+   panel's hairline vocabulary.
+
+   The fill is painted with a gradient driven by `--piq-range-pct`, which the
+   component sets from its value: WebKit has no ::-webkit-slider-progress, so
+   a filled lower track has to come from the background either way. Firefox
+   gets the same look natively via ::-moz-range-progress.
+   ============================================================================= */
+.piq-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 14px;
+  background: transparent;
+  cursor: pointer;
+}
+.piq-range::-webkit-slider-runnable-track {
+  height: 5px;
+  border-radius: 99px;
+  background: linear-gradient(
+    to right,
+    var(--piq-indigo) 0 var(--piq-range-pct, 0%),
+    var(--piq-border) var(--piq-range-pct, 0%) 100%
+  );
+}
+.piq-range::-moz-range-track {
+  height: 5px;
+  border-radius: 99px;
+  background: var(--piq-border);
+}
+.piq-range::-moz-range-progress {
+  height: 5px;
+  border-radius: 99px;
+  background: var(--piq-indigo);
+}
+.piq-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -4.5px;
+  border-radius: 50%;
+  background: var(--piq-surface);
+  border: 2px solid var(--piq-indigo);
+}
+.piq-range::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--piq-surface);
+  border: 2px solid var(--piq-indigo);
+}
+.piq-range:focus-visible {
+  outline: 2px solid var(--piq-indigo);
+  outline-offset: 4px;
 }
 
 /* Sidebar width utility - fixed on mobile, dynamic on desktop */

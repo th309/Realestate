@@ -156,7 +156,8 @@ export function ComponentScoreBadge({
           <span
             className={`font-bold ${compact ? 'text-sm' : 'text-lg'}`}
             style={{
-              fontFamily: 'var(--report-font-display)',
+              fontFamily: 'var(--report-font-mono)',
+              fontVariantNumeric: 'tabular-nums',
               color: 'var(--report-navy)',
             }}
           >

@@ -24,7 +24,6 @@ import {
 import { useMapData, useMapSearch, useMapLayers } from "@/app/map/hooks";
 
 import {
-  NAV_ITEMS,
   getMetricCategories,
   isMetricSupportedForGeo,
   getMetricConfig,
@@ -271,8 +270,6 @@ function EmbedMapFullInner() {
       {/* Optional sidebar */}
       {config.showSidebar && (
         <Sidebar
-          pathname="/embed/map-full"
-          navItems={NAV_ITEMS}
           metricCategories={metricCategories}
           expandedCategories={expandedCategories}
           selectedMetric={selectedMetric}

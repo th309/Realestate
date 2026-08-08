@@ -1,4 +1,5 @@
 import { COVERAGE_COPY } from "@/lib/data/validation-claims";
+import { SectionHeading } from "@/app/components/marketing";
 import { BeatSection } from "./BeatSection";
 import { Reveal } from "./Reveal";
 
@@ -8,10 +9,9 @@ import { Reveal } from "./Reveal";
  * The PAS turn after the hero's verdict: picking a market on gut feel is
  * guessing, because the sources disagree and there are simply too many markets
  * to track by feel. One idea, agitated three ways — no CTA on this beat (that
- * comes later in the funnel). Server-rendered on the dark top of the page's
- * fixed indigo→light gradient, so it reads light-on-dark via BeatSection's
- * tone="dark" (spec §4.0). The only client behavior is the staggered scroll
- * fade of each agitate point, handled by the already-client Reveal primitive.
+ * comes later in the funnel). Server-rendered on its own light surface
+ * band. The only client behavior is the staggered scroll fade of each agitate
+ * point, handled by the already-client Reveal primitive.
  */
 
 const AGITATE_POINTS: {
@@ -47,27 +47,30 @@ function AgitatePoint({
   sublabel: string;
 }) {
   return (
-    <div className="flex flex-col gap-2 border-t border-primary-light/25 pt-5 md:border-l md:border-t-0 md:pl-6 md:pt-0">
-      <p className="text-2xl font-semibold leading-tight tracking-tight text-on-primary md:text-3xl">
-        {monoLead && <span className="font-mono">{monoLead} </span>}
+    <div className="flex flex-col gap-2 border-t border-outline-variant pt-5 md:border-l md:border-t-0 md:pl-6 md:pt-0">
+      <p className="text-2xl font-semibold leading-tight tracking-tight text-on-surface md:text-3xl">
+        {monoLead && (
+          <span className="font-mono tabular-nums">{monoLead} </span>
+        )}
         {lead}
       </p>
-      <p className="text-base leading-relaxed text-primary-light">{sublabel}</p>
+      <p className="text-base leading-relaxed text-on-surface-variant">
+        {sublabel}
+      </p>
     </div>
   );
 }
 
 export function BeatTension() {
   return (
-    <BeatSection id="beat-tension" eyebrow="The problem" tone="dark">
-      <Reveal>
-        <h2 className="max-w-3xl font-serif text-3xl font-semibold leading-[1.05] tracking-tight text-on-primary sm:text-4xl md:text-5xl">
-          Zillow says one thing. Realtor.com says another. You&apos;re supposed
-          to just&hellip; know?
-        </h2>
-      </Reveal>
+    <BeatSection id="beat-tension" surface="b">
+      <SectionHeading
+        eyebrow="The problem"
+        title="Zillow says one thing. Realtor.com says another. You're supposed to just… know?"
+        align="start"
+      />
 
-      <div className="mt-12 grid grid-cols-1 gap-8 md:mt-16 md:grid-cols-3 md:gap-0">
+      <div className="grid grid-cols-1 gap-8 md:grid-cols-3 md:gap-0">
         {AGITATE_POINTS.map((point, index) => (
           <Reveal key={point.lead} delayMs={index * 70}>
             <AgitatePoint

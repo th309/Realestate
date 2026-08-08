@@ -2,9 +2,11 @@
 import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
+import { PiqSegmented } from "../primitives/card";
 import { SectionWrapper } from "./SectionWrapper";
 import { MetricBlock } from "../primitives/MetricBlock";
 import type { MarketContextChain } from "@/lib/data";
+import { getScoreLabel } from "@/app/components/scoring/score-labels";
 import { useMarketContextByGeo } from "../../lib/use-market-context-by-geo";
 
 type PillLevel = "zip" | "county" | "metro";
@@ -35,6 +37,14 @@ interface MarketContextSectionProps {
   /** Pro + has-input gate from the parent. Combined with geo availability to
    *  decide whether to fire per-geo AI requests. */
   aiEnabled?: boolean;
+  /**
+   * False while a saved deal is showing RESTORED market data — suppresses the
+   * three per-geo fetches so opening a saved deal writes nothing (the
+   * `fallback*` props above carry the saved values). Defaults true; see
+   * `useMarketContextByGeo`. NOT YET THREADED from `AnalyzerClient` —
+   * `AnalyzerSections` sits between them and is owned elsewhere.
+   */
+  marketDataEnabled?: boolean;
 }
 
 const PILL_ORDER: PillLevel[] = ["metro", "county", "zip"];
@@ -90,6 +100,7 @@ export function MarketContextSection({
   onRefreshAi,
   aiPayloadBase,
   aiEnabled,
+  marketDataEnabled = true,
 }: MarketContextSectionProps) {
   const availablePills = useMemo<PillLevel[]>(
     () => PILL_ORDER.filter((lvl) => idForLevel(chain, lvl) != null),
@@ -112,6 +123,7 @@ export function MarketContextSection({
     chain,
     aiPayloadBase,
     aiEnabled: aiEnabled ?? false,
+    enabled: marketDataEnabled,
   });
   const data = byGeo.dataByPill[effectivePill];
   const activeAi = byGeo.aiByPill[effectivePill];
@@ -142,7 +154,11 @@ export function MarketContextSection({
   const marketHeat = data?.market_heat?.value ?? fallbackMarketHeat ?? null;
   const netMigration =
     data?.net_migration?.value ?? fallbackNetMigration ?? null;
-  const piqLabel = data?.piq_score?.label ?? null;
+  // The score's own momentum word, never the backend's `label` — that field
+  // still carries a legacy quality grade ("F" for a 43), which reads as a
+  // verdict on the market and collides with the A/B/C/F confidence scale.
+  // CLAUDE.md §9.
+  const piqLabel = piqScore == null ? null : getScoreLabel(piqScore);
 
   const url = buildMarketUrl(effectivePill, activeId);
   const toNum = (v: number | null) => (v == null ? Number.NaN : v);
@@ -240,7 +256,7 @@ export function MarketContextSection({
   );
 }
 
-/** Pill row mirroring StrategyChips for visual unity. */
+/** Geography selector — the shared segmented control, not a bespoke pill row. */
 function GeoPills({
   pills,
   active,
@@ -251,40 +267,14 @@ function GeoPills({
   onChange: (lvl: PillLevel) => void;
 }) {
   return (
-    <div
-      role="tablist"
-      aria-label="Market context geography"
-      className="flex items-center gap-2 flex-wrap mb-3"
-      data-geo-pills
-    >
-      <span className="text-xs uppercase font-semibold text-on-surface-variant mr-1">
-        View at
-      </span>
-      {pills.map((p) => {
-        const isActive = p === active;
-        return (
-          <button
-            key={p}
-            type="button"
-            role="tab"
-            aria-selected={isActive}
-            onClick={() => onChange(p)}
-            className="rounded-full px-3 py-1 text-xs font-semibold transition-colors"
-            style={{
-              background: isActive ? "var(--md-primary)" : "transparent",
-              color: isActive
-                ? "var(--md-on-primary)"
-                : "var(--md-on-surface-variant)",
-              border: isActive
-                ? "0.5px solid var(--md-primary)"
-                : "0.5px solid var(--md-outline-variant)",
-              letterSpacing: "0.02em",
-            }}
-          >
-            {PILL_LABEL[p]}
-          </button>
-        );
-      })}
+    <div className="mb-3" data-geo-pills>
+      <PiqSegmented
+        label="View at"
+        ariaLabel="Market context geography"
+        value={active}
+        onChange={onChange}
+        options={pills.map((p) => ({ value: p, label: PILL_LABEL[p] }))}
+      />
     </div>
   );
 }

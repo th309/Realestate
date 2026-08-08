@@ -104,11 +104,17 @@ describe('AiInsightsService', () => {
 
     expect(provider.complete).toHaveBeenCalledTimes(1);
     expect(cache.set).toHaveBeenCalledTimes(1);
-    expect(cache.set).toHaveBeenCalledWith('test-key', {
-      text: 'fresh verdict from provider',
-      threadId: result.threadId,
-      citedFacts: [],
-    });
+    expect(cache.set).toHaveBeenCalledWith(
+      'test-key',
+      {
+        text: 'fresh verdict from provider',
+        threadId: result.threadId,
+        citedFacts: [],
+      },
+      // PIQ scores ride along so the durable row records which score vintage
+      // the narrative was written against.
+      samplePayload.piqByGeo,
+    );
   });
 
   it('assembled prompt includes all four context blocks', async () => {
@@ -253,6 +259,7 @@ describe('AiInsightsService', () => {
       expect(cache.set).toHaveBeenCalledWith(
         'test-key',
         expect.objectContaining({ text: validBatchJson }),
+        samplePayload.piqByGeo,
       );
     });
 
@@ -350,6 +357,86 @@ describe('AiInsightsService', () => {
       expect(result.expense_waterfall.text).toBe('');
       expect(result.sensitivity.text).toBe('');
       expect(result.after_tax.text).toBe('');
+    });
+  });
+
+  /**
+   * The header verdict was the ONE path with no cache at all: every analyzer
+   * page load and every debounced input tweak hit the provider, forever. That
+   * is what made the page look like it regenerated all its AI on refresh even
+   * while the six batched sections were being served warm.
+   */
+  describe('stream (header verdict) caching', () => {
+    async function* chunks(...parts: string[]) {
+      for (const p of parts) yield p;
+    }
+    const drain = async (gen: AsyncGenerator<string>) => {
+      const out: string[] = [];
+      for await (const c of gen) out.push(c);
+      return out;
+    };
+
+    it('replays a cached verdict without calling the provider', async () => {
+      cache.get.mockResolvedValue({
+        text: 'BUY. Strong DSCR at 1.23.',
+        threadId: 'tid',
+        citedFacts: [],
+      });
+
+      const out = await drain(service.stream(samplePayload));
+
+      expect(out.join('')).toBe('BUY. Strong DSCR at 1.23.');
+      expect(provider.stream).not.toHaveBeenCalled();
+      expect(cache.set).not.toHaveBeenCalled();
+    });
+
+    it('streams then persists the accumulated verdict on a miss', async () => {
+      cache.get.mockResolvedValue(null);
+      provider.stream.mockReturnValue(chunks('BUY. ', 'Strong ', 'DSCR.'));
+
+      const out = await drain(service.stream(samplePayload));
+
+      expect(out).toEqual(['BUY. ', 'Strong ', 'DSCR.']);
+      expect(cache.set).toHaveBeenCalledWith(
+        'test-key',
+        expect.objectContaining({ text: 'BUY. Strong DSCR.' }),
+        samplePayload.piqByGeo,
+      );
+    });
+
+    it('keys the verdict on its own section, not the batch', async () => {
+      cache.get.mockResolvedValue(null);
+      provider.stream.mockReturnValue(chunks('BUY.'));
+
+      await drain(service.stream(samplePayload));
+
+      expect(cache.computeKey).toHaveBeenCalledWith(
+        samplePayload,
+        'header_verdict',
+      );
+    });
+
+    it('does not persist a verdict truncated by client disconnect', async () => {
+      // Consumer abandons the generator mid-stream (browser closed the SSE
+      // connection). The write sits after the loop precisely so a partial
+      // verdict can never be cached as though it were complete.
+      cache.get.mockResolvedValue(null);
+      provider.stream.mockReturnValue(chunks('BUY. ', 'Strong ', 'DSCR.'));
+
+      for await (const _chunk of service.stream(samplePayload)) {
+        break;
+      }
+
+      expect(cache.set).not.toHaveBeenCalled();
+    });
+
+    it('does not cache an empty verdict', async () => {
+      cache.get.mockResolvedValue(null);
+      provider.stream.mockReturnValue(chunks('', '  '));
+
+      await drain(service.stream(samplePayload));
+
+      expect(cache.set).not.toHaveBeenCalled();
     });
   });
 });

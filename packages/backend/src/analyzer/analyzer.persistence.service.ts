@@ -1,8 +1,14 @@
-import { Inject, Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import * as crypto from 'node:crypto';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 import type { AnalysisSnapshotDto } from './dto/analysis-snapshot.dto';
+import { projectDealLabel } from './project-deal-label';
 
 /**
  * Persistence concerns for the Deal Analyzer.
@@ -23,28 +29,59 @@ export class AnalyzerPersistenceService {
   ) {}
 
   /**
-   * Upsert a saved analysis for the owner, keyed on `(owner_id, address_full)`
-   * — the DB-level unique constraint `deal_analyses_owner_address_unique`
-   * enforces at most one row per address per owner.
+   * Save an analysis for the owner. Two keying strategies:
    *
-   * If a row already exists for this owner+address it's updated in place
-   * (existing `id` and `share_token` are preserved so any previously
-   * distributed share link keeps working); otherwise a new row is inserted
-   * with a freshly generated `share_token`. A same-millisecond double-click
-   * race that slips past the existence check is caught by falling back to
-   * an update when the INSERT hits the unique-violation (Postgres `23505`).
+   * - `dto.id` present: updates that row directly, re-scoped by owner. This
+   *   is the path for an already-open saved deal — going through the
+   *   address-keyed upsert below would create a SECOND row the moment the
+   *   user corrects a street address on a deal they already saved, since
+   *   the lookup key itself just changed.
+   * - `dto.id` absent (first save): upserted on `(owner_id, address_full)`
+   *   — the DB-level unique constraint `deal_analyses_owner_address_unique`
+   *   enforces at most one row per address per owner. If a row already
+   *   exists for this owner+address it's updated in place (existing `id`
+   *   and `share_token` are preserved so any previously distributed share
+   *   link keeps working); otherwise a new row is inserted with a freshly
+   *   generated `share_token`. A same-millisecond double-click race that
+   *   slips past the existence check is caught by falling back to an
+   *   update when the INSERT hits the unique-violation (Postgres `23505`).
    *
    * Returns `{ id, share_token }` for the (new or existing) row.
    */
   async save(ownerId: string, dto: AnalysisSnapshotDto) {
+    // `id` is never itself part of the row — it only selects which row to
+    // update. Stripping it here means neither branch below can accidentally
+    // write a client-supplied id into `deal_analyses`.
+    //
+    // `result_snapshot` is destructured out and re-added only when the
+    // caller actually sent one. A plain Save omits it (see the DTO), and the
+    // key has to stay absent through the UPDATE spread — an explicit
+    // `undefined` reads as "clear this" to anything that inspects the patch,
+    // and would overwrite a published artifact a client may already hold.
+    const { id: targetId, result_snapshot: published, ...fields } = dto;
+    const rest = {
+      ...fields,
+      ...(published !== undefined ? { result_snapshot: published } : {}),
+    };
+
+    if (targetId) return this.updateExisting(ownerId, targetId, rest);
+
     const existing = await this.findExisting(ownerId, dto.address_full);
-    if (existing) return this.updateExisting(ownerId, existing.id, dto);
+    if (existing) return this.updateExisting(ownerId, existing.id, rest);
 
     // 24 bytes → 32 base64url chars → 192 bits of entropy.
     const shareToken = crypto.randomBytes(24).toString('base64url');
     const { data, error } = await this.supabase
       .from('deal_analyses')
-      .insert({ ...dto, owner_id: ownerId, share_token: shareToken })
+      // `result_snapshot` is NOT NULL, but a first save is not necessarily a
+      // publish — default it to `{}` so a never-shared deal still inserts.
+      // `rest` spreads after, so a real Share/PDF payload still wins.
+      .insert({
+        result_snapshot: {},
+        ...rest,
+        owner_id: ownerId,
+        share_token: shareToken,
+      })
       .select('id, share_token')
       .single();
     if (!error) return data;
@@ -53,7 +90,7 @@ export class AnalyzerPersistenceService {
     // between our existence check and this insert. Fall back to update.
     if (error.code === '23505') {
       const raced = await this.findExisting(ownerId, dto.address_full);
-      if (raced) return this.updateExisting(ownerId, raced.id, dto);
+      if (raced) return this.updateExisting(ownerId, raced.id, rest);
     }
     throw new Error(`save failed: ${error.message}`);
   }
@@ -79,12 +116,18 @@ export class AnalyzerPersistenceService {
    * `updated_at`. Never touches `share_token` — the point of upserting is
    * that previously distributed share links keep resolving to this id.
    *
-   * Scoped by both `owner_id` and `id`. `id` alone would still be correct
-   * here in practice (it comes from `findExisting()`, which already scoped
-   * by owner), but `this.supabase` is the service-role client — see
-   * `supabase.module.ts` — so RLS's `deal_analyses_owner_update` policy is
-   * not in effect and provides no protection. The `.eq('owner_id', ownerId)`
-   * is the actual enforcement, matching `list()`/`getOne()`/`remove()`.
+   * Scoped by both `owner_id` and `id`. When called from `save()`'s id path
+   * this `id` is client-supplied — this double-`.eq()` is what stops it
+   * from ever reaching another owner's row (`this.supabase` is the
+   * service-role client — see `supabase.module.ts` — so RLS's
+   * `deal_analyses_owner_update` policy is not in effect and provides no
+   * protection; the `.eq('owner_id', ownerId)` is the actual enforcement,
+   * matching `list()`/`getOne()`/`remove()`).
+   *
+   * `.maybeSingle()` (not `.single()`) so an `id` that doesn't match any row
+   * for this owner resolves to `data: null` instead of throwing — that's
+   * what lets the 404 below fire cleanly instead of surfacing a raw
+   * PostgREST "no rows" error.
    */
   private async updateExisting(
     ownerId: string,
@@ -97,9 +140,61 @@ export class AnalyzerPersistenceService {
       .eq('owner_id', ownerId)
       .eq('id', id)
       .select('id, share_token')
-      .single();
-    if (error) throw new Error(`save update failed: ${error.message}`);
+      .maybeSingle();
+    if (error) {
+      // Renaming onto an address this owner already saved elsewhere hits
+      // the same `deal_analyses_owner_address_unique` constraint the
+      // address-keyed upsert path relies on — translate it to a readable
+      // 409 instead of leaking the raw Postgres code.
+      if (error.code === '23505') {
+        throw new ConflictException(
+          'You already have a saved analysis for that address.',
+        );
+      }
+      throw new Error(`save update failed: ${error.message}`);
+    }
+    if (!data) throw new NotFoundException('analysis not found');
     return data;
+  }
+
+  /**
+   * Autosave: overwrite only the working state of a saved deal.
+   *
+   * Also projects the deal's name onto the `label` column, because that
+   * column is what the saved-deals list renders and the name itself lives
+   * inside the state blob — see `projectDealLabel`. Nothing else about the
+   * row is touched; `result_snapshot` and `market_context` in particular
+   * stay exactly as the last deliberate Share/PDF left them.
+   *
+   * Scoped by `owner_id` AND `id`. `this.supabase` is the service-role
+   * client (see supabase.module.ts), so the `deal_analyses_owner_update`
+   * RLS policy is NOT in effect — the `.eq('owner_id', ...)` IS the
+   * enforcement, matching list()/getOne()/remove().
+   *
+   * Returns null when no row matched, so the controller can 404 without
+   * confirming whether the id exists for some other owner.
+   */
+  async patchState(
+    ownerId: string,
+    id: string,
+    inputSnapshot: Record<string, unknown>,
+  ) {
+    const { data, error } = await this.supabase
+      .from('deal_analyses')
+      .update({
+        input_snapshot: inputSnapshot,
+        // The deal's name rides inside the state blob; the column is a
+        // projection of it. See project-deal-label.ts for why this is not a
+        // widening of `PatchDealStateDto`.
+        ...projectDealLabel(inputSnapshot),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('owner_id', ownerId)
+      .eq('id', id)
+      .select('id')
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    return data ?? null;
   }
 
   /**

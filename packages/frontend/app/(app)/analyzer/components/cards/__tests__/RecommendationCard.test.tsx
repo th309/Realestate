@@ -46,12 +46,16 @@ describe("RecommendationCard", () => {
     });
   }
 
+  // The meta pills set their value in the mono face, so label and value are
+  // separate elements — assert on the pill's textContent rather than looking
+  // for one text node spanning both.
   it("renders flooredAt pill when set", () => {
-    const { container, getByText } = render(
+    const { container } = render(
       <RecommendationCard result={makeResult({ flooredAt: "D" })} />,
     );
-    expect(container.querySelector('[data-meta-pill="floored"]')).toBeTruthy();
-    expect(getByText(/Floored at D/)).toBeTruthy();
+    const pill = container.querySelector('[data-meta-pill="floored"]');
+    expect(pill).toBeTruthy();
+    expect(pill?.textContent).toBe("Floored at D");
   });
 
   it("does not render flooredAt pill when unset", () => {
@@ -69,13 +73,12 @@ describe("RecommendationCard", () => {
   });
 
   it("renders the graded-against label even without a customize callback", () => {
-    const { container, getByText } = render(
+    const { container } = render(
       <RecommendationCard result={makeResult()} presetLabel="Aggressive" />,
     );
-    expect(getByText("Graded against Aggressive criteria")).toBeTruthy();
-    expect(
-      container.querySelector('[data-meta-pill="customize"]'),
-    ).toBeTruthy();
+    const pill = container.querySelector('[data-meta-pill="customize"]');
+    expect(pill).toBeTruthy();
+    expect(pill?.textContent).toBe("Graded against Aggressive");
   });
 
   it("does not render the Edit criteria button when onCustomizeClick is absent", () => {

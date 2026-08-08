@@ -15,13 +15,16 @@ import type { SharedAnalysisBranding } from "@/lib/data/fetchers/analyzer-share"
 import type { RichResultSnapshot } from "@/app/analyzer/lib/analyzer-snapshot-types";
 import { ReadonlyCoverPage } from "./ReadonlyCoverPage";
 import { ReadonlyAnalyticsPage } from "./ReadonlyAnalyticsPage";
+import { resolveRenderInput } from "./resolve-render-input";
+import type { ShareImagery } from "./resolve-share-imagery";
 
 interface Props {
   row: SavedAnalysis;
   branding: SharedAnalysisBranding | null;
+  imagery: ShareImagery;
 }
 
-export function ReadonlyAnalyzerView({ row, branding }: Props) {
+export function ReadonlyAnalyzerView({ row, branding, imagery }: Props) {
   const snap = (row.result_snapshot ?? {}) as Partial<RichResultSnapshot>;
   const rental = snap.rental ?? {};
   const flip = snap.rental ? (snap.flip ?? null) : null;
@@ -47,6 +50,11 @@ export function ReadonlyAnalyzerView({ row, branding }: Props) {
   // shared payload render even though they live in the same snapshot blob.
   const sharedNotes = snap.shareNotes && snap.notes?.trim() ? snap.notes : null;
 
+  // The flat DealInput the cover table and the charts read. `input_snapshot`
+  // now holds a versioned DealStateV2 that nests it, so it must be unwrapped
+  // rather than passed through — see resolve-render-input.ts.
+  const renderInput = resolveRenderInput(snap.input, row.input_snapshot);
+
   const preparedDate = (row.created_at ?? "").slice(0, 10) || "—";
   const disclaimer =
     branding?.report_disclaimer ??
@@ -55,6 +63,7 @@ export function ReadonlyAnalyzerView({ row, branding }: Props) {
   return (
     <>
       <ReadonlyCoverPage
+        imagery={imagery}
         preparedDate={preparedDate}
         addressFull={row.address_full ?? null}
         addressCity={row.address_city ?? null}
@@ -68,9 +77,7 @@ export function ReadonlyAnalyzerView({ row, branding }: Props) {
         brrrr={brrrr}
         bestStrategy={bestStrategy}
         strategyNarrative={null}
-        input={
-          snap.input ?? (row.input_snapshot as Record<string, unknown>) ?? {}
-        }
+        input={renderInput ?? {}}
         assumptions={snap.assumptions}
         arvLocal={snap.arvLocal ?? null}
         rehabBudget={snap.rehabBudget ?? null}
@@ -79,9 +86,7 @@ export function ReadonlyAnalyzerView({ row, branding }: Props) {
       />
 
       <ReadonlyAnalyticsPage
-        input={
-          snap.input ?? (row.input_snapshot as Record<string, unknown>) ?? null
-        }
+        input={renderInput}
         rental={rental}
         flip={flip}
         brrrr={brrrr}

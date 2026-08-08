@@ -22,10 +22,11 @@ describe("AIAnnotation", () => {
     );
     const node = container.querySelector("[data-ai-annotation]");
     expect(node?.getAttribute("data-stale")).toBe("true");
-    // Brand: stale text stays primary-blue (no opacity fade). The refresh
-    // button is the sole visual cue that the insight is cached.
-    expect(node?.className).toMatch(/text-primary/);
-    expect(node?.className).not.toMatch(/opacity-70/);
+    // Brand: a cached insight is not faded or greyed — the refresh button is
+    // the sole visual cue. The text's colour itself comes from the enclosing
+    // PiqInsightStrip, so it is not asserted here.
+    expect(node?.className).not.toMatch(/opacity-/);
+    expect(node?.className).not.toMatch(/text-piq-muted/);
     const btn = container.querySelector("[data-ai-refresh]");
     expect(btn).toBeTruthy();
     fireEvent.click(btn!);

@@ -2,13 +2,12 @@ import type { Metadata } from "next";
 import { formatMarketsScored } from "@/lib/data/validation-claims";
 
 /**
- * Canonical homepage metadata — the single source of truth shared by BOTH the
- * control homepage (`app/(app)/page.tsx`, variant A) and the narrative rewrite
- * (`app/(app)/home-v2/page.tsx`, variant B). Because B is served at `/` via a
- * middleware rewrite, its metadata MUST be byte-identical to A so SEO carries
- * over unchanged (no title/canonical/OG divergence). B previews are kept out of
- * the index by middleware's `X-Robots-Tag: noindex` header, not by metadata, so
- * this object stays indexable with canonical `/` for both.
+ * Canonical homepage metadata for `app/(app)/page.tsx`.
+ *
+ * It lives in its own module because it was the shared, byte-identical metadata
+ * of the retired landing A/B split — keeping it here means the title, canonical
+ * and OG fields that survived that experiment are still edited in exactly one
+ * place, and `/` stays indexable with canonical `https://www.propertyiq.app`.
  */
 export const landingMetadata: Metadata = {
   title: {

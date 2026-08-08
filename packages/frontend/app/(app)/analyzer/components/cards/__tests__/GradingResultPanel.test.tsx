@@ -60,7 +60,7 @@ function makeResult(
 }
 
 describe("GradingResultPanel", () => {
-  it("renders all 4 sub-components when auto-kills present", () => {
+  it("renders all 3 sub-components when auto-kills present", () => {
     const result = makeResult({
       autoKills: [{ code: "X", message: "Killed it" }],
     });
@@ -70,7 +70,6 @@ describe("GradingResultPanel", () => {
     expect(
       container.querySelector("[data-score-breakdown-table]"),
     ).toBeTruthy();
-    expect(container.querySelector("[data-advisories-strip]")).toBeTruthy();
   });
 
   it("omits AutoKillBanner when autoKills is empty", () => {
@@ -80,6 +79,19 @@ describe("GradingResultPanel", () => {
     expect(
       container.querySelector("[data-score-breakdown-table]"),
     ).toBeTruthy();
-    expect(container.querySelector("[data-advisories-strip]")).toBeTruthy();
+  });
+
+  // The advisories chips moved OUT of this panel: the mockup puts them
+  // between the verdict and the KPI row, where they read as a pre-flight
+  // check on the KPIs. AnalyzerClient renders them from grading.data now.
+  it("no longer owns the advisories strip", () => {
+    const { container } = render(<GradingResultPanel result={makeResult()} />);
+    expect(container.querySelector("[data-advisories-strip]")).toBeNull();
+  });
+
+  it("exposes the jump anchors the jump bar targets", () => {
+    const { container } = render(<GradingResultPanel result={makeResult()} />);
+    expect(container.querySelector("#verdict")).toBeTruthy();
+    expect(container.querySelector("#grading")).toBeTruthy();
   });
 });

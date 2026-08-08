@@ -8,6 +8,7 @@ import {
   NotFoundException,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
   Query,
   Req,
@@ -27,6 +28,7 @@ import { AnalyzerTierGate } from './analyzer-tier-gate.service';
 import { OnboardingService } from '../onboarding/onboarding.service';
 import { MarketContextQueryDto } from './dto/market-context.dto';
 import { AnalysisSnapshotDto } from './dto/analysis-snapshot.dto';
+import { PatchDealStateDto } from './dto/patch-deal-state.dto';
 import { ListSavedQueryDto } from './dto/list-saved.dto';
 import {
   PropertyLookupQueryDto,
@@ -166,6 +168,33 @@ export class AnalyzerController {
       throw new NotFoundException('analysis not found');
     }
     return row;
+  }
+
+  /**
+   * PATCH /api/analyzer/saved/:id/state
+   *
+   * Autosave target. Persists ONLY the working deal state; the published
+   * share artifact (`result_snapshot`) and the restore baseline
+   * (`market_context`) are untouched by design — see the persistence spec
+   * §4.2. Auth-required and Pro-gated to match POST /save.
+   */
+  @Patch('saved/:id/state')
+  @UseGuards(JwtAuthGuard)
+  async patchSavedState(
+    @AuthUserId() userId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: PatchDealStateDto,
+  ) {
+    await this.tierGate.requirePro(userId);
+    const row = await this.persistence.patchState(
+      userId,
+      id,
+      body.input_snapshot,
+    );
+    if (!row) {
+      throw new NotFoundException('analysis not found');
+    }
+    return { ok: true };
   }
 
   /**

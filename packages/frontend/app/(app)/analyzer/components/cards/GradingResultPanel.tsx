@@ -15,7 +15,6 @@ import type {
   UpgradePathBrrrrRequest,
   UpgradePathFlipRequest,
 } from "@/lib/data";
-import { AdvisoriesStrip } from "./AdvisoriesStrip";
 import { AutoKillBanner } from "./AutoKillBanner";
 import { BrrrrUpgradePathPanel } from "./BrrrrUpgradePathPanel";
 import { FlipUpgradePathPanel } from "./FlipUpgradePathPanel";
@@ -83,12 +82,10 @@ export function GradingResultPanel({
   flipContext,
   flipOverrideThresholds,
   onApplyFlipLever,
-  onApplyFlipCombination,
   brrrrInput,
   brrrrContext,
   brrrrOverrideThresholds,
   onApplyBrrrrLever,
-  onApplyBrrrrCombination,
   onCustomizeClick,
   onEditAutoKillCriteria,
   presetLabel,
@@ -114,54 +111,86 @@ export function GradingResultPanel({
     strategy === "BRRRR" &&
     onApplyBrrrrLever;
 
+  // Exactly one upgrade-path panel can apply at a time — the three guards are
+  // mutually exclusive on `strategy`. Resolving it to a single node lets the
+  // grading table pair with it two-up, and fall back to full width for an
+  // A-grade deal, which has no levers left to pull.
+  const leverPanel = canRenderBnhUpgradePath ? (
+    <UpgradePathPanel
+      input={input}
+      context={context ?? {}}
+      currentGrade={result.letter}
+      strategy={strategy}
+      onApply={onApplyLever}
+      overrideThresholds={overrideThresholds}
+    />
+  ) : canRenderFlipUpgradePath ? (
+    <FlipUpgradePathPanel
+      input={flipInput}
+      context={flipContext}
+      currentGrade={result.letter}
+      onApplyFlipLever={onApplyFlipLever}
+      overrideThresholds={flipOverrideThresholds}
+    />
+  ) : canRenderBrrrrUpgradePath ? (
+    <BrrrrUpgradePathPanel
+      input={brrrrInput}
+      context={brrrrContext}
+      currentGrade={result.letter}
+      onApplyBrrrrLever={onApplyBrrrrLever}
+      overrideThresholds={brrrrOverrideThresholds}
+    />
+  ) : null;
+
+  const scoreTable = (
+    <ScoreBreakdownTable
+      metrics={result.metrics}
+      rawGpa={result.rawGpa}
+      marketAdjustment={result.marketAdjustment}
+      finalGpa={result.finalGpa}
+      finalLetter={result.letter}
+      presetLabel={presetLabel}
+    />
+  );
+
   return (
     <div data-grading-result-panel className="space-y-4">
       <AutoKillBanner
         autoKills={result.autoKills}
         onEditCriteria={onEditAutoKillCriteria}
       />
-      <RecommendationCard
-        result={result}
-        onCustomizeClick={onCustomizeClick}
-        presetLabel={presetLabel}
-        aiProps={aiProps}
-      />
-      <ScoreBreakdownTable
-        metrics={result.metrics}
-        rawGpa={result.rawGpa}
-        marketAdjustment={result.marketAdjustment}
-        finalGpa={result.finalGpa}
-        finalLetter={result.letter}
-      />
-      {canRenderBnhUpgradePath && (
-        <UpgradePathPanel
-          input={input}
-          context={context ?? {}}
-          currentGrade={result.letter}
-          strategy={strategy}
-          onApply={onApplyLever}
-          overrideThresholds={overrideThresholds}
+      <div id="verdict" className="scroll-mt-20">
+        <RecommendationCard
+          result={result}
+          onCustomizeClick={onCustomizeClick}
+          presetLabel={presetLabel}
+          aiProps={aiProps}
         />
+      </div>
+      {leverPanel ? (
+        <div className="grid grid-cols-1 items-start gap-4 min-[1240px]:grid-cols-2">
+          {/*
+            The mockup pairs these at similar heights, but the real engine
+            emits one lever per failing metric — measured 399px of table
+            against 1136px of levers, which left ~740px of dead column. The
+            table sticks instead, so the grade breakdown stays on screen while
+            you read the levers that move it.
+          */}
+          <div
+            id="grading"
+            className="min-w-0 scroll-mt-20 min-[1240px]:sticky min-[1240px]:top-6"
+          >
+            {scoreTable}
+          </div>
+          <div id="improve" className="min-w-0 scroll-mt-20">
+            {leverPanel}
+          </div>
+        </div>
+      ) : (
+        <div id="grading" className="scroll-mt-20">
+          {scoreTable}
+        </div>
       )}
-      {canRenderFlipUpgradePath && (
-        <FlipUpgradePathPanel
-          input={flipInput}
-          context={flipContext}
-          currentGrade={result.letter}
-          onApplyFlipLever={onApplyFlipLever}
-          overrideThresholds={flipOverrideThresholds}
-        />
-      )}
-      {canRenderBrrrrUpgradePath && (
-        <BrrrrUpgradePathPanel
-          input={brrrrInput}
-          context={brrrrContext}
-          currentGrade={result.letter}
-          onApplyBrrrrLever={onApplyBrrrrLever}
-          overrideThresholds={brrrrOverrideThresholds}
-        />
-      )}
-      <AdvisoriesStrip advisories={result.advisories} />
     </div>
   );
 }

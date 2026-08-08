@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SectionHeading, StatTile } from "@/app/components/marketing";
 import { BeatSection } from "./BeatSection";
 import { Reveal } from "./Reveal";
 import { PrimaryCta } from "./PrimaryCta";
@@ -25,9 +26,8 @@ import { PrimaryCta } from "./PrimaryCta";
  * monotonic, with the midpoint (≈45–55) band highlighted as the calibrated
  * "performs like its state" zero.
  *
- * Lower-middle of the page's fixed indigo→light gradient → dark-on-light, so
- * tone="light" (spec §4.0). Server component; the only client leaf is the
- * shared PrimaryCta. Mono numbers, serif headline, M3 semantic tokens only.
+ * Sits on its own light surface band. Server component; the only client leaf is
+ * the shared PrimaryCta. Mono numbers, M3 semantic tokens only.
  */
 
 /**
@@ -53,12 +53,25 @@ const SCORE_BANDS: ScoreBand[] = [
 interface ProofStat {
   value: string;
   label: string;
+  caption: string;
 }
 
 const PROOF_STATS: ProofStat[] = [
-  { value: "0.27", label: "predictive strength (IC), 3-year, at metro level" },
-  { value: "100%", label: "of validated years with a positive signal" },
-  { value: "22 yrs", label: "of history backtested, 2001 to today" },
+  {
+    label: "Predictive strength",
+    value: "0.27",
+    caption: "IC, 3-year, at metro level",
+  },
+  {
+    label: "Positive years",
+    value: "100%",
+    caption: "of validated years with a positive signal",
+  },
+  {
+    label: "Backtested",
+    value: "22 yrs",
+    caption: "of history, 2001 to today",
+  },
 ];
 
 // --- Visual geometry (pure layout math, no chart library) --------------------
@@ -72,8 +85,11 @@ function barWidth(excess: number): number {
 function ScoreBandRow({ band }: { band: ScoreBand }) {
   const positive = band.excess >= 0;
   const width = barWidth(band.excess);
-  const barColor = positive ? "bg-green-700" : "bg-red-700";
-  const valueColor = positive ? "text-green-700" : "text-red-700";
+  const barColor = positive ? "bg-tertiary" : "bg-error";
+  // The bar takes the bright accent; the figure beside it takes the darkened
+  // text green. `text-tertiary` is a fill colour and reads at 2.04:1 as words
+  // on a light band.
+  const valueColor = positive ? "text-tertiary-text" : "text-error";
   return (
     <div
       className={`flex items-center gap-3 rounded-lg px-2 py-1.5 ${
@@ -151,38 +167,26 @@ function ScoreBandVisual() {
 
 export function BeatProof() {
   return (
-    <BeatSection id="beat-proof" eyebrow="The proof" tone="light">
-      <Reveal>
-        <h2 className="font-serif text-3xl font-semibold leading-[1.1] tracking-tight sm:text-4xl md:text-5xl">
-          We backtested it. Here&apos;s what held up.
-        </h2>
-      </Reveal>
+    <BeatSection id="beat-proof" surface="none">
+      <SectionHeading
+        eyebrow="The proof"
+        title="We backtested it. Here's what held up."
+        subhead="The honest answer to “is it accurate?” is a 22-year, out-of-sample backtest. Markets scoring 45–55 landed within a fifth of a point of zero excess return versus their state. Higher scores beat their state; lower scores lagged. The number means what it says."
+        align="start"
+      />
 
-      <Reveal delayMs={70}>
-        <p className="mt-5 max-w-2xl text-lg text-on-surface-variant">
-          The honest answer to &ldquo;is it accurate?&rdquo; is a 22-year,
-          out-of-sample backtest. Markets scoring 45&ndash;55 landed within a
-          fifth of a point of zero excess return versus their state. Higher
-          scores beat their state; lower scores lagged. The number means what it
-          says.
-        </p>
-      </Reveal>
-
-      <Reveal delayMs={140} className="mt-12">
+      <Reveal delayMs={140}>
         <ScoreBandVisual />
       </Reveal>
 
-      <div className="mt-12 grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-3">
+      <div className="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-3">
         {PROOF_STATS.map((stat, index) => (
           <Reveal key={stat.label} delayMs={200 + index * 70}>
-            <div className="flex flex-col">
-              <div className="font-mono text-4xl font-semibold tracking-tight text-on-surface sm:text-5xl">
-                {stat.value}
-              </div>
-              <p className="mt-2 text-sm text-on-surface-variant">
-                {stat.label}
-              </p>
-            </div>
+            <StatTile
+              label={stat.label}
+              value={stat.value}
+              caption={stat.caption}
+            />
           </Reveal>
         ))}
       </div>

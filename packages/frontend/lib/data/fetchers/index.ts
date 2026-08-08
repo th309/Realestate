@@ -59,3 +59,9 @@ export * from "./market-explorer";
 
 // Social connect (one-click account connection via the Late aggregator)
 export * from "./social-connect";
+
+// Street View imagery (signed Google URLs resolved by the backend)
+export * from "./street-view";
+
+// Geocoding (building-level coordinates for an address)
+export * from "./geocoding";

@@ -124,59 +124,91 @@ export function AnalyzerSections({
 }: AnalyzerSectionsProps) {
   return (
     <>
-      <ProjectionSection
-        input={input}
-        projection={projection}
-        afterTax={afterTax}
-        {...sectionAi.projection}
-      />
-      <ExpenseSection
-        grossRentMonthly={grossRentMonthly}
-        vacancyMonthly={vacancyMonthly}
-        opexMonthly={opexAnnual / 12}
-        debtServiceMonthly={debtServiceMonthly}
-        {...sectionAi.expense_waterfall}
-      />
-      <SensitivitySection
-        input={input}
-        rental={rental}
-        flip={flip}
-        brrrr={brrrr}
-        arv={arvLocal}
-        rehabBudget={rehabBudget}
-        activeStrategy={activeStrategy}
-        salesComps={salesComps}
-        {...sectionAi.sensitivity}
-      />
-      <CompsSection
-        subjectLat={subjectLat}
-        subjectLon={subjectLon}
-        subjectAddress={displayAddress}
-        pricePerSqftValues={pricePerSqftValues}
-        yourPricePerSqft={yourPricePerSqft}
-        subjectPrice={subjectPrice}
-        salesComps={salesComps}
-        rentalComps={rentalComps}
-        mapboxToken={mapboxToken}
-        {...sectionAi.comps}
-      />
-      <MarketContextSection
-        chain={marketContext?.chain ?? null}
-        initialGeoLevel={marketContext?.geo_level ?? null}
-        fallbackPiq={marketContext?.piq_score?.value ?? null}
-        fallbackHomeValue={marketContext?.home_value?.value ?? null}
-        fallbackHomeValueYoy={marketContext?.home_value_yoy?.value ?? null}
-        fallbackRentIndex={marketContext?.rent_index?.value ?? null}
-        fallbackMarketHeat={marketContext?.market_heat?.value ?? null}
-        fallbackNetMigration={marketContext?.net_migration?.value ?? null}
-        aiPayloadBase={marketContextAi.aiPayloadBase}
-        aiEnabled={marketContextAi.aiEnabled}
-      />
-      <AfterTaxSection
-        afterTax={afterTax}
-        marginalTaxRate={marginalTaxRate}
-        {...sectionAi.after_tax}
-      />
+      {/*
+        Two-up rows above 1240px, stacked below — the spec's core layout move,
+        and the reason it claims ~40% less scrolling to reach the levers.
+
+        Charts pair; blocks that genuinely need the full measure do not. A
+        single-series line chart stretched across 1600px is mostly empty, so
+        every chart here has a partner. The two exceptions below earn their
+        width: comps carries a map beside its distribution, and market context
+        is a single rank of metric tiles that reads like the KPI row.
+      */}
+      <div className="grid grid-cols-1 gap-6 min-[1240px]:grid-cols-2">
+        <div id="projection" className="min-w-0 scroll-mt-20">
+          <ProjectionSection
+            input={input}
+            projection={projection}
+            afterTax={afterTax}
+            {...sectionAi.projection}
+          />
+        </div>
+        <div id="expenses" className="min-w-0 scroll-mt-20">
+          <ExpenseSection
+            grossRentMonthly={grossRentMonthly}
+            vacancyMonthly={vacancyMonthly}
+            opexMonthly={opexAnnual / 12}
+            debtServiceMonthly={debtServiceMonthly}
+            {...sectionAi.expense_waterfall}
+          />
+        </div>
+      </div>
+
+      {/* After-tax moves up beside sensitivity rather than sitting last: both
+          answer "what happens to this cash flow when something changes", and
+          the two are a close height match, which is what keeps a paired row
+          from leaving a dead column. */}
+      <div className="grid grid-cols-1 gap-6 min-[1240px]:grid-cols-2">
+        <div id="sensitivity" className="min-w-0 scroll-mt-20">
+          <SensitivitySection
+            input={input}
+            rental={rental}
+            flip={flip}
+            brrrr={brrrr}
+            arv={arvLocal}
+            rehabBudget={rehabBudget}
+            activeStrategy={activeStrategy}
+            salesComps={salesComps}
+            {...sectionAi.sensitivity}
+          />
+        </div>
+        <div id="aftertax" className="min-w-0 scroll-mt-20">
+          <AfterTaxSection
+            afterTax={afterTax}
+            marginalTaxRate={marginalTaxRate}
+            {...sectionAi.after_tax}
+          />
+        </div>
+      </div>
+
+      <div id="comps" className="scroll-mt-20">
+        <CompsSection
+          subjectLat={subjectLat}
+          subjectLon={subjectLon}
+          subjectAddress={displayAddress}
+          pricePerSqftValues={pricePerSqftValues}
+          yourPricePerSqft={yourPricePerSqft}
+          subjectPrice={subjectPrice}
+          salesComps={salesComps}
+          rentalComps={rentalComps}
+          mapboxToken={mapboxToken}
+          {...sectionAi.comps}
+        />
+      </div>
+      <div id="market" className="scroll-mt-20">
+        <MarketContextSection
+          chain={marketContext?.chain ?? null}
+          initialGeoLevel={marketContext?.geo_level ?? null}
+          fallbackPiq={marketContext?.piq_score?.value ?? null}
+          fallbackHomeValue={marketContext?.home_value?.value ?? null}
+          fallbackHomeValueYoy={marketContext?.home_value_yoy?.value ?? null}
+          fallbackRentIndex={marketContext?.rent_index?.value ?? null}
+          fallbackMarketHeat={marketContext?.market_heat?.value ?? null}
+          fallbackNetMigration={marketContext?.net_migration?.value ?? null}
+          aiPayloadBase={marketContextAi.aiPayloadBase}
+          aiEnabled={marketContextAi.aiEnabled}
+        />
+      </div>
       <NotesSection
         initialNotes={notes}
         initialShare={shareNotes}

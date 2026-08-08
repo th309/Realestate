@@ -1,7 +1,14 @@
 import { describe, it, expect, vi } from "vitest";
+import type { ComponentProps } from "react";
 import { render, fireEvent, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
+
+/** next/link stand-in: href is whatever the caller passed, not necessarily a string. */
+type LinkMockProps = Omit<ComponentProps<"a">, "href"> & {
+  href?: unknown;
+  children?: ReactNode;
+};
 
 vi.mock("@/lib/data", () => ({
   fetchSavedAnalyses: vi.fn().mockResolvedValue([
@@ -15,7 +22,7 @@ vi.mock("@/lib/data", () => ({
   ]),
 }));
 vi.mock("next/link", () => ({
-  default: ({ href, children, ...rest }: any) => (
+  default: ({ href, children, ...rest }: LinkMockProps) => (
     <a href={typeof href === "string" ? href : ""} {...rest}>
       {children}
     </a>

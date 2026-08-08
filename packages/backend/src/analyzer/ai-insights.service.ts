@@ -103,7 +103,7 @@ export class AiInsightsService {
       threadId: randomUUID(),
       citedFacts: [],
     };
-    await this.cache.set(key, result);
+    await this.cache.set(key, result, payload.piqByGeo);
     return { ...result, cacheHit: false };
   }
 
@@ -143,26 +143,60 @@ export class AiInsightsService {
     // returns {} — caching that would lock the user into empty narratives for
     // 24h on every subsequent hit.
     if (parsed !== null && Object.keys(parsed).length > 0) {
-      await this.cache.set(key, {
-        text: rawText,
-        threadId,
-        citedFacts: [],
-      });
+      await this.cache.set(
+        key,
+        { text: rawText, threadId, citedFacts: [] },
+        payload.piqByGeo,
+      );
     }
 
     return this.buildBatchedResult(parsed ?? {}, threadId, false);
   }
 
+  /**
+   * Header verdict (SSE). Cached on the same composite key as every other
+   * section — it was previously the ONE path with no cache at all, so it hit
+   * the provider on every analyzer page load and every debounced input tweak,
+   * forever. That is what made the page look like it "reruns the AI every
+   * time" even while the six section annotations were being served warm.
+   *
+   * A cache hit replays as a single chunk rather than re-simulating token
+   * latency: the consumer (`useAiHeaderVerdict`) just accumulates chunks, so
+   * one chunk paints the verdict instantly.
+   *
+   * The write deliberately sits AFTER the loop. If the client disconnects
+   * mid-stream the generator is closed at the yield point and this line never
+   * runs, so a truncated verdict can't be persisted as though it were whole.
+   */
   async *stream(payload: InsightPayload): AsyncGenerator<string> {
+    const key = this.cache.computeKey(payload, 'header_verdict');
+    const cached = await this.cache.get(key);
+    if (cached?.text) {
+      yield cached.text;
+      return;
+    }
+
     const userPrompt = assemblePrompt(
       payload,
       getSectionPrompt('header_verdict'),
     );
-    yield* this.provider.stream(AI_PURPOSES.ANALYZER_HEADER_VERDICT, {
-      systemPrompt: SYSTEM_PROMPT,
-      userPrompt,
-      maxTokens: 200,
-    });
+
+    let accumulated = '';
+    for await (const chunk of this.provider.stream(
+      AI_PURPOSES.ANALYZER_HEADER_VERDICT,
+      { systemPrompt: SYSTEM_PROMPT, userPrompt, maxTokens: 200 },
+    )) {
+      accumulated += chunk;
+      yield chunk;
+    }
+
+    if (accumulated.trim().length > 0) {
+      await this.cache.set(
+        key,
+        { text: accumulated, threadId: randomUUID(), citedFacts: [] },
+        payload.piqByGeo,
+      );
+    }
   }
 
   /**

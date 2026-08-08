@@ -1,4 +1,4 @@
-import { Header } from "@/src/components/layout/Header";
+import { AppChrome } from "@/app/components/app-shell/AppChrome";
 import { GlobalBreadcrumbs } from "@/components/navigation";
 import { Providers } from "@/app/providers";
 import { DevToolbarLoader } from "@/components/dev/DevToolbarLoader";
@@ -51,7 +51,11 @@ export async function AppShell({
         initialUserId={initialUserId}
         initialEntitlementState={initialEntitlementState}
       >
-        <Header />
+        {/* Dark AppBar on the tools and authed account surfaces, light
+            marketing Header everywhere else. Chosen by route rather than by
+            route group: `(app)` holds the homepage, blog, about, and pricing
+            alongside the five tools, so the group boundary is the wrong seam. */}
+        <AppChrome />
         <GlobalBreadcrumbs />
         <EnterpriseGraceBanner />
         <EnterpriseOnboardingGate>

@@ -125,8 +125,6 @@ export function buildLeaderboardRows(
         : formatExplorerValue(x.v, cfg.format),
       valueColor: isScore ? chip.color : "var(--md-on-surface)",
       score,
-      scoreBg: chip.bg,
-      scoreColor: chip.color,
       // Upper-bounded at monthIndex+1 — without it, .slice(windowStart)
       // runs to the end of the FULL fetched series, which is one month
       // beyond "now" whenever monthIndex isn't the array's last index (e.g.

@@ -45,8 +45,11 @@ describe("UpgradePathOption", () => {
     const pill = container.querySelector(
       "[data-upgrade-option-feasibility]",
     ) as HTMLElement;
-    // #00C853 → easy
-    expect(pill.getAttribute("style") ?? "").toContain("rgb(0, 200, 83)");
+    // The green comes from the accent token, never a literal — a hardcoded
+    // hex here stayed light-mode green in dark mode.
+    const style = pill.getAttribute("style") ?? "";
+    expect(style).toContain("var(--md-tertiary)");
+    expect(style).not.toMatch(/#[0-9a-f]{3,8}/i);
   });
 
   it("renders the 'From X to Y' body text with current and target values", () => {

@@ -20,17 +20,28 @@ import { usePiqByGeo } from "./use-piq-by-geo";
 import {
   buildProvenanceFromBundle,
   mergeRentcastIntoInput,
-  extractZip,
   type AnalyzerStateOptions,
   type FieldProvenance,
   type ProvenanceMap,
   isDivergent,
 } from "./use-analyzer-state.provenance";
+import { resolveMarketZip } from "./resolve-market-zip";
+import { getScoreLabel } from "@/app/components/scoring/score-labels";
+import {
+  pickMarketContext,
+  resolveInitialAnalyzerState,
+  shouldAutoFetchProperty,
+  useMarketRefreshGate,
+} from "./use-analyzer-state.hydration";
+import type { MarketContext } from "@/lib/data/fetchers/analyzer";
 
 export type { FieldProvenance, ProvenanceMap };
 export { isDivergent };
 export type { AnalyzerAssumptions };
 export { DEFAULT_ASSUMPTIONS };
+// Re-exported so callers (and its test) keep importing the auto-fetch guard
+// from here; it lives in use-analyzer-state.hydration.ts for the line limit.
+export { shouldAutoFetchProperty };
 
 /**
  * Combines all the analyzer state + side effects into one consumable hook so
@@ -39,32 +50,52 @@ export { DEFAULT_ASSUMPTIONS };
  * Side effects encapsulated here:
  *   - RentCast fetch (mutation) + sync result to input fields once per fetch
  *   - Auto-fetch on first render when address arrives via ?address= param
+ *   - Market context + per-geo PIQ, gated so a hydrated deal restores rather
+ *     than refetches them (useMarketRefreshGate)
  *   - Memoized projection / sensitivity / break-even / after-tax / BRRRR-timeline
  *   - Debounced streaming AI header verdict
  */
+export interface AnalyzerStateArgs extends AnalyzerStateOptions {
+  /** The saved row's `market_context`. Restored, never refetched — §4.4. */
+  initialMarketContext?: MarketContext | null;
+}
+
 export function useAnalyzerState({
   isPro,
   initialAddress = "",
   paramAddress,
   paramZip,
-}: AnalyzerStateOptions) {
-  // Empty initial state — analyzer waits for the user (or RentCast fetch) to
-  // supply numbers. Hardcoded defaults misled users into thinking the analyzer
-  // had already valued their property; null forces an explicit step.
-  const analyzer = useAnalyzer({
-    price: 0,
-    rentMonthly: null,
-    taxAnnual: null,
-    insuranceAnnual: null,
-  });
+  initialState,
+  initialMarketContext,
+}: AnalyzerStateArgs) {
+  const isHydrated = Boolean(initialState);
+  // A saved deal (initialState) overrides every default below to resume in
+  // place — see resolveInitialAnalyzerState for the empty-analyzer defaults.
+  const initial = resolveInitialAnalyzerState(initialState, initialAddress);
+  const analyzer = useAnalyzer(initial.input);
 
-  const [address, setAddress] = useState(initialAddress);
-  const [arvLocal, setArvLocal] = useState<number>(0);
-  const [rehabBudget, setRehabBudget] = useState<number>(45_000);
-  const [propertyType, setPropertyType] = useState<"sfh" | "mf">("sfh");
-  const [unitCount, setUnitCount] = useState<number | null>(1);
-  const [assumptions, setAssumptionsState] =
-    useState<AnalyzerAssumptions>(DEFAULT_ASSUMPTIONS);
+  const [address, setAddress] = useState(initial.address);
+  // Postcode of the suggestion the user picked from autocomplete. Mapbox hands
+  // it to us as structured data, so it beats parsing the display string — and
+  // it is the only market signal free-tier users get, since they never receive
+  // a RentCast lookup. Cleared the moment the user edits the field by hand,
+  // otherwise the previous property's ZIP would linger.
+  const [selectedZip, setSelectedZip] = useState<string | null>(
+    initial.selectedZip,
+  );
+  const changeAddress = (next: string) => {
+    setAddress(next);
+    setSelectedZip(null);
+  };
+  const [arvLocal, setArvLocal] = useState<number>(initial.arvLocal);
+  const [rehabBudget, setRehabBudget] = useState<number>(initial.rehabBudget);
+  const [propertyType, setPropertyType] = useState<"sfh" | "mf">(
+    initial.propertyType,
+  );
+  const [unitCount, setUnitCount] = useState<number | null>(initial.unitCount);
+  const [assumptions, setAssumptionsState] = useState<AnalyzerAssumptions>(
+    initial.assumptions,
+  );
   const setAssumption = <K extends keyof AnalyzerAssumptions>(
     key: K,
     value: AnalyzerAssumptions[K],
@@ -118,7 +149,9 @@ export function useAnalyzerState({
     propertyLookup.data && "quotaExceeded" in propertyLookup.data,
   );
 
-  const [provenance, setProvenance] = useState<ProvenanceMap>({});
+  const [provenance, setProvenance] = useState<ProvenanceMap>(
+    initial.provenance,
+  );
   const prefill = useAnalyzerPrefill();
 
   const applyPrefillBundle = (
@@ -142,53 +175,67 @@ export function useAnalyzerState({
   }, [rentcastData, arvLocal, setAnalyzerInput]);
 
   // Auto-fetch on first render when address arrived via ?address= query param,
-  // saving the user a click in the common deep-link flow. Note: `mutate` from
+  // saving the user a click in the common deep-link flow — but never for a
+  // hydrated saved deal (see shouldAutoFetchProperty). Note: `mutate` from
   // useMutation is stable, so we only depend on the trigger conditions.
   const autoFetchedRef = useRef(false);
   const mutate = propertyLookup.mutate;
   useEffect(() => {
-    const trimmed = address.trim();
-    const shouldFetch =
-      !autoFetchedRef.current &&
-      isPro &&
-      trimmed.length > 5 &&
-      Boolean(paramAddress);
-    if (shouldFetch) {
-      autoFetchedRef.current = true;
-      mutate({ address: trimmed });
-    }
-  }, [isPro, address, paramAddress, mutate]);
+    if (
+      !shouldAutoFetchProperty({
+        isPro,
+        address,
+        paramAddress,
+        alreadyFetched: autoFetchedRef.current,
+        isHydrated,
+      })
+    )
+      return;
+    autoFetchedRef.current = true;
+    mutate({ address: address.trim() });
+  }, [isPro, address, paramAddress, mutate, isHydrated]);
 
   const { projection, sensitivity, afterTax, breakEven, brrrrTimeline } =
     useDerivedAnalytics(analyzer.input, assumptions, arvLocal, rehabBudget);
 
-  // Market context geography priority:
-  //   1. ?zip= URL param (explicit, deep-link)
-  //   2. ZIP extracted from RentCast's resolved_address (canonical)
-  //   3. ZIP extracted from the user-typed address (works without RentCast,
-  //      so free-tier users still get market data)
+  // Market context geography — see resolveMarketZip for the priority order.
   // Server-side, MetricResolutionService handles county/state fallback if
   // a ZIP has no metric coverage.
-  const zip =
-    (paramZip && /^\d{5}$/.test(paramZip) ? paramZip : null) ??
-    extractZip(rentcastData?.resolved_address) ??
-    extractZip(address);
+  const zip = resolveMarketZip({
+    paramZip,
+    selectedZip,
+    resolvedAddress: rentcastData?.resolved_address,
+    typedAddress: address,
+  });
+  // Suppressed for a hydrated saved deal until the user asks — see
+  // useMarketRefreshGate for why a page view must not refetch the market.
+  const marketGate = useMarketRefreshGate(isHydrated);
   const marketContextQuery = useMarketContext({
     zip: zip ?? undefined,
-    enabled: Boolean(zip),
+    enabled: Boolean(zip) && marketGate.enabled,
   });
-  const marketContext = marketContextQuery.data;
-  const { piqByGeo } = usePiqByGeo(marketContext?.chain);
+  const marketContext = pickMarketContext({
+    restored: initialMarketContext ?? null,
+    live: marketContextQuery.data,
+    isLive: marketGate.enabled && !marketContextQuery.isLoading,
+  });
+  const { piqByGeo, isResolving: piqByGeoResolving } = usePiqByGeo(
+    marketContext?.chain,
+    { enabled: marketGate.enabled, restored: initialState?.piqByGeo ?? null },
+  );
 
   const verdictPayload = useMemo(
     () => ({
       input: analyzer.input,
       result: analyzer.rental,
       rentcast: rentcastData ?? {},
+      // Momentum word, not the backend's legacy quality grade — handing the
+      // model an "F" for a 43 makes it write the score up as a bad market
+      // rather than a cooling one. CLAUDE.md §9.
       piq: marketContext?.piq_score
         ? {
             score: marketContext.piq_score.value,
-            label: marketContext.piq_score.label,
+            label: getScoreLabel(marketContext.piq_score.value),
             marketHeat: marketContext.market_heat?.value,
           }
         : {},
@@ -202,7 +249,14 @@ export function useAnalyzerState({
   return {
     analyzer,
     address,
-    setAddress,
+    setAddress: changeAddress,
+    selectedZip, // was internal-only; Task 11 needs it to build deal state
+    isHydrated,
+    marketCapturedAt: initialState?.marketCapturedAt ?? null,
+    /** "Update market data" only — see useMarketRefreshGate. */
+    requestMarketRefresh: marketGate.requestMarketRefresh,
+    /** False while a saved deal is showing restored market data. */
+    marketDataEnabled: marketGate.enabled,
     arvLocal,
     setArvLocal,
     rehabBudget,
@@ -227,11 +281,13 @@ export function useAnalyzerState({
     marketContext,
     marketContextLoading: marketContextQuery.isLoading,
     piqByGeo,
+    piqByGeoResolving,
     provenance,
     applyPrefillBundle,
     prefill,
     handleAddressSelect: async (s: AddressSuggestion) => {
       setAddress(s.full);
+      setSelectedZip(s.postalCode ?? null);
       const bundle = await prefill.mutateAsync({
         zip: s.postalCode ?? undefined,
         address: isPro ? s.full : undefined,

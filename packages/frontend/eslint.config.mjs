@@ -9,7 +9,12 @@ const eslintConfig = defineConfig([
   globalIgnores([
     // Default ignores of eslint-config-next:
     ".next/**",
-    ".next-dev/**",
+    // Every parallel dist dir, matching the `/.next-*/` convention .gitignore
+    // documents (.next-dev, .next-verify, .next-test, .next-mobile). Listing
+    // only .next-dev meant a production build into .next-verify — which the
+    // redesign plan's own verification step prescribes — put ~1,280 generated
+    // files into the lint run and reported ~89,000 phantom problems.
+    ".next-*/**",
     "out/**",
     "build/**",
     "next-env.d.ts",

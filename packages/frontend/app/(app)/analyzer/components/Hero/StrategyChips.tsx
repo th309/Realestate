@@ -39,7 +39,7 @@ export function StrategyChips({
               fontSize: "13px",
               fontWeight: 500,
               background: isActive ? piq.indigo : "transparent",
-              color: isActive ? "#FFFFFF" : piq.textPrimary,
+              color: isActive ? piq.onIndigo : piq.textPrimary,
               border: `0.5px solid ${isActive ? piq.indigo : piq.border}`,
               cursor: "pointer",
               letterSpacing: "0.01em",

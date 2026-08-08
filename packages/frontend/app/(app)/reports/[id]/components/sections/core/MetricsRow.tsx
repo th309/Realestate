@@ -150,7 +150,8 @@ export function MetricsRow({
             <p
               className="text-xl font-semibold tracking-tight"
               style={{
-                fontFamily: 'var(--report-font-display)',
+                fontFamily: 'var(--report-font-mono)',
+                fontVariantNumeric: 'tabular-nums',
                 color: 'var(--report-navy)',
                 letterSpacing: '-0.02em',
               }}
@@ -161,7 +162,8 @@ export function MetricsRow({
             <p
               className="text-xl font-semibold"
               style={{
-                fontFamily: 'var(--report-font-display)',
+                fontFamily: 'var(--report-font-mono)',
+                fontVariantNumeric: 'tabular-nums',
                 color: 'var(--report-navy)',
                 opacity: 0.4,
               }}

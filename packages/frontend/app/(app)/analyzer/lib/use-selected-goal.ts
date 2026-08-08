@@ -36,7 +36,15 @@ interface AnalyzerBundle {
 }
 
 interface UseSelectedGoalResult {
+  /** Raw picker state. Compare-mode UI only — see `activeGoal`. */
   selectedGoal: InvestorGoal | null;
+  /**
+   * The goal that actually frames this analysis: `selectedGoal` in compare
+   * mode, `null` everywhere else. Anything user-facing (the AI payload, the
+   * saved snapshot) MUST read this rather than `selectedGoal`, or a goal the
+   * user can't see on the current screen ends up framing their narrative.
+   */
+  activeGoal: InvestorGoal | null;
   setSelectedGoal: (goal: InvestorGoal) => void;
   bestPlay: Strategy;
   /** True when a goal is selected in compare mode but no strategy scores
@@ -51,6 +59,24 @@ interface UseSelectedGoalResult {
  * overrides the deterministic `computeBestPlay` when a goal is active in
  * compare mode. Auto-pre-selects the inferred default goal once the deal
  * becomes gradable so the user always sees a recommendation tied to a goal.
+ *
+ * IMPORTANT — the returned `selectedGoal` is COMPARE-MODE state. It is
+ * deliberately persisted globally (not per-property): a goal is a standing
+ * investing preference, so carrying "I'm optimizing for cash flow" onto the
+ * next deal you compare is the desired behavior.
+ *
+ * The consequence is that `selectedGoal` can be non-null while the user is
+ * looking at focused mode, where GoalPicker isn't rendered and the strategy is
+ * chosen directly. Callers must NOT feed it to anything user-facing in that
+ * state — AnalyzerClient derives `activeGoal` (null outside compare mode) for
+ * exactly this reason.
+ *
+ * The bug that motivated the rule: a goal auto-inferred during one compare
+ * session (say `fast_cash`) persisted to localStorage, then framed every
+ * later focused-mode analysis, because the AI payload took `selectedGoal`
+ * unconditionally and the recommendation prompt names the goal in its opening
+ * sentence. Buy-and-hold analyses opened with "your goal is fast cash within
+ * 12 months" — a goal the user could neither see nor change on that screen.
  */
 export function useSelectedGoal(
   analyzer: AnalyzerBundle,
@@ -62,11 +88,18 @@ export function useSelectedGoal(
   const { rental, flip, brrrr } = analyzer;
   const defaultBestPlay = computeBestPlay(rental, flip, brrrr, projection);
   const [selectedGoal, setSelectedGoal] = useState<InvestorGoal | null>(null);
+  // Gates the auto-infer effect below. Both effects run in the same commit on
+  // mount, so without this the inference reads `selectedGoal` as null (the
+  // hydrate's setState hasn't been applied yet in that pass), infers a
+  // default, and its setter lands LAST — silently overwriting the goal the
+  // user actually chose on their previous visit.
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     const saved = window.localStorage.getItem(STORAGE_KEY);
     if (isInvestorGoal(saved)) setSelectedGoal(saved);
+    setHydrated(true);
   }, []);
 
   useEffect(() => {
@@ -95,11 +128,13 @@ export function useSelectedGoal(
   );
 
   useEffect(() => {
+    // Never infer before we know whether the user already has a saved goal.
+    if (!hydrated) return;
     if (analysisMode !== "compare") return;
     if (selectedGoal != null) return;
     if (!hasGradableInput) return;
     setSelectedGoal(inferDefaultGoal(scoringInput));
-  }, [analysisMode, selectedGoal, hasGradableInput, scoringInput]);
+  }, [hydrated, analysisMode, selectedGoal, hasGradableInput, scoringInput]);
 
   const goalBestPlay =
     analysisMode === "compare" && selectedGoal
@@ -112,5 +147,10 @@ export function useSelectedGoal(
   const noGoalFit =
     analysisMode === "compare" && selectedGoal != null && goalBestPlay === null;
 
-  return { selectedGoal, setSelectedGoal, bestPlay, noGoalFit };
+  // GoalPicker renders in compare mode only, so outside it the goal is state
+  // the user can neither see nor change — usually inherited from localStorage
+  // or auto-inferred during an earlier compare session on a different deal.
+  const activeGoal = analysisMode === "compare" ? selectedGoal : null;
+
+  return { selectedGoal, activeGoal, setSelectedGoal, bestPlay, noGoalFit };
 }

@@ -80,7 +80,7 @@ function PostSection({
           </button>
         )}
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-7">
         {visible.map((post) => (
           <PostCard key={post.slug} post={post} />
         ))}
@@ -300,7 +300,7 @@ export function BlogIndexContent({
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-7">
               {filteredPosts.map((post) => (
                 <PostCard key={post.slug} post={post} />
               ))}
@@ -316,7 +316,7 @@ export function BlogIndexContent({
               </h2>
               {/* Column count dips at lg because the 360px sidebar appears there
                   and shrinks this column below 3-card width until xl. */}
-              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-7">
                 {featured.map((post) => (
                   <PostCard key={post.slug} post={post} featured />
                 ))}

@@ -139,7 +139,7 @@ export function AssumptionsTab({
   return (
     <div className="flex flex-col gap-4">
       <p className="text-xs text-on-surface-variant">
-        Form defaults used when the analyzer can't infer a value from the
+        Form defaults used when the analyzer can&apos;t infer a value from the
         property. Saved per user.
       </p>
       <div className="flex flex-col gap-3">

@@ -32,7 +32,7 @@ export function ScoreRingChart({
     .innerRadius(innerR)
     .outerRadius(outerR)
     .startAngle(0)
-    .endAngle(Math.PI * 2)({} as any) as string;
+    .endAngle(Math.PI * 2)({}) as string;
 
   // Score arc
   const t = Math.min(1, Math.max(0, score / max));
@@ -41,19 +41,23 @@ export function ScoreRingChart({
     .outerRadius(outerR)
     .startAngle(0)
     .endAngle(t * Math.PI * 2)
-    .cornerRadius(3)({} as any) as string;
+    .cornerRadius(3)({}) as string;
 
   // Breakdown arcs (outer ring at radius * 0.96..1.0)
-  let cursor = 0;
-  const breakdownArcs = breakdown.map((b) => {
-    const start = cursor * Math.PI * 2;
-    cursor += b.weight;
-    const end = cursor * Math.PI * 2;
+  // Prefix sums rather than a running `cursor`: reassigning a variable during
+  // render is what react-hooks/immutability flags, and `breakdown` is a handful
+  // of segments so the repeated scan costs nothing.
+  const breakdownArcs = breakdown.map((b, i) => {
+    const priorWeight = breakdown
+      .slice(0, i)
+      .reduce((sum, prev) => sum + prev.weight, 0);
+    const start = priorWeight * Math.PI * 2;
+    const end = (priorWeight + b.weight) * Math.PI * 2;
     const path = d3arc<unknown>()
       .innerRadius(radius * 0.96)
       .outerRadius(radius * 1.0)
       .startAngle(start)
-      .endAngle(end)({} as any) as string;
+      .endAngle(end)({}) as string;
     return { path, color: b.color, label: b.label };
   });
 

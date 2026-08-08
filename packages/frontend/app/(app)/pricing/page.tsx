@@ -18,14 +18,10 @@ import { useToast } from "@/components/ui/Toast";
 import { trackEvent } from "@/lib/analytics/tracker";
 import { getPricingCtaVariant, PRICING_CTA_COPY } from "@/lib/ab";
 import { PricingCards } from "./components/PricingCards";
-import {
-  AIInsightsSection,
-  ScoresSection,
-} from "./components/FeatureShowcaseInsights";
-import {
-  ReportsSection,
-  GeoDataSection,
-} from "./components/FeatureShowcaseData";
+import { AIInsightsSection } from "./components/AIInsightsSection";
+import { ScoresSection } from "./components/ScoresSection";
+import { ReportsSection } from "./components/ReportsSection";
+import { GeoDataSection } from "./components/GeoDataSection";
 
 export default function PricingPage() {
   return (
@@ -36,7 +32,7 @@ export default function PricingPage() {
 }
 
 function PricingContent() {
-  const { tier, trial, loading, refresh } = useEntitlements();
+  const { tier, trial, refresh } = useEntitlements();
   const { user, loading: authLoading } = useAuth();
   const { showToast } = useToast();
   const router = useRouter();

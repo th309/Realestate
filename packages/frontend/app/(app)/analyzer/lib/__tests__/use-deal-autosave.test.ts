@@ -1,0 +1,359 @@
+import { StrictMode } from "react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { renderHook, act } from "@testing-library/react";
+import {
+  useDealAutosave,
+  AUTOSAVE_DEBOUNCE_MS,
+  MAX_CONSECUTIVE_FAILURES,
+} from "../use-deal-autosave";
+import type { DealStateV2 } from "../deal-state-types";
+
+const patchDealState = vi.fn();
+vi.mock("@/lib/data", () => ({
+  patchDealState: (...a: unknown[]) => patchDealState(...a),
+}));
+
+// Deliberately a partial fixture — a double cast (never full field coverage
+// of AnalyzerInputState) keeps the test focused on debounce/status behavior
+// rather than on constructing a complete DealStateV2.
+const STATE = {
+  v: 2,
+  input: { price: 300000 },
+} as unknown as DealStateV2;
+
+const withPrice = (price: number) =>
+  ({ ...STATE, input: { price } }) as unknown as DealStateV2;
+
+describe("useDealAutosave", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    patchDealState.mockReset().mockResolvedValue(undefined);
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("does not save on the initial render — hydration is not an edit", () => {
+    renderHook(() =>
+      useDealAutosave({ dealId: "row-1", state: STATE, enabled: true }),
+    );
+    act(() => {
+      vi.advanceTimersByTime(AUTOSAVE_DEBOUNCE_MS * 3);
+    });
+    expect(patchDealState).not.toHaveBeenCalled();
+  });
+
+  it("does not save when there is no row yet", () => {
+    const { rerender } = renderHook(
+      ({ s }) => useDealAutosave({ dealId: null, state: s, enabled: true }),
+      { initialProps: { s: STATE } },
+    );
+    rerender({ s: withPrice(310000) });
+    act(() => {
+      vi.advanceTimersByTime(AUTOSAVE_DEBOUNCE_MS * 2);
+    });
+    expect(patchDealState).not.toHaveBeenCalled();
+  });
+
+  it("debounces a burst of edits into one request", async () => {
+    const { rerender } = renderHook(
+      ({ s }) => useDealAutosave({ dealId: "row-1", state: s, enabled: true }),
+      { initialProps: { s: STATE } },
+    );
+    for (const price of [310000, 320000, 330000]) {
+      rerender({ s: withPrice(price) });
+      act(() => {
+        vi.advanceTimersByTime(AUTOSAVE_DEBOUNCE_MS / 4);
+      });
+    }
+    // Async + a microtask flush: the final advance fires the flush, whose
+    // resolution (setStatus) would otherwise land outside any act() call.
+    await act(async () => {
+      vi.advanceTimersByTime(AUTOSAVE_DEBOUNCE_MS);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(patchDealState).toHaveBeenCalledTimes(1);
+    expect(patchDealState.mock.calls[0][1].input.price).toBe(330000);
+  });
+
+  it("reports saved after a successful write", async () => {
+    const { result, rerender } = renderHook(
+      ({ s }) => useDealAutosave({ dealId: "row-1", state: s, enabled: true }),
+      { initialProps: { s: STATE } },
+    );
+    rerender({ s: withPrice(310000) });
+    // Fake timers are active, so waitFor's own internal poll (which relies on
+    // a real setTimeout) would never fire — assert directly once the flush's
+    // pending promise has had a chance to settle. See OtpCodeForm.test.tsx
+    // for the same pattern elsewhere in this repo.
+    await act(async () => {
+      vi.advanceTimersByTime(AUTOSAVE_DEBOUNCE_MS);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(result.current.status).toBe("saved");
+  });
+
+  it("reports error and stops after MAX_CONSECUTIVE_FAILURES", async () => {
+    patchDealState.mockRejectedValue(new Error("500"));
+    const { result, rerender } = renderHook(
+      ({ s }) => useDealAutosave({ dealId: "row-1", state: s, enabled: true }),
+      { initialProps: { s: STATE } },
+    );
+    for (let i = 0; i < MAX_CONSECUTIVE_FAILURES + 2; i++) {
+      rerender({ s: withPrice(300000 + i) });
+      await act(async () => {
+        vi.advanceTimersByTime(AUTOSAVE_DEBOUNCE_MS);
+      });
+    }
+    expect(result.current.status).toBe("error");
+    expect(patchDealState.mock.calls.length).toBeLessThanOrEqual(
+      MAX_CONSECUTIVE_FAILURES,
+    );
+  });
+
+  it("does not save under StrictMode's double-invoked mount effect", () => {
+    renderHook(
+      () => useDealAutosave({ dealId: "row-1", state: STATE, enabled: true }),
+      { wrapper: StrictMode },
+    );
+    act(() => {
+      vi.advanceTimersByTime(AUTOSAVE_DEBOUNCE_MS * 3);
+    });
+    expect(patchDealState).not.toHaveBeenCalled();
+  });
+
+  it("does not starve on content-identical re-renders, and saves exactly once when a field actually changes", async () => {
+    const { rerender } = renderHook(
+      ({ s }) => useDealAutosave({ dealId: "row-1", state: s, enabled: true }),
+      { initialProps: { s: withPrice(300000) } },
+    );
+    // A caller that rebuilds `state` every render (streaming text, count-up
+    // animations) must not be mistaken for an edit — 10 re-renders, each a
+    // brand new object with the SAME content, well past the debounce window.
+    for (let i = 0; i < 10; i++) {
+      rerender({ s: withPrice(300000) });
+      act(() => {
+        vi.advanceTimersByTime(AUTOSAVE_DEBOUNCE_MS * 2);
+      });
+    }
+    expect(patchDealState).not.toHaveBeenCalled();
+
+    rerender({ s: withPrice(310000) });
+    await act(async () => {
+      vi.advanceTimersByTime(AUTOSAVE_DEBOUNCE_MS);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(patchDealState).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not advance the saved baseline on a failed write, so an identical retry stays dirty", async () => {
+    patchDealState.mockRejectedValueOnce(new Error("500"));
+    const { result, rerender } = renderHook(
+      ({ s }) => useDealAutosave({ dealId: "row-1", state: s, enabled: true }),
+      { initialProps: { s: STATE } },
+    );
+
+    rerender({ s: withPrice(310000) });
+    await act(async () => {
+      vi.advanceTimersByTime(AUTOSAVE_DEBOUNCE_MS);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(result.current.status).toBe("error");
+    expect(patchDealState).toHaveBeenCalledTimes(1);
+
+    // Same content, freshly constructed object — must still read as dirty:
+    // the failed write above must not have moved the baseline forward.
+    rerender({ s: withPrice(310000) });
+    await act(async () => {
+      vi.advanceTimersByTime(AUTOSAVE_DEBOUNCE_MS);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(patchDealState).toHaveBeenCalledTimes(2);
+    expect(result.current.status).toBe("saved");
+  });
+
+  it("keeps the freshest write authoritative when an older in-flight save resolves after a newer one", async () => {
+    let resolveFirst!: () => void;
+    let resolveSecond!: () => void;
+    const first = new Promise<void>((resolve) => {
+      resolveFirst = resolve;
+    });
+    const second = new Promise<void>((resolve) => {
+      resolveSecond = resolve;
+    });
+    patchDealState.mockReturnValueOnce(first).mockReturnValueOnce(second);
+
+    const { result, rerender } = renderHook(
+      ({ s }) => useDealAutosave({ dealId: "row-1", state: s, enabled: true }),
+      { initialProps: { s: STATE } },
+    );
+
+    // First edit's debounce fires and starts an in-flight PATCH.
+    rerender({ s: withPrice(310000) });
+    await act(async () => {
+      vi.advanceTimersByTime(AUTOSAVE_DEBOUNCE_MS);
+    });
+    expect(patchDealState).toHaveBeenCalledTimes(1);
+
+    // Second edit's debounce fires and starts ITS OWN PATCH while the first
+    // is still pending — the real-world overlap under network latency.
+    rerender({ s: withPrice(320000) });
+    await act(async () => {
+      vi.advanceTimersByTime(AUTOSAVE_DEBOUNCE_MS);
+    });
+    expect(patchDealState).toHaveBeenCalledTimes(2);
+
+    // The newer request resolves first.
+    await act(async () => {
+      resolveSecond();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(result.current.status).toBe("saved");
+
+    // The older, now-superseded request resolves after it. It must not win.
+    await act(async () => {
+      resolveFirst();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(result.current.status).toBe("saved");
+
+    // Proof, not just assertion: if the stale response HAD rolled the saved
+    // baseline back to the 310000 fingerprint, this re-render of the already
+    // -saved 320000 content would read as dirty and re-fire a save.
+    patchDealState.mockClear();
+    rerender({ s: withPrice(320000) });
+    await act(async () => {
+      vi.advanceTimersByTime(AUTOSAVE_DEBOUNCE_MS);
+    });
+    expect(patchDealState).not.toHaveBeenCalled();
+  });
+
+  it("does not treat a same-content object with different key order as an edit (canonical fingerprint)", () => {
+    // Same content as STATE, but rebuilt with reversed key order — proof the
+    // fingerprint doesn't depend on property insertion order.
+    const reordered = {
+      input: { price: 300000 },
+      v: 2,
+    } as unknown as DealStateV2;
+
+    const { rerender } = renderHook(
+      ({ s }) => useDealAutosave({ dealId: "row-1", state: s, enabled: true }),
+      { initialProps: { s: STATE } },
+    );
+    rerender({ s: reordered });
+    act(() => {
+      vi.advanceTimersByTime(AUTOSAVE_DEBOUNCE_MS * 2);
+    });
+    expect(patchDealState).not.toHaveBeenCalled();
+  });
+
+  it("does not treat an undefined-valued key as an edit — JSON drops it, so persisted content is identical", () => {
+    // The exact shape that made every OPEN of a saved deal issue a PATCH.
+    // Restored state comes back from Postgres through JSON, which already
+    // dropped undefined-valued keys. The rebuilt state still carries them,
+    // because the input-sync effect assigns
+    // `capexReserveAnnualPerUnit: isCommercial ? x : undefined` and
+    // `financing.amortizationYears` the same way. Both persist identically,
+    // so neither may count as an edit.
+    const restored = {
+      v: 2,
+      input: { price: 300000, financing: { termYears: 30 } },
+    } as unknown as DealStateV2;
+
+    const rebuilt = {
+      v: 2,
+      input: {
+        price: 300000,
+        capexReserveAnnualPerUnit: undefined,
+        financing: { termYears: 30, amortizationYears: undefined },
+      },
+    } as unknown as DealStateV2;
+
+    // Precondition: the two really do persist identically.
+    expect(JSON.stringify(rebuilt)).toBe(JSON.stringify(restored));
+
+    const { rerender } = renderHook(
+      ({ s }) => useDealAutosave({ dealId: "row-1", state: s, enabled: true }),
+      { initialProps: { s: restored } },
+    );
+    rerender({ s: rebuilt });
+    act(() => {
+      vi.advanceTimersByTime(AUTOSAVE_DEBOUNCE_MS * 2);
+    });
+    expect(patchDealState).not.toHaveBeenCalled();
+  });
+
+  it("resets the failure budget when dealId changes, so an abandoned deal's failures don't count against a freshly-opened deal", async () => {
+    patchDealState.mockRejectedValue(new Error("500"));
+    const { result, rerender } = renderHook(
+      ({ id, s }) => useDealAutosave({ dealId: id, state: s, enabled: true }),
+      { initialProps: { id: "deal-a", s: STATE } },
+    );
+
+    // Rack up MAX_CONSECUTIVE_FAILURES - 1 failures against deal A — one
+    // short of tripping the breaker. Starts at 310000, not 300000 — STATE's
+    // own price — so the very first iteration isn't a content-identical
+    // (and therefore skipped) re-render.
+    for (let i = 0; i < MAX_CONSECUTIVE_FAILURES - 1; i++) {
+      rerender({ id: "deal-a", s: withPrice(310000 + i) });
+      await act(async () => {
+        vi.advanceTimersByTime(AUTOSAVE_DEBOUNCE_MS);
+      });
+    }
+    expect(patchDealState).toHaveBeenCalledTimes(MAX_CONSECUTIVE_FAILURES - 1);
+
+    // Move to a freshly-opened deal B.
+    rerender({ id: "deal-b", s: STATE });
+    patchDealState.mockClear();
+
+    // Deal B must get its OWN full failure budget — MAX_CONSECUTIVE_FAILURES
+    // attempts, not just the 1 that would remain if deal A's failures still
+    // counted against it.
+    for (let i = 0; i < MAX_CONSECUTIVE_FAILURES; i++) {
+      rerender({ id: "deal-b", s: withPrice(400000 + i) });
+      await act(async () => {
+        vi.advanceTimersByTime(AUTOSAVE_DEBOUNCE_MS);
+      });
+    }
+    expect(patchDealState).toHaveBeenCalledTimes(MAX_CONSECUTIVE_FAILURES);
+    expect(result.current.status).toBe("error");
+  });
+
+  it("does not apply a slow flush's status after the hook has moved to a different dealId", async () => {
+    let resolveDealA!: () => void;
+    const dealAWrite = new Promise<void>((resolve) => {
+      resolveDealA = resolve;
+    });
+    patchDealState.mockReturnValueOnce(dealAWrite);
+
+    const { result, rerender } = renderHook(
+      ({ id, s }) => useDealAutosave({ dealId: id, state: s, enabled: true }),
+      { initialProps: { id: "deal-a", s: STATE } },
+    );
+
+    rerender({ id: "deal-a", s: withPrice(310000) });
+    await act(async () => {
+      vi.advanceTimersByTime(AUTOSAVE_DEBOUNCE_MS);
+    });
+    expect(result.current.status).toBe("saving");
+
+    // Move to a different deal before deal A's slow write resolves.
+    rerender({ id: "deal-b", s: STATE });
+
+    await act(async () => {
+      resolveDealA();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    // Deal A's write finishing must not paint deal B's status "saved".
+    expect(result.current.status).not.toBe("saved");
+  });
+});
