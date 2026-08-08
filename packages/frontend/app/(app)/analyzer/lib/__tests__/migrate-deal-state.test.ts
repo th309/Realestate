@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { migrateDealState } from "../migrate-snapshot";
+import { getDealStaleness } from "../deal-staleness";
 import { DEFAULT_ASSUMPTIONS } from "../analyzer-assumptions";
 
 const V1_ROW = {
@@ -60,6 +61,12 @@ describe("migrateDealState upconverts a legacy v1 row", () => {
     expect(migrateDealState(V1_ROW).marketCapturedAt).toBe(
       "2026-05-01T00:00:00.000Z",
     );
+  });
+
+  it("does not produce a stale-deal banner for a legacy row with no updated_at — the epoch sentinel must read as unknown, not ~20,000 days old", () => {
+    const { updated_at: _drop, ...rowWithoutUpdatedAt } = V1_ROW;
+    const s = migrateDealState(rowWithoutUpdatedAt);
+    expect(getDealStaleness(s.marketCapturedAt).stale).toBe(false);
   });
 
   it("defaults the fields that genuinely do not exist in v1", () => {

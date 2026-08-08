@@ -158,6 +158,13 @@ function withDealStateDefaults(candidate: DealStateCandidate): DealStateV2 {
     piqByGeo: (candidate.piqByGeo as DealStateV2["piqByGeo"]) ?? null,
     notes: str(candidate.notes, ""),
     shareNotes: candidate.shareNotes === true,
+    // A legacy row with no `updated_at` (or a v2 blob missing the field)
+    // has no genuine capture time to fall back to — epoch 1970 is a
+    // sentinel for "unknown," not a real 56-year-old market snapshot.
+    // `getDealStaleness` (./deal-staleness.ts, `MAX_PLAUSIBLE_AGE_DAYS`)
+    // is what turns that sentinel into "not stale" rather than an absurd
+    // ~20,000-day banner — keep the two in agreement if this default ever
+    // changes.
     marketCapturedAt: str(
       candidate.marketCapturedAt,
       new Date(0).toISOString(),

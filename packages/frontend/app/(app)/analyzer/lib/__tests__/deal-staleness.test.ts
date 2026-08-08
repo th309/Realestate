@@ -57,4 +57,25 @@ describe("getDealStaleness degrades safely on bad input", () => {
       expect(getDealStaleness(bad, NOW)).toEqual({ stale: false, days: 0 });
     },
   );
+
+  it("treats the epoch-1970 missing-timestamp sentinel from migrateDealState as unknown, not a ~20,000-day-old deal", () => {
+    // `migrateDealState` (migrate-snapshot.ts) defaults `marketCapturedAt`
+    // to `new Date(0).toISOString()` for a legacy row with no `updated_at`.
+    // That sentinel must degrade the same way an unparseable timestamp
+    // does — never as an absurd multi-decade stale banner.
+    expect(getDealStaleness(new Date(0).toISOString(), NOW)).toEqual({
+      stale: false,
+      days: 0,
+    });
+  });
+
+  it("still reports a genuine, merely-old-but-plausible capture as stale", () => {
+    // Guards against an overcorrection that swallows real staleness — a
+    // deal captured 3 years ago (well under MAX_PLAUSIBLE_AGE_DAYS) must
+    // still fire the banner.
+    expect(getDealStaleness(daysAgo(365 * 3), NOW)).toEqual({
+      stale: true,
+      days: 365 * 3,
+    });
+  });
 });
