@@ -16,11 +16,6 @@ import { AdvisoriesStrip } from "./components/cards/AdvisoriesStrip";
 import { AnalyzerSections } from "./components/AnalyzerSections";
 import { CustomizeThresholdsDrawer } from "./components/CustomizeThresholdsDrawer/CustomizeThresholdsDrawer";
 import type { ThresholdsTabId } from "./components/CustomizeThresholdsDrawer/useDrawerState";
-import {
-  detectActivePreset,
-  type AnyStrategyThresholds,
-} from "./components/CustomizeThresholdsDrawer/preset-helpers";
-import { useThresholds } from "@/lib/data";
 import { toEngineStrategy, useGradingResult } from "./lib/use-grading-result";
 import { useAnalyzerDefaultsPrefill } from "./lib/use-analyzer-defaults-prefill";
 import { StrategyKPI } from "./components/Hero/StrategyKPI";
@@ -35,9 +30,8 @@ import { useAnalyzerNotes } from "./lib/use-analyzer-notes";
 import { useMobileInputFocus } from "./lib/use-mobile-input-focus";
 import { GoalPicker } from "./components/StrategyCompare/GoalPicker";
 import { useUpgradeProps } from "./lib/use-upgrade-props";
-import { deriveCashflowSummary } from "./lib/cashflow-summary";
 import { useSectionAiInsights } from "./lib/use-section-ai-insights";
-import { buildCompsViewProps } from "./lib/comps-view-props";
+import { useAnalyzerViewModel } from "./lib/use-analyzer-view-model";
 import { STRATEGY_LABEL, type Strategy } from "./lib/strategy-tile-mappers";
 import type { AnalysisMode } from "./components/InputPanel/StrategyControls";
 
@@ -102,27 +96,37 @@ export default function AnalyzerClient({
     setAssumption,
     currentInput: analyzer.input,
   });
-  const activeStrategy: Strategy =
-    analysisMode === "compare" ? bestPlay : focusedStrategy;
-
-  // "Graded against X criteria" must reflect the user's SAVED rubric, not a
-  // hardcoded preset name. GET falls back to the Balanced preset when the
-  // account has no saved row, so detectActivePreset resolves it correctly;
-  // anything off the preset grid reads as Custom.
-  const engineStrategy = toEngineStrategy(activeStrategy) ?? "BUY_AND_HOLD";
-  const savedThresholdsQ = useThresholds(engineStrategy);
-  const activePreset = detectActivePreset(
-    engineStrategy,
-    (savedThresholdsQ.data as AnyStrategyThresholds | undefined) ?? null,
-  );
-  const presetLabel = savedThresholdsQ.data
-    ? activePreset
-      ? activePreset.charAt(0).toUpperCase() + activePreset.slice(1)
-      : "Custom"
-    : "Balanced";
-
-  const displayAddress =
-    rentcastData?.resolved_address ?? (address.trim() || null);
+  const vm = useAnalyzerViewModel({
+    analysisMode,
+    bestPlay,
+    focusedStrategy,
+    resolvedAddress: rentcastData?.resolved_address,
+    address,
+    rentcastData,
+    price: analyzer.input.price ?? 0,
+    input: analyzer.input,
+    rental,
+    lookupError: propertyLookup.error,
+  });
+  const {
+    activeStrategy,
+    presetLabel,
+    displayAddress,
+    compsView,
+    lookupErrorMsg,
+  } = vm;
+  const { grossRentMonthly, debtServiceMonthly, opexAnnual, vacancyMonthly } =
+    vm.cashflow;
+  const {
+    salesComps,
+    rentalComps,
+    pricePerSqftValues,
+    yourPricePerSqft,
+    subjectPrice,
+    subjectLat,
+    subjectLon,
+    mapboxToken,
+  } = compsView;
 
   // Single entry point for property input on mobile: open the sheet. Focus
   // management on open lives in useMobileInputFocus.
@@ -144,9 +148,6 @@ export default function AnalyzerClient({
     bestPlay: noGoalFit ? null : bestPlay,
     onPickStrategy: pickStrategy,
   });
-
-  const { grossRentMonthly, debtServiceMonthly, opexAnnual, vacancyMonthly } =
-    deriveCashflowSummary(analyzer.input, rental);
 
   const grading = useGradingResult({
     input: analyzer.input,
@@ -189,24 +190,6 @@ export default function AnalyzerClient({
     goal: activeGoal,
     projection,
   });
-
-  const compsView = buildCompsViewProps(
-    rentcastData,
-    analyzer.input.price ?? 0,
-  );
-  const {
-    salesComps,
-    rentalComps,
-    pricePerSqftValues,
-    yourPricePerSqft,
-    subjectPrice,
-    subjectLat,
-    subjectLon,
-    mapboxToken,
-  } = compsView;
-  const lookupErrorMsg = propertyLookup.error
-    ? String(propertyLookup.error.message ?? propertyLookup.error)
-    : null;
 
   const inputPanel = (
     <AnalyzerInputPanel
