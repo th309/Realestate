@@ -1538,9 +1538,13 @@ couple of seconds."
 ```tsx
 // packages/frontend/app/(app)/analyzer/components/chrome/__tests__/SaveButton.test.tsx
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { SaveButton } from "../SaveButton";
+
+// NOTE: `@testing-library/user-event` is NOT a dependency of this repo — only
+// `@testing-library/jest-dom` and `@testing-library/react` are installed. Use
+// `fireEvent`, which is the established idiom here (see
+// app/(app)/activate/__tests__/page.success-links.test.tsx).
 
 describe("SaveButton reports its own save state", () => {
   it("invites the first save when no row exists", () => {
