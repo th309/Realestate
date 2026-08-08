@@ -103,6 +103,36 @@ export class AnalyzerPersistenceService {
   }
 
   /**
+   * Autosave: overwrite only the working state of a saved deal.
+   *
+   * Scoped by `owner_id` AND `id`. `this.supabase` is the service-role
+   * client (see supabase.module.ts), so the `deal_analyses_owner_update`
+   * RLS policy is NOT in effect — the `.eq('owner_id', ...)` IS the
+   * enforcement, matching list()/getOne()/remove().
+   *
+   * Returns null when no row matched, so the controller can 404 without
+   * confirming whether the id exists for some other owner.
+   */
+  async patchState(
+    ownerId: string,
+    id: string,
+    inputSnapshot: Record<string, unknown>,
+  ) {
+    const { data, error } = await this.supabase
+      .from('deal_analyses')
+      .update({
+        input_snapshot: inputSnapshot,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('owner_id', ownerId)
+      .eq('id', id)
+      .select('id')
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    return data ?? null;
+  }
+
+  /**
    * List saved analyses for the owner, newest first. Cursor is the
    * `created_at` of the last row from the previous page.
    */
