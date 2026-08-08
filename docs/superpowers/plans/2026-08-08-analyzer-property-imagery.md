@@ -493,6 +493,10 @@ git commit -m "feat(street-view): add signed Street View resolve endpoint"
 - Create: `packages/frontend/lib/data/hooks/usePropertyImagery.ts`
 - Modify: `packages/frontend/lib/data/fetchers/index.ts` (add export)
 - Modify: `packages/frontend/lib/data/hooks/index.ts` (add export)
+- Modify: `packages/frontend/lib/data/index.ts` (add `usePropertyImagery` to the
+  hand-maintained hooks whitelist ending in `} from "./hooks";`) — **required**:
+  fetchers are re-exported by wildcard, but hooks are a named allowlist, so a hook
+  omitted here compiles fine yet is unreachable from `@/lib/data`
 - Test: `packages/frontend/lib/data/fetchers/__tests__/street-view.test.ts`
 
 **Interfaces:**
@@ -1271,7 +1275,7 @@ Expected: FAIL — cannot resolve `../StaticPropertyImagery`.
 
 ```tsx
 // packages/frontend/app/(app)/shared/analysis/[token]/components/StaticPropertyImagery.tsx
-import { buildAerialUrl } from "../../../../analyzer/components/PropertyImagery/buildAerialUrl";
+import { buildAerialUrl } from "@/app/analyzer/components/PropertyImagery";
 
 interface Props {
   /** Signed Street View URL resolved server-side; null when no panorama exists. */
