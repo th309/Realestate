@@ -16,13 +16,15 @@ import type { RichResultSnapshot } from "@/app/analyzer/lib/analyzer-snapshot-ty
 import { ReadonlyCoverPage } from "./ReadonlyCoverPage";
 import { ReadonlyAnalyticsPage } from "./ReadonlyAnalyticsPage";
 import { resolveRenderInput } from "./resolve-render-input";
+import type { ShareImagery } from "./resolve-share-imagery";
 
 interface Props {
   row: SavedAnalysis;
   branding: SharedAnalysisBranding | null;
+  imagery: ShareImagery;
 }
 
-export function ReadonlyAnalyzerView({ row, branding }: Props) {
+export function ReadonlyAnalyzerView({ row, branding, imagery }: Props) {
   const snap = (row.result_snapshot ?? {}) as Partial<RichResultSnapshot>;
   const rental = snap.rental ?? {};
   const flip = snap.rental ? (snap.flip ?? null) : null;
@@ -61,6 +63,7 @@ export function ReadonlyAnalyzerView({ row, branding }: Props) {
   return (
     <>
       <ReadonlyCoverPage
+        imagery={imagery}
         preparedDate={preparedDate}
         addressFull={row.address_full ?? null}
         addressCity={row.address_city ?? null}

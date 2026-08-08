@@ -22,6 +22,7 @@ import { notFound } from "next/navigation";
 import { OrgBrandingHeader } from "./components/OrgBrandingHeader";
 import { OrgBrandingFooter } from "./components/OrgBrandingFooter";
 import { ReadonlyAnalyzerView } from "./ReadonlyAnalyzerView";
+import { resolveShareImagery } from "./resolve-share-imagery";
 import "./print-mode.css";
 
 export const dynamic = "force-dynamic";
@@ -42,6 +43,11 @@ export default async function SharedAnalysisPage({
   ]);
   if (!row) notFound();
 
+  // Geocoded server-side rather than read off the saved row: rows written
+  // before the centroid fix carry the comps' average position, kilometres from
+  // the property. See resolve-share-imagery.
+  const imagery = await resolveShareImagery(row.address_full);
+
   const isPrintMode = (await searchParams)?.print === "1";
   const accentColor = branding?.accent_color ?? "#3949AB";
 
@@ -57,7 +63,7 @@ export default async function SharedAnalysisPage({
           <OrgBrandingHeader branding={branding} subtitle="Deal Analysis" />
         </div>
 
-        <ReadonlyAnalyzerView row={row} branding={branding} />
+        <ReadonlyAnalyzerView row={row} branding={branding} imagery={imagery} />
 
         {!isPrintMode && (
           <footer
