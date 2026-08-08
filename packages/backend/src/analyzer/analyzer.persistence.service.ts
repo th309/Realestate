@@ -51,8 +51,7 @@ export class AnalyzerPersistenceService {
     // `id` is never itself part of the row — it only selects which row to
     // update. Stripping it here means neither branch below can accidentally
     // write a client-supplied id into `deal_analyses`.
-    const { id: targetId, ...fields } = dto;
-    const rest = fields as AnalysisSnapshotDto;
+    const { id: targetId, ...rest } = dto;
 
     if (targetId) return this.updateExisting(ownerId, targetId, rest);
 

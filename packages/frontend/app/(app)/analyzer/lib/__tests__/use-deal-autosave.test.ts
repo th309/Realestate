@@ -235,6 +235,61 @@ describe("useDealAutosave", () => {
     expect(patchDealState).not.toHaveBeenCalled();
   });
 
+  it("does not treat a same-content object with different key order as an edit (canonical fingerprint)", () => {
+    // Same content as STATE, but rebuilt with reversed key order — proof the
+    // fingerprint doesn't depend on property insertion order.
+    const reordered = {
+      input: { price: 300000 },
+      v: 2,
+    } as unknown as DealStateV2;
+
+    const { rerender } = renderHook(
+      ({ s }) => useDealAutosave({ dealId: "row-1", state: s, enabled: true }),
+      { initialProps: { s: STATE } },
+    );
+    rerender({ s: reordered });
+    act(() => {
+      vi.advanceTimersByTime(AUTOSAVE_DEBOUNCE_MS * 2);
+    });
+    expect(patchDealState).not.toHaveBeenCalled();
+  });
+
+  it("resets the failure budget when dealId changes, so an abandoned deal's failures don't count against a freshly-opened deal", async () => {
+    patchDealState.mockRejectedValue(new Error("500"));
+    const { result, rerender } = renderHook(
+      ({ id, s }) => useDealAutosave({ dealId: id, state: s, enabled: true }),
+      { initialProps: { id: "deal-a", s: STATE } },
+    );
+
+    // Rack up MAX_CONSECUTIVE_FAILURES - 1 failures against deal A — one
+    // short of tripping the breaker. Starts at 310000, not 300000 — STATE's
+    // own price — so the very first iteration isn't a content-identical
+    // (and therefore skipped) re-render.
+    for (let i = 0; i < MAX_CONSECUTIVE_FAILURES - 1; i++) {
+      rerender({ id: "deal-a", s: withPrice(310000 + i) });
+      await act(async () => {
+        vi.advanceTimersByTime(AUTOSAVE_DEBOUNCE_MS);
+      });
+    }
+    expect(patchDealState).toHaveBeenCalledTimes(MAX_CONSECUTIVE_FAILURES - 1);
+
+    // Move to a freshly-opened deal B.
+    rerender({ id: "deal-b", s: STATE });
+    patchDealState.mockClear();
+
+    // Deal B must get its OWN full failure budget — MAX_CONSECUTIVE_FAILURES
+    // attempts, not just the 1 that would remain if deal A's failures still
+    // counted against it.
+    for (let i = 0; i < MAX_CONSECUTIVE_FAILURES; i++) {
+      rerender({ id: "deal-b", s: withPrice(400000 + i) });
+      await act(async () => {
+        vi.advanceTimersByTime(AUTOSAVE_DEBOUNCE_MS);
+      });
+    }
+    expect(patchDealState).toHaveBeenCalledTimes(MAX_CONSECUTIVE_FAILURES);
+    expect(result.current.status).toBe("error");
+  });
+
   it("does not apply a slow flush's status after the hook has moved to a different dealId", async () => {
     let resolveDealA!: () => void;
     const dealAWrite = new Promise<void>((resolve) => {

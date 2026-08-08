@@ -16,11 +16,18 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
  *
  * An unparseable timestamp reports not-stale: a missing banner is a far
  * smaller failure than a crash on open.
+ *
+ * `marketCapturedAt` is typed to allow null/undefined even though every
+ * current caller (`StaleDealNotice`) already guards before calling: `new
+ * Date(null)` evaluates to epoch 1970, NOT `NaN`, so a null slipping through
+ * untyped would silently report `stale: true` with a ~20,000-day count
+ * instead of degrading safely like every other bad input here.
  */
 export function getDealStaleness(
-  marketCapturedAt: string,
+  marketCapturedAt: string | null | undefined,
   now: Date = new Date(),
 ): { stale: boolean; days: number } {
+  if (!marketCapturedAt) return { stale: false, days: 0 };
   const captured = new Date(marketCapturedAt).getTime();
   if (!Number.isFinite(captured)) return { stale: false, days: 0 };
 

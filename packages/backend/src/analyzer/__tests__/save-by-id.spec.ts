@@ -1,4 +1,4 @@
-import { ConflictException } from '@nestjs/common';
+import { ConflictException, NotFoundException } from '@nestjs/common';
 import { AnalyzerPersistenceService } from '../analyzer.persistence.service';
 import type { AnalysisSnapshotDto } from '../dto/analysis-snapshot.dto';
 
@@ -88,5 +88,21 @@ describe('AnalyzerPersistenceService.save with an id', () => {
     await expect(
       svc.save('owner-1', { ...DTO, id: 'row-1' }),
     ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it("raises 404 when the id matches no row for this owner — indistinguishable from a bad id or another owner's id", async () => {
+    // `.maybeSingle()` resolves `{ data: null, error: null }` when the
+    // `.eq('owner_id', ...).eq('id', ...)` pair matches nothing, whether
+    // because the id doesn't exist or belongs to another owner.
+    const { client, calls } = mockSupabase({ data: null, error: null });
+    const svc = new AnalyzerPersistenceService(client);
+
+    await expect(
+      svc.save('owner-1', { ...DTO, id: 'row-1' }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+
+    const eqs = calls.filter((c) => 'eq' in c).map((c) => c.eq);
+    expect(eqs).toContainEqual(['id', 'row-1']);
+    expect(eqs).toContainEqual(['owner_id', 'owner-1']);
   });
 });

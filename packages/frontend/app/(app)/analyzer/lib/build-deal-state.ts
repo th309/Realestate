@@ -9,6 +9,13 @@ export type BuildDealStateArgs = Omit<DealStateV2, "v">;
  * value the user authored or a snapshot we are choosing to restore rather
  * than refetch. If you find yourself computing something in this function,
  * it probably belongs in the recompute path instead.
+ *
+ * This is currently the ONLY place `DealStateV2` objects are assembled.
+ * `useDealAutosave` (`./use-deal-autosave.ts`) fingerprints its `state` via
+ * `canonicalStringify`, a key-order-independent stringify, specifically so a
+ * second call site built with a different field order (or a future refactor
+ * of this function) can't silently break the fingerprint and make autosave
+ * PATCH on every render forever.
  */
 export function buildDealState(args: BuildDealStateArgs): DealStateV2 {
   return { v: DEAL_STATE_VERSION, ...args };

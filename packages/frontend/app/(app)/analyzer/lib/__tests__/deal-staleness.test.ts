@@ -34,11 +34,25 @@ describe("getDealStaleness fires only past the threshold", () => {
       days: 400,
     });
   });
+
+  it("is not stale — and never reports a negative day count — for a future-dated capture (clock skew)", () => {
+    const future = new Date(
+      NOW.getTime() + 5 * 24 * 60 * 60 * 1000,
+    ).toISOString();
+    expect(getDealStaleness(future, NOW)).toEqual({ stale: false, days: 0 });
+  });
 });
 
 describe("getDealStaleness degrades safely on bad input", () => {
   it.each(["", "not-a-date", "2026-13-45T00:00:00Z"])(
     "treats %s as not stale rather than throwing",
+    (bad) => {
+      expect(getDealStaleness(bad, NOW)).toEqual({ stale: false, days: 0 });
+    },
+  );
+
+  it.each([null, undefined])(
+    "treats %s as not stale rather than evaluating `new Date(%s)` (which is epoch 1970, not NaN)",
     (bad) => {
       expect(getDealStaleness(bad, NOW)).toEqual({ stale: false, days: 0 });
     },

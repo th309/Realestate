@@ -12,16 +12,45 @@ export const MAX_CONSECUTIVE_FAILURES = 3;
 export type SaveStatus = "idle" | "saving" | "saved" | "error";
 
 /**
+ * Deterministic stand-in for `JSON.stringify` used to fingerprint `state`
+ * (see rule 1 below): recursively sorts object keys before stringifying so
+ * the fingerprint is stable no matter what property order the caller
+ * assembled `state` with. `buildDealState` (`./build-deal-state.ts`) is
+ * currently the only call site, and it happens to spread fields in a fixed
+ * order — this function is what makes that an implementation detail rather
+ * than a load-bearing contract. Arrays keep their existing order, since
+ * order is semantically meaningful there. `JSON.stringify` returning
+ * `undefined` (for `undefined`, functions, symbols) is normalized to the
+ * literal string `"undefined"` so it still participates in the fingerprint
+ * instead of silently vanishing.
+ */
+function canonicalStringify(value: unknown): string {
+  if (Array.isArray(value)) {
+    return `[${value.map(canonicalStringify).join(",")}]`;
+  }
+  if (value !== null && typeof value === "object") {
+    const obj = value as Record<string, unknown>;
+    const keys = Object.keys(obj).sort();
+    return `{${keys
+      .map((k) => `${JSON.stringify(k)}:${canonicalStringify(obj[k])}`)
+      .join(",")}}`;
+  }
+  return JSON.stringify(value) ?? "undefined";
+}
+
+/**
  * Autosave the working state of an already-saved deal.
  *
  * Four rules, each of which is a bug if broken:
  *   1. Never fires on hydration, or on a re-render that didn't actually
  *      change the state's content. Gated by a content fingerprint
- *      (JSON.stringify), not by render count or object identity — so
- *      StrictMode's double-invoked mount effect and a caller that rebuilds
- *      `state` every render (e.g. streaming AI text, count-up animations)
- *      both produce a fingerprint equal to the last-saved one, and neither
- *      can trigger a spurious write or starve a real one.
+ *      (`canonicalStringify`, a key-order-independent `JSON.stringify`; see
+ *      its doc comment and `buildDealState` in `./build-deal-state.ts`), not
+ *      by render count or object identity — so StrictMode's double-invoked
+ *      mount effect and a caller that rebuilds `state` every render (e.g.
+ *      streaming AI text, count-up animations) both produce a fingerprint
+ *      equal to the last-saved one, and neither can trigger a spurious
+ *      write or starve a real one.
  *   2. Never fires without a `dealId`. A brand-new analysis needs one
  *      explicit save to materialize a row, or every slider fiddle spawns one.
  *   3. Writes state ONLY, via patchDealState. It must never reach the save
@@ -58,6 +87,12 @@ export function useDealAutosave({
   }, [state]);
   useEffect(() => {
     dealIdRef.current = dealId;
+    // Each deal gets its own failure budget. Without this, failures racked
+    // up against a deal the user has since navigated away from would count
+    // toward a freshly-opened deal's MAX_CONSECUTIVE_FAILURES — the
+    // dealIdRef guard elsewhere only protects status *display*, not this
+    // counter.
+    failuresRef.current = 0;
   }, [dealId]);
 
   const flush = useCallback(
@@ -85,7 +120,7 @@ export function useDealAutosave({
   );
 
   useEffect(() => {
-    const fingerprint = JSON.stringify(state);
+    const fingerprint = canonicalStringify(state);
     if (lastSavedFingerprintRef.current === null) {
       // First run establishes the baseline — hydration, not an edit. Immune
       // to StrictMode's double-invoke: the second run sees a non-null
@@ -106,7 +141,7 @@ export function useDealAutosave({
 
   const retry = useCallback(() => {
     failuresRef.current = 0;
-    void flush(JSON.stringify(stateRef.current));
+    void flush(canonicalStringify(stateRef.current));
   }, [flush]);
 
   return { status, retry };
