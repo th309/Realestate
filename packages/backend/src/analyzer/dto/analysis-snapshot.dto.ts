@@ -82,8 +82,23 @@ export class AnalysisSnapshotDto {
   @IsObject()
   input_snapshot!: Record<string, unknown>;
 
+  /**
+   * The frozen render artifact behind the public share link and the PDF.
+   *
+   * OPTIONAL, and the omission is load-bearing. A plain "Save deal" persists
+   * the user's working state without republishing — it sends no
+   * `result_snapshot`, and `save()` omits the key from the UPDATE so the
+   * artifact a client may already be reading survives untouched. Only Share
+   * and PDF send it. See `buildDealStatePayload` vs `buildPublishedArtifact`
+   * on the frontend, which make that distinction a type rather than a
+   * convention.
+   *
+   * The column is `NOT NULL`, so `save()` defaults it to `{}` on INSERT —
+   * a deal that has never been shared has nothing published yet.
+   */
+  @IsOptional()
   @IsObject()
-  result_snapshot!: Record<string, unknown>;
+  result_snapshot?: Record<string, unknown>;
 
   @IsOptional()
   @IsObject()

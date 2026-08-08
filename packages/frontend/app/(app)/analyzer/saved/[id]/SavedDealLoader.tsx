@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import { useSavedAnalysis } from "@/lib/analyzer/useSavedAnalysis";
 import { migrateDealState } from "../../lib/migrate-snapshot";
 import AnalyzerClient from "../../AnalyzerClient";
+import type { MarketContext } from "@/lib/data/fetchers/analyzer";
 
 /**
  * A saved deal carries its own address in `initialState`, so there is
@@ -40,8 +41,18 @@ function Shell({ children }: { children: React.ReactNode }) {
  */
 export default function SavedDealLoader({ id }: { id: string }) {
   const { data: row, isLoading } = useSavedAnalysis(id);
-  const initialState = useMemo(
-    () => (row ? migrateDealState(row) : null),
+  // Paired, because `migrateDealState` never returns null — a missing ROW is
+  // the only failure, so one null check has to cover both seeds.
+  const saved = useMemo(
+    () =>
+      row
+        ? {
+            state: migrateDealState(row),
+            // The market as it was when this deal was saved. Restored, never
+            // refetched (spec §4.4) — see useMarketRefreshGate.
+            marketContext: (row.market_context ?? null) as MarketContext | null,
+          }
+        : null,
     [row],
   );
 
@@ -51,7 +62,7 @@ export default function SavedDealLoader({ id }: { id: string }) {
         <p>Loading…</p>
       </Shell>
     );
-  if (!row || !initialState)
+  if (!saved)
     return (
       <Shell>
         <p>Not found.</p>
@@ -61,7 +72,8 @@ export default function SavedDealLoader({ id }: { id: string }) {
   return (
     <AnalyzerClient
       dealId={id}
-      initialState={initialState}
+      initialState={saved.state}
+      initialMarketContext={saved.marketContext}
       searchParamsPromise={NO_SEARCH_PARAMS}
     />
   );

@@ -22,6 +22,7 @@ import { MarketScoreStrip } from "./components/MarketScoreStrip";
 import { StaleDealNotice } from "./components/cards/StaleDealNotice";
 import { useCurrentDealState } from "./lib/use-current-deal-state";
 import type { DealStateV2 } from "./lib/deal-state-types";
+import type { MarketContext } from "@/lib/data/fetchers/analyzer";
 import { AnalyzerSidebar } from "./components/chrome/AnalyzerSidebar";
 import { SavedAnalysesPanel } from "./components/SavedAnalysesPanel";
 import { RentcastBanners } from "./components/RentcastBanners";
@@ -41,6 +42,7 @@ export default function AnalyzerClient({
   searchParamsPromise,
   dealId: savedDealId,
   initialState,
+  initialMarketContext,
 }: {
   searchParamsPromise: Promise<{
     address?: string;
@@ -49,6 +51,8 @@ export default function AnalyzerClient({
   /** Set when resuming a saved deal — turns on autosave. See SavedDealLoader. */
   dealId?: string;
   initialState?: DealStateV2;
+  /** The saved row's `market_context`, restored rather than refetched (§4.4). */
+  initialMarketContext?: MarketContext | null;
 }) {
   const params = use(searchParamsPromise);
   const entitlements = useEntitlements();
@@ -62,6 +66,7 @@ export default function AnalyzerClient({
     paramAddress: params.address,
     paramZip: params.zip,
     initialState,
+    initialMarketContext,
   });
   // Null until the first deliberate save materializes a row (onSaved).
   const [dealId, setDealId] = useState<string | null>(savedDealId ?? null);
@@ -74,7 +79,12 @@ export default function AnalyzerClient({
   const { rental, flip, brrrr } = analyzer;
 
   const chrome = useAnalyzerChrome();
-  const notesState = useAnalyzerNotes();
+  // Seeded from the saved deal or autosave writes "" straight over the saved
+  // notes on open — permanent data loss, no user action required.
+  const notesState = useAnalyzerNotes({
+    notes: initialState?.notes,
+    shareNotes: initialState?.shareNotes,
+  });
   const { hasGradableInput, verdict } = deriveDealReadout(
     analyzer.input,
     rental,
@@ -96,6 +106,9 @@ export default function AnalyzerClient({
     setInput: analyzer.setInput,
     setAssumption,
     currentInput: analyzer.input,
+    // A resumed deal already holds the values the user tuned for it; the
+    // global defaults must not overwrite them on open — see the hook.
+    enabled: !state.isHydrated,
   });
   const vm = useAnalyzerViewModel({
     analysisMode,
@@ -187,6 +200,7 @@ export default function AnalyzerClient({
           onRegisterSave={notesState.registerSave}
           strategyLabel={STRATEGY_LABEL[activeStrategy]}
           dealId={dealId}
+          dealState={deal.dealState}
           label={deal.label}
           onLabelChange={deal.setLabel}
           saveStatus={deal.saveStatus}
@@ -337,9 +351,8 @@ export default function AnalyzerClient({
       <AnalyzerOverlays
         chrome={chrome}
         strategy={toEngineStrategy(activeStrategy) ?? "BUY_AND_HOLD"}
-      >
-        {inputPanel}
-      </AnalyzerOverlays>
+        inputPanel={inputPanel}
+      />
     </main>
   );
 }

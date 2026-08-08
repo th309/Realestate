@@ -8,6 +8,7 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import * as crypto from 'node:crypto';
 import { SUPABASE_CLIENT } from '../supabase/supabase.service';
 import type { AnalysisSnapshotDto } from './dto/analysis-snapshot.dto';
+import { projectDealLabel } from './project-deal-label';
 
 /**
  * Persistence concerns for the Deal Analyzer.
@@ -51,7 +52,17 @@ export class AnalyzerPersistenceService {
     // `id` is never itself part of the row — it only selects which row to
     // update. Stripping it here means neither branch below can accidentally
     // write a client-supplied id into `deal_analyses`.
-    const { id: targetId, ...rest } = dto;
+    //
+    // `result_snapshot` is destructured out and re-added only when the
+    // caller actually sent one. A plain Save omits it (see the DTO), and the
+    // key has to stay absent through the UPDATE spread — an explicit
+    // `undefined` reads as "clear this" to anything that inspects the patch,
+    // and would overwrite a published artifact a client may already hold.
+    const { id: targetId, result_snapshot: published, ...fields } = dto;
+    const rest = {
+      ...fields,
+      ...(published !== undefined ? { result_snapshot: published } : {}),
+    };
 
     if (targetId) return this.updateExisting(ownerId, targetId, rest);
 
@@ -62,7 +73,15 @@ export class AnalyzerPersistenceService {
     const shareToken = crypto.randomBytes(24).toString('base64url');
     const { data, error } = await this.supabase
       .from('deal_analyses')
-      .insert({ ...rest, owner_id: ownerId, share_token: shareToken })
+      // `result_snapshot` is NOT NULL, but a first save is not necessarily a
+      // publish — default it to `{}` so a never-shared deal still inserts.
+      // `rest` spreads after, so a real Share/PDF payload still wins.
+      .insert({
+        result_snapshot: {},
+        ...rest,
+        owner_id: ownerId,
+        share_token: shareToken,
+      })
       .select('id, share_token')
       .single();
     if (!error) return data;
@@ -141,6 +160,12 @@ export class AnalyzerPersistenceService {
   /**
    * Autosave: overwrite only the working state of a saved deal.
    *
+   * Also projects the deal's name onto the `label` column, because that
+   * column is what the saved-deals list renders and the name itself lives
+   * inside the state blob — see `projectDealLabel`. Nothing else about the
+   * row is touched; `result_snapshot` and `market_context` in particular
+   * stay exactly as the last deliberate Share/PDF left them.
+   *
    * Scoped by `owner_id` AND `id`. `this.supabase` is the service-role
    * client (see supabase.module.ts), so the `deal_analyses_owner_update`
    * RLS policy is NOT in effect — the `.eq('owner_id', ...)` IS the
@@ -158,6 +183,10 @@ export class AnalyzerPersistenceService {
       .from('deal_analyses')
       .update({
         input_snapshot: inputSnapshot,
+        // The deal's name rides inside the state blob; the column is a
+        // projection of it. See project-deal-label.ts for why this is not a
+        // widening of `PatchDealStateDto`.
+        ...projectDealLabel(inputSnapshot),
         updated_at: new Date().toISOString(),
       })
       .eq('owner_id', ownerId)

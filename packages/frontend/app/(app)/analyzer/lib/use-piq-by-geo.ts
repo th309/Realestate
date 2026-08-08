@@ -9,6 +9,17 @@ export interface PiqByGeo {
   metro: number | null;
 }
 
+export interface PiqByGeoOptions {
+  /**
+   * False while a saved deal is showing the scores it was SAVED with. Opening
+   * a saved deal is a page view, not a refresh (spec §4.4) — see
+   * `useMarketRefreshGate`. Defaults to true for a fresh analysis.
+   */
+  enabled?: boolean;
+  /** Scores restored from the saved deal, shown while `enabled` is false. */
+  restored?: PiqByGeo | null;
+}
+
 /**
  * Fan out three parallel market-context queries (ZIP/County/Metro) so the
  * Property Header can show all three PIQ scores at once. County and Metro
@@ -18,7 +29,10 @@ export interface PiqByGeo {
  * React Query caches each level independently, so the user clicking pills
  * in MarketContextSection below hits the same cache rather than refetching.
  */
-export function usePiqByGeo(chain: MarketContextChain | null | undefined): {
+export function usePiqByGeo(
+  chain: MarketContextChain | null | undefined,
+  { enabled = true, restored = null }: PiqByGeoOptions = {},
+): {
   piqByGeo: PiqByGeo;
   /**
    * True until every enabled level has settled. A `null` score is ambiguous on
@@ -38,14 +52,14 @@ export function usePiqByGeo(chain: MarketContextChain | null | undefined): {
   const countyFips = chain?.county_fips;
   const cbsaCode = chain?.cbsa_code;
 
-  const zipQuery = useMarketContext({ zip, enabled: Boolean(zip) });
+  const zipQuery = useMarketContext({ zip, enabled: enabled && Boolean(zip) });
   const countyQuery = useMarketContext({
     county_fips: countyFips,
-    enabled: Boolean(countyFips),
+    enabled: enabled && Boolean(countyFips),
   });
   const metroQuery = useMarketContext({
     cbsa_code: cbsaCode,
-    enabled: Boolean(cbsaCode),
+    enabled: enabled && Boolean(cbsaCode),
   });
 
   // A disabled query (no id at that level) is settled by definition — it will
@@ -56,15 +70,28 @@ export function usePiqByGeo(chain: MarketContextChain | null | undefined): {
     (Boolean(countyFips) && countyQuery.isLoading) ||
     (Boolean(cbsaCode) && metroQuery.isLoading);
 
+  // While the live queries are switched off — or still in flight on the way
+  // back from an explicit refresh — the saved score is the honest answer. A
+  // null would render as "no score" and, worse, would churn the deal state
+  // through an all-null intermediate that autosave would faithfully persist.
+  const scoreFor = (
+    query: ReturnType<typeof useMarketContext>,
+    saved: number | null,
+  ) =>
+    enabled && !query.isLoading
+      ? (query.data?.piq_score?.value ?? null)
+      : saved;
+
   return {
     piqByGeo: {
-      zip: zipQuery.data?.piq_score?.value ?? null,
-      county: countyQuery.data?.piq_score?.value ?? null,
-      metro: metroQuery.data?.piq_score?.value ?? null,
+      zip: scoreFor(zipQuery, restored?.zip ?? null),
+      county: scoreFor(countyQuery, restored?.county ?? null),
+      metro: scoreFor(metroQuery, restored?.metro ?? null),
     },
     // The chain itself arrives async. Before it lands there are no ids to
     // query, so every level reads null — indistinguishable from "no scores
-    // anywhere" without this guard.
-    isResolving: !chain || pending,
+    // anywhere" without this guard. Suppressed levels are settled, not
+    // pending: their restored scores are already final.
+    isResolving: enabled && (!chain || pending),
   };
 }

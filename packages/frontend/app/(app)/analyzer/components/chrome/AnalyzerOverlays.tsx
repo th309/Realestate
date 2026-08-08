@@ -10,8 +10,12 @@ interface Props {
   chrome: AnalyzerChrome;
   /** Strategy whose thresholds the drawer edits. */
   strategy: Strategy;
-  /** The input panel, hosted by the mobile sheet. */
-  children: ReactNode;
+  /**
+   * The input panel, hosted by the mobile sheet. Named rather than taken as
+   * `children`: this is not a generic slot, and the sheet is only one of the
+   * two overlays here — `children` read as "anything, anywhere in this".
+   */
+  inputPanel: ReactNode;
 }
 
 /**
@@ -19,14 +23,14 @@ interface Props {
  * because they share one owner (`useAnalyzerChrome`) and nothing else on the
  * page reads their state.
  */
-export function AnalyzerOverlays({ chrome, strategy, children }: Props) {
+export function AnalyzerOverlays({ chrome, strategy, inputPanel }: Props) {
   return (
     <>
       <MobileInputSheet
         open={chrome.inputsOpenMobile}
         onClose={chrome.closeInputs}
       >
-        {children}
+        {inputPanel}
       </MobileInputSheet>
 
       <CustomizeThresholdsDrawer

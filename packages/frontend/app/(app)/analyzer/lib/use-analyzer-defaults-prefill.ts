@@ -14,6 +14,13 @@ interface PrefillTargets {
   setInput: (next: DealInput) => void;
   setAssumption: AssumptionSetter;
   currentInput: DealInput;
+  /**
+   * False when resuming a saved deal. Those values ARE the user's choices for
+   * this deal — overwriting them with the global defaults on open discards
+   * the tuning AND (via autosave) persists the discarding, turning a page
+   * view into a destructive write. Defaults to true for a fresh analysis.
+   */
+  enabled?: boolean;
 }
 
 /**
@@ -31,6 +38,7 @@ export function useAnalyzerDefaultsPrefill({
   setInput,
   setAssumption,
   currentInput,
+  enabled = true,
 }: PrefillTargets) {
   const { data } = useAnalyzerDefaults();
   // Snapshot of the defaults we last applied — re-apply only when the saved
@@ -38,7 +46,7 @@ export function useAnalyzerDefaultsPrefill({
   const appliedForRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!data) return;
+    if (!data || !enabled) return;
     const snapshot = JSON.stringify(data);
     if (appliedForRef.current === snapshot) return;
 
@@ -77,5 +85,5 @@ export function useAnalyzerDefaultsPrefill({
       setAssumption("expenseGrowthPct", data.expenseGrowthPct);
 
     appliedForRef.current = snapshot;
-  }, [data, setInput, setAssumption, currentInput]);
+  }, [data, enabled, setInput, setAssumption, currentInput]);
 }

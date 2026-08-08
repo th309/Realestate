@@ -8,17 +8,21 @@ import { SaveButton } from "./SaveButton";
 import { ShareAnalysisModal } from "./ShareAnalysisModal";
 import {
   downloadAnalysisPdf,
-  saveAnalysis,
+  saveDealState,
+  publishAnalysis,
 } from "@/lib/data/fetchers/analyzer";
-import { fetchBatchedAiInsights, type AiInsightPayload } from "@/lib/data";
+import type { AiInsightPayload } from "@/lib/data";
 import {
-  buildAnalyzerSnapshot,
+  buildDealStatePayload,
+  buildPublishedArtifact,
   type AnalyzerSnapshotDerived,
   type AnalyzerSnapshotExtras,
   type AnalyzerSnapshotState,
 } from "../../lib/build-analyzer-snapshot";
+import { preAwaitAiNarratives } from "../../lib/pre-await-ai-narratives";
 import { emitAnalyzerEvent } from "../../lib/analyzer-telemetry";
 import { SAVED_ANALYSES_QUERY_KEY } from "../SavedAnalysesPanel";
+import type { DealStateV2 } from "../../lib/deal-state-types";
 import type { SaveStatus } from "../../lib/use-deal-autosave";
 
 interface Props {
@@ -26,51 +30,51 @@ interface Props {
   isPro: boolean;
   state: AnalyzerSnapshotState;
   derived: AnalyzerSnapshotDerived;
-  /** Rich data captured at save time (projection, sensitivity, grading, etc.). */
+  /**
+   * The deal's complete resumable state — what lands in `input_snapshot`.
+   * Built once by `useCurrentDealState` so the explicit-save paths here and
+   * the debounced autosave write byte-identical state. Carries the deal's
+   * `label`, which is why there is no separate label prop.
+   */
+  dealState: DealStateV2;
+  /** Rich data captured at Share time (projection, sensitivity, grading, …). */
   extras?: AnalyzerSnapshotExtras;
-  /** AI payload for pre-awaiting batched narratives before save. */
+  /** AI payload for pre-awaiting batched narratives before PUBLISHING. */
   aiPayload?: AiInsightPayload | null;
   /** Used for the PDF filename and the modal heading. */
   headingLabel: string;
   /**
    * Publishes a "save now" function up to the parent so the NotesSection
    * "Save" button (which lives in a different subtree) can persist the
-   * current snapshot — notes included — without re-implementing the save
+   * current deal state — notes included — without re-implementing the save
    * flow. Resolves `true`/`false` so the caller can tell success from a
    * guarded/failed save (e.g. no resolved address) instead of assuming
    * success. Called with `null` on unmount to clear the reference.
+   *
+   * Notes ride in `DealStateV2`, so this is a state save, not a publish: a
+   * note edited after sharing does not rewrite the link's frozen artifact.
    */
   onRegisterSave?: (saveNow: (() => Promise<boolean>) | null) => void;
   /**
    * Existing saved-deal id, once one exists. Determines whether the Save
-   * button reads "Save deal" (first save) or "Saved" (re-save), and is what
-   * Task 11 uses to turn on `useDealAutosave`. Optional/defaulted so this
-   * component still type-checks and works standalone before Task 11 threads
-   * it down through `AnalyzerHeader` / `AnalyzerClient`.
+   * button reads "Save deal" (first save) or "Saved" (re-save), whether the
+   * write creates or updates the row, and — because only the creating save
+   * captures `market_context` — which columns it may touch.
    */
   dealId?: string | null;
   /**
-   * User-editable deal name (`DealLabelField`), threaded down so an
-   * explicit Save carries the current rename — not just autosave's
-   * `input_snapshot` copy. `null`/undefined saves as unnamed.
-   */
-  label?: string | null;
-  /**
-   * Debounced-autosave status (Task 8's `useDealAutosave`), threaded down so
-   * the Save button can report it. Defaults to `"idle"` until Task 11 wires
-   * the real hook through the header.
+   * Debounced-autosave status (`useDealAutosave`), threaded down so the
+   * Save button can report it.
    */
   saveStatus?: SaveStatus;
   /**
-   * Explicit Save-button click handler. Defaults to the same save-snapshot
-   * flow PDF/Share already use, so the button is functional even before
-   * Task 11 supplies a dedicated handler.
+   * Explicit Save-button click handler. Defaults to the deal-state save
+   * below; `AnalyzerClient` supplies autosave's retry when it has errored.
    */
   onSaveClick?: () => void;
   /**
-   * Fires with the saved row's id after a successful save, so a parent
-   * (Task 11) can capture it and enable autosave for a previously-unsaved
-   * deal.
+   * Fires with the saved row's id after a successful write, so the parent
+   * can capture it and enable autosave for a previously-unsaved deal.
    */
   onSaved?: (dealId: string) => void;
 }
@@ -78,26 +82,31 @@ interface Props {
 /**
  * Header pills that replace the old Pro/Present/PDF mode toolbar. Owns the
  * share token, save state, and modal state so the parent (`AnalyzerClient`)
- * stays under the React-component line limit. Both buttons funnel through
- * the same auto-save then differ only in what they do with the token: open
- * the modal vs. download the PDF directly.
+ * stays under the React-component line limit.
  *
- * AI narratives are pre-awaited via the batched-insights endpoint before
- * the save call resolves, so the saved snapshot captures real prose
- * instead of "Generating verdict…" placeholders. The batched call is
- * already cached on the analyzer page (24h backend TTL + react-query
- * cache), so this normally short-circuits without a new network call.
+ * The three buttons split across TWO write paths, and the split is the
+ * point (spec §4.2):
+ *
+ * - **Save** (and the Notes "Save") → `persistDealState`. Writes
+ *   `input_snapshot` and the identity columns. Never touches
+ *   `result_snapshot`, and never fires an LLM call — `DealStatePayload` has
+ *   no field for a narrative to go in.
+ * - **Share / PDF** → `publish`. Writes the frozen render artifact as well,
+ *   pre-awaiting the batched AI narratives so the artifact captures real
+ *   prose instead of "Generating verdict…" placeholders. That batched call
+ *   is already cached on the analyzer page (24h backend TTL + react-query),
+ *   so it normally short-circuits without a new network call.
  */
 export function AnalyzerHeaderActions({
   isPro,
   state,
   derived,
+  dealState,
   extras,
   aiPayload,
   headingLabel,
   onRegisterSave,
   dealId = null,
-  label = null,
   saveStatus = "idle",
   onSaveClick,
   onSaved,
@@ -110,11 +119,13 @@ export function AnalyzerHeaderActions({
   const queryClient = useQueryClient();
 
   // Live refs avoid stale closures + bypass useCallback dep churn from the
-  // many fields inside state/derived/extras.
+  // many fields inside state/derived/extras/dealState.
   const stateRef = useRef(state);
   stateRef.current = state;
   const derivedRef = useRef(derived);
   derivedRef.current = derived;
+  const dealStateRef = useRef(dealState);
+  dealStateRef.current = dealState;
   const extrasRef = useRef<AnalyzerSnapshotExtras | undefined>(extras);
   extrasRef.current = extras;
   const aiPayloadRef = useRef<AiInsightPayload | null | undefined>(aiPayload);
@@ -123,91 +134,100 @@ export function AnalyzerHeaderActions({
   onSavedRef.current = onSaved;
   const dealIdRef = useRef(dealId);
   dealIdRef.current = dealId;
-  const labelRef = useRef(label);
-  labelRef.current = label;
 
-  // Builds the snapshot (pre-awaiting AI narratives) and persists it, returning
-  // the fresh share token. Once `dealId` exists the row is updated BY ID
-  // server-side; before that it upserts by (owner, property address) — either
-  // way, repeat saves of the same deal update the existing row rather than
-  // creating a new one. Requires a resolved address: manual/numbers-only
-  // analyses (no address entered, RentCast unresolved) have no property to
-  // key the save on, so the backend now rejects address_full being blank —
-  // guard against that here with a friendly message instead of a raw 400.
-  const saveSnapshot = useCallback(async (): Promise<string | null> => {
-    if (!derivedRef.current.displayAddress?.trim()) {
-      setSaveError(
-        "Enter a property address before saving — this analysis has no property to save it against.",
-      );
-      return null;
-    }
-    setSaveInProgress(true);
-    setSaveError(null);
-    try {
-      // Pre-await AI narratives so the saved snapshot captures real prose.
-      // Failures are non-fatal — we still save without narratives.
-      let narratives: AnalyzerSnapshotExtras["aiNarratives"] = undefined;
-      const payload = aiPayloadRef.current;
-      if (payload) {
-        try {
-          const batch = await fetchBatchedAiInsights(payload);
-          narratives = {
-            recommendation_analysis:
-              batch?.recommendation_analysis?.text ?? null,
-            projection: batch?.projection?.text ?? null,
-            expense_waterfall: batch?.expense_waterfall?.text ?? null,
-            sensitivity: batch?.sensitivity?.text ?? null,
-            comps: batch?.comps?.text ?? null,
-            after_tax: batch?.after_tax?.text ?? null,
-          };
-        } catch {
-          // Narratives are best-effort. Snapshot saves regardless.
-        }
+  /**
+   * Shared shell for both write paths: the address guard, the in-progress
+   * flag, error surfacing, and the post-write bookkeeping. `write` decides
+   * WHAT is persisted; this decides how persisting behaves.
+   *
+   * Requires a resolved address: manual/numbers-only analyses (no address
+   * entered, RentCast unresolved) have no property to key the save on, so
+   * the backend rejects a blank `address_full` — guard against that here
+   * with a friendly message instead of a raw 400.
+   */
+  const runWrite = useCallback(
+    async (
+      write: () => Promise<{ id: string; share_token: string }>,
+    ): Promise<{ id: string; share_token: string } | null> => {
+      if (!derivedRef.current.displayAddress?.trim()) {
+        setSaveError(
+          "Enter a property address before saving — this analysis has no property to save it against.",
+        );
+        return null;
       }
+      setSaveInProgress(true);
+      setSaveError(null);
+      try {
+        const result = await write();
+        // Refresh the "Saved analyses" panel so a re-save (which updates the
+        // same row rather than inserting a new one) or a brand-new save shows
+        // up without a page reload.
+        queryClient.invalidateQueries({ queryKey: SAVED_ANALYSES_QUERY_KEY });
+        // Lets the parent capture the row id — e.g. to enable autosave for a
+        // deal that previously had none.
+        onSavedRef.current?.(result.id);
+        return result;
+      } catch (err) {
+        setSaveError(
+          err instanceof Error ? err.message : "Failed to save this analysis",
+        );
+        return null;
+      } finally {
+        setSaveInProgress(false);
+      }
+    },
+    [queryClient],
+  );
 
-      const merged: AnalyzerSnapshotExtras = {
-        ...(extrasRef.current ?? {}),
-        aiNarratives: narratives ?? extrasRef.current?.aiNarratives,
-      };
-      const result = await saveAnalysis(
-        buildAnalyzerSnapshot(stateRef.current, derivedRef.current, merged, {
-          id: dealIdRef.current ?? undefined,
-          label: labelRef.current,
-        }),
+  // Save / Notes-Save. Deal state only — cannot reach `result_snapshot`.
+  const persistDealState = useCallback(async (): Promise<boolean> => {
+    const result = await runWrite(() =>
+      saveDealState(
+        buildDealStatePayload(
+          dealStateRef.current,
+          stateRef.current,
+          derivedRef.current,
+          { id: dealIdRef.current ?? undefined },
+        ),
+      ),
+    );
+    return result != null;
+  }, [runWrite]);
+
+  // Share / PDF. Publishes the frozen render artifact and yields the token.
+  const publish = useCallback(async (): Promise<string | null> => {
+    const result = await runWrite(async () => {
+      const merged = await preAwaitAiNarratives(
+        extrasRef.current,
+        aiPayloadRef.current,
       );
-      setShareToken(result.share_token);
-      // Refresh the "Saved analyses" panel so a re-save (which upserts the
-      // same row rather than inserting a new one) or a brand-new save shows
-      // up without a page reload.
-      queryClient.invalidateQueries({ queryKey: SAVED_ANALYSES_QUERY_KEY });
-      // Lets a parent capture the row id (e.g. to enable autosave for a
-      // deal that previously had none — Task 11).
-      onSavedRef.current?.(result.id);
-      return result.share_token;
-    } catch (err) {
-      const msg =
-        err instanceof Error ? err.message : "Failed to prepare share link";
-      setSaveError(msg);
-      return null;
-    } finally {
-      setSaveInProgress(false);
-    }
-  }, [queryClient]);
+      return publishAnalysis(
+        buildPublishedArtifact(
+          dealStateRef.current,
+          stateRef.current,
+          derivedRef.current,
+          merged,
+          { id: dealIdRef.current ?? undefined },
+        ),
+      );
+    });
+    if (result) setShareToken(result.share_token);
+    return result?.share_token ?? null;
+  }, [runWrite]);
 
   // Share/PDF reuse an existing token (same link) once one exists.
   const ensureToken = useCallback(async (): Promise<string | null> => {
     if (shareToken) return shareToken;
-    return saveSnapshot();
-  }, [shareToken, saveSnapshot]);
+    return publish();
+  }, [shareToken, publish]);
 
   // Publish a "save now" handle so the NotesSection Save button (different
-  // subtree) can persist the current snapshot — notes included. It always
-  // re-saves so freshly typed notes land even after a share link was created.
+  // subtree) can persist the current deal state — notes included.
   useEffect(() => {
     if (!onRegisterSave) return;
-    onRegisterSave(async () => (await saveSnapshot()) != null);
+    onRegisterSave(persistDealState);
     return () => onRegisterSave(null);
-  }, [onRegisterSave, saveSnapshot]);
+  }, [onRegisterSave, persistDealState]);
 
   const handleShareClick = useCallback(async () => {
     emitAnalyzerEvent("analyzer_share_button_clicked", { is_signed_in: isPro });
@@ -233,9 +253,9 @@ export function AnalyzerHeaderActions({
     try {
       const token = await ensureToken();
       if (!token) {
-        // ensureToken()/saveSnapshot() already set saveError (e.g. the
-        // no-address guard) — surface it via the modal instead of silently
-        // reverting the button with no explanation.
+        // ensureToken()/publish() already set saveError (e.g. the no-address
+        // guard) — surface it via the modal instead of silently reverting
+        // the button with no explanation.
         setModalOpen(true);
         return;
       }
@@ -257,16 +277,15 @@ export function AnalyzerHeaderActions({
     }
   }, [isPro, ensureToken, headingLabel]);
 
-  // Falls back to the same save-snapshot flow PDF/Share use when the parent
-  // hasn't supplied a dedicated handler yet (Task 11 wires one through
-  // `useDealAutosave`'s retry). Keeps the button functional standalone.
+  // `onSaveClick` is autosave's retry, supplied by the parent only while
+  // autosave is in its error state. Otherwise Save is a plain state save.
   const handleSaveClick = useCallback(() => {
     if (onSaveClick) {
       onSaveClick();
       return;
     }
-    void saveSnapshot();
-  }, [onSaveClick, saveSnapshot]);
+    void persistDealState();
+  }, [onSaveClick, persistDealState]);
 
   return (
     <>
@@ -274,6 +293,7 @@ export function AnalyzerHeaderActions({
         <SaveButton
           status={saveStatus}
           hasRow={Boolean(dealId)}
+          canSave={isPro}
           onClick={handleSaveClick}
         />
         <PdfButton onClick={handlePdfClick} loading={pdfInProgress} />

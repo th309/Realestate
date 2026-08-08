@@ -5,6 +5,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useCurrentDealState } from "../use-current-deal-state";
 import { DEFAULT_ASSUMPTIONS } from "../analyzer-assumptions";
 import type { DealStateV2 } from "../deal-state-types";
+import type { InvestorGoal } from "../goal-types";
+
+const requestMarketRefresh = vi.fn();
 
 const patchDealState = vi.fn();
 vi.mock("@/lib/data", () => ({
@@ -33,6 +36,7 @@ function makeState(input: object = INPUT_300K) {
     rentcastData: null,
     piqByGeo: { zip: 61, county: 58, metro: 63 },
     marketCapturedAt: "2026-01-01T00:00:00.000Z",
+    requestMarketRefresh,
   } as unknown as Parameters<typeof useCurrentDealState>[0]["state"];
 }
 
@@ -43,7 +47,10 @@ function wrapper({ children }: { children: ReactNode }) {
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
 }
 
-function renderDealState(initialState?: DealStateV2) {
+function renderDealState(
+  initialState?: DealStateV2,
+  activeGoal: InvestorGoal | null = null,
+) {
   return renderHook(
     ({ state }) =>
       useCurrentDealState({
@@ -52,7 +59,7 @@ function renderDealState(initialState?: DealStateV2) {
         dealId: "row-1",
         isPro: true,
         analysisMode: "focused",
-        activeGoal: null,
+        activeGoal,
         notes: "",
         shareNotes: false,
       }),
@@ -61,12 +68,18 @@ function renderDealState(initialState?: DealStateV2) {
 }
 
 describe("useCurrentDealState", () => {
-  beforeEach(() => patchDealState.mockReset().mockResolvedValue(undefined));
+  beforeEach(() => {
+    patchDealState.mockReset().mockResolvedValue(undefined);
+    requestMarketRefresh.mockReset();
+    localStorage.clear();
+  });
 
   // The load-bearing invariant: useDealAutosave re-arms its debounce on every
-  // change of the state object's IDENTITY, so a rebuilt-per-render object
-  // would make its own "saving"/"saved" re-render schedule the next save —
-  // an autosave loop writing forever with nothing edited.
+  // change of the state object's IDENTITY. It cannot loop — the fingerprint
+  // gate returns early whenever the CONTENT is unchanged — but while a PATCH
+  // is in flight, the hook's own "saving" re-render would hand a rebuilt
+  // object to an effect whose saved baseline has not advanced yet, re-arming
+  // the timer and sending a second, identical write.
   it("keeps one state object across re-renders that changed nothing", () => {
     const { result, rerender } = renderDealState();
     const first = result.current.dealState;
@@ -90,6 +103,17 @@ describe("useCurrentDealState", () => {
     );
   });
 
+  it("leaves the staleness clock alone when the user merely edits", () => {
+    const { result, rerender } = renderDealState();
+    rerender({ state: makeState({ price: 310_000 }) });
+    // Autosave writes on this edit; the clock must not follow it, or a
+    // 74-day-old deal looks freshly captured after one keystroke (spec §4.5).
+    expect(result.current.marketCapturedAt).toBe("2026-01-01T00:00:00.000Z");
+    expect(result.current.dealState.marketCapturedAt).toBe(
+      "2026-01-01T00:00:00.000Z",
+    );
+  });
+
   it("moves the staleness clock only on an explicit market refresh", async () => {
     const { result } = renderDealState();
     await act(async () => {
@@ -100,9 +124,30 @@ describe("useCurrentDealState", () => {
     );
   });
 
-  it("records the active goal for audit but never restores one", () => {
+  it("opens the market-refresh gate before invalidating the queries", async () => {
+    // On a hydrated deal those queries are DISABLED, and invalidating a
+    // disabled query is a no-op — so a refresh that only invalidated would
+    // silently do nothing at all.
     const { result } = renderDealState();
-    expect(result.current.dealState.activeGoalAtSave).toBeNull();
+    await act(async () => {
+      result.current.refreshMarketData();
+    });
+    expect(requestMarketRefresh).toHaveBeenCalledOnce();
+  });
+
+  it("records the LIVE active goal for audit and never restores a saved one", () => {
+    // Spec §4.6. The goal is a standing preference owned by
+    // localStorage["analyzer.investorGoal"]; a saved deal's goal is an audit
+    // record of what framed its narratives, nothing more. Restoring it once
+    // let one compare session's "fast cash" frame every later analysis.
+    localStorage.setItem("analyzer.investorGoal", "cash_flow");
+    const { result } = renderDealState(
+      { activeGoalAtSave: "fast_cash" } as DealStateV2,
+      "long_term_wealth",
+    );
+
+    expect(result.current.dealState.activeGoalAtSave).toBe("long_term_wealth");
+    expect(localStorage.getItem("analyzer.investorGoal")).toBe("cash_flow");
   });
 
   it("seeds the deal label from the saved row and persists edits to it", () => {

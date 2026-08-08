@@ -25,6 +25,7 @@ type AnalyzerStateSlice = Pick<
   | "rentcastData"
   | "piqByGeo"
   | "marketCapturedAt"
+  | "requestMarketRefresh"
 >;
 
 export interface UseCurrentDealStateArgs {
@@ -64,12 +65,17 @@ export interface CurrentDealState {
  * Lives outside `AnalyzerClient` for two reasons. The obvious one is the
  * 400-line component cap (CLAUDE.md §1.3). The load-bearing one is
  * MEMOIZATION: `useDealAutosave` re-arms its debounce whenever the state
- * object's identity changes, so rebuilding the object on every render would
- * make its own `setStatus("saving"/"saved")` re-render schedule the next
- * save — an autosave loop writing every couple of seconds forever. The
- * `useMemo` below keys on the underlying values so identity changes only
- * when the deal actually changes. `piqByGeo` is spread into primitives for
- * the same reason: `usePiqByGeo` returns a fresh object each render.
+ * object's identity changes. It cannot loop — its fingerprint gate (rule 1)
+ * returns early whenever the CONTENT matches what was last saved, so a
+ * caller that rebuilds an equal object every render still writes nothing.
+ * What the memo prevents is narrower and real: while a PATCH is in flight
+ * the hook's own `setStatus("saving")` re-render would hand it a fresh
+ * object whose fingerprint still differs from the not-yet-advanced baseline,
+ * re-arming the 2s timer and sending a second, identical PATCH. One
+ * duplicate write per slow save, not a loop. The `useMemo` below keys on the
+ * underlying values so identity changes only when the deal actually changes.
+ * `piqByGeo` is spread into primitives for the same reason: `usePiqByGeo`
+ * returns a fresh object each render.
  *
  * `marketCapturedAt` is NOT bumped by autosave (spec §4.5) — it is the
  * clock `StaleDealNotice` reads, and an edit is not a market refresh. Only
@@ -111,6 +117,7 @@ export function useCurrentDealState({
     provenance,
     rentcastData,
     piqByGeo,
+    requestMarketRefresh,
   } = state;
   const { input } = analyzer;
   const { zip: piqZip, county: piqCounty, metro: piqMetro } = piqByGeo;
@@ -181,13 +188,23 @@ export function useCurrentDealState({
   // Market context and the three per-geo PIQ reads share one query prefix
   // (see useMarketContext), so one invalidation refreshes the strip, the
   // section and the score chain together.
+  //
+  // On a hydrated deal those queries are DISABLED (useMarketRefreshGate), and
+  // invalidating a disabled query is a no-op — so the gate has to open first.
+  // Opening it is itself what triggers the fetch there; the invalidation is
+  // what re-fetches on a fresh analysis, or on a second refresh click.
   const refreshMarketData = useCallback(() => {
     setIsRefreshingMarket(true);
+    requestMarketRefresh();
     void queryClient
       .invalidateQueries({ queryKey: ["analyzer", "market-context"] })
       .then(() => setMarketCapturedAt(new Date().toISOString()))
+      // Without this a refetch rejection is an unhandled rejection — no
+      // clock stamp (correct: nothing was refreshed) but also no trace. The
+      // restored data is untouched either way (spec §8).
+      .catch(() => undefined)
       .finally(() => setIsRefreshingMarket(false));
-  }, [queryClient]);
+  }, [queryClient, requestMarketRefresh]);
 
   return {
     dealState,

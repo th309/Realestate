@@ -8,6 +8,7 @@ import {
   mapStrategyToBestPlay,
 } from "../../lib/build-share-bundle";
 import { deriveCashflowSummary } from "../../lib/cashflow-summary";
+import type { DealStateV2 } from "../../lib/deal-state-types";
 import type { SaveStatus } from "../../lib/use-deal-autosave";
 
 interface Props {
@@ -34,6 +35,13 @@ interface Props {
   strategyLabel?: string;
   /** Saved-deal row id, once one exists. Pass-throughs to AnalyzerHeaderActions. */
   dealId?: string | null;
+  /**
+   * The deal's complete resumable state (`useCurrentDealState().dealState`).
+   * Passed straight through: the Save/Share/PDF buttons persist exactly the
+   * object autosave persists, so an explicit save can't write a different —
+   * or older — shape than a debounced one.
+   */
+  dealState: DealStateV2;
   saveStatus?: SaveStatus;
   onSaveClick?: () => void;
   onSaved?: (dealId: string) => void;
@@ -131,7 +139,7 @@ export function AnalyzerHeader(p: Props) {
         headingLabel={p.headingLabel}
         onRegisterSave={p.onRegisterSave}
         dealId={p.dealId}
-        label={p.label}
+        dealState={p.dealState}
         saveStatus={p.saveStatus}
         onSaveClick={p.onSaveClick}
         onSaved={p.onSaved}

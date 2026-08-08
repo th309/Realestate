@@ -28,17 +28,19 @@ import {
 import { resolveMarketZip } from "./resolve-market-zip";
 import { getScoreLabel } from "@/app/components/scoring/score-labels";
 import {
+  pickMarketContext,
   resolveInitialAnalyzerState,
   shouldAutoFetchProperty,
+  useMarketRefreshGate,
 } from "./use-analyzer-state.hydration";
+import type { MarketContext } from "@/lib/data/fetchers/analyzer";
 
 export type { FieldProvenance, ProvenanceMap };
 export { isDivergent };
 export type { AnalyzerAssumptions };
 export { DEFAULT_ASSUMPTIONS };
-// Re-exported so callers (and its test) can keep importing the auto-fetch
-// guard from the main hook module; the implementation lives in
-// use-analyzer-state.hydration.ts to keep this file under the line limit.
+// Re-exported so callers (and its test) keep importing the auto-fetch guard
+// from here; it lives in use-analyzer-state.hydration.ts for the line limit.
 export { shouldAutoFetchProperty };
 
 /**
@@ -48,16 +50,25 @@ export { shouldAutoFetchProperty };
  * Side effects encapsulated here:
  *   - RentCast fetch (mutation) + sync result to input fields once per fetch
  *   - Auto-fetch on first render when address arrives via ?address= param
+ *   - Market context + per-geo PIQ, gated so a hydrated deal restores rather
+ *     than refetches them (useMarketRefreshGate)
  *   - Memoized projection / sensitivity / break-even / after-tax / BRRRR-timeline
  *   - Debounced streaming AI header verdict
  */
+export interface AnalyzerStateArgs extends AnalyzerStateOptions {
+  /** The saved row's `market_context`. Restored, never refetched — §4.4. */
+  initialMarketContext?: MarketContext | null;
+}
+
 export function useAnalyzerState({
   isPro,
   initialAddress = "",
   paramAddress,
   paramZip,
   initialState,
-}: AnalyzerStateOptions) {
+  initialMarketContext,
+}: AnalyzerStateArgs) {
+  const isHydrated = Boolean(initialState);
   // A saved deal (initialState) overrides every default below to resume in
   // place — see resolveInitialAnalyzerState for the empty-analyzer defaults.
   const initial = resolveInitialAnalyzerState(initialState, initialAddress);
@@ -176,13 +187,13 @@ export function useAnalyzerState({
         address,
         paramAddress,
         alreadyFetched: autoFetchedRef.current,
-        isHydrated: Boolean(initialState),
+        isHydrated,
       })
     )
       return;
     autoFetchedRef.current = true;
     mutate({ address: address.trim() });
-  }, [isPro, address, paramAddress, mutate, initialState]);
+  }, [isPro, address, paramAddress, mutate, isHydrated]);
 
   const { projection, sensitivity, afterTax, breakEven, brrrrTimeline } =
     useDerivedAnalytics(analyzer.input, assumptions, arvLocal, rehabBudget);
@@ -196,13 +207,21 @@ export function useAnalyzerState({
     resolvedAddress: rentcastData?.resolved_address,
     typedAddress: address,
   });
+  // Suppressed for a hydrated saved deal until the user asks — see
+  // useMarketRefreshGate for why a page view must not refetch the market.
+  const marketGate = useMarketRefreshGate(isHydrated);
   const marketContextQuery = useMarketContext({
     zip: zip ?? undefined,
-    enabled: Boolean(zip),
+    enabled: Boolean(zip) && marketGate.enabled,
   });
-  const marketContext = marketContextQuery.data;
+  const marketContext = pickMarketContext({
+    restored: initialMarketContext ?? null,
+    live: marketContextQuery.data,
+    isLive: marketGate.enabled && !marketContextQuery.isLoading,
+  });
   const { piqByGeo, isResolving: piqByGeoResolving } = usePiqByGeo(
     marketContext?.chain,
+    { enabled: marketGate.enabled, restored: initialState?.piqByGeo ?? null },
   );
 
   const verdictPayload = useMemo(
@@ -232,8 +251,10 @@ export function useAnalyzerState({
     address,
     setAddress: changeAddress,
     selectedZip, // was internal-only; Task 11 needs it to build deal state
-    isHydrated: Boolean(initialState),
+    isHydrated,
     marketCapturedAt: initialState?.marketCapturedAt ?? null,
+    /** "Update market data" only — see useMarketRefreshGate. */
+    requestMarketRefresh: marketGate.requestMarketRefresh,
     arvLocal,
     setArvLocal,
     rehabBudget,

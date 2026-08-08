@@ -5,8 +5,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { AnalyzerHeaderActions } from "../AnalyzerHeaderActions";
 import { SavedAnalysesPanel } from "../../SavedAnalysesPanel";
-import { saveAnalysis } from "@/lib/data/fetchers/analyzer";
+import { publishAnalysis } from "@/lib/data/fetchers/analyzer";
 import { fetchSavedAnalyses } from "@/lib/data";
+import { makeDealState } from "../../../lib/__tests__/deal-state-fixture";
 
 /** next/link stand-in: href is whatever the caller passed, not necessarily a string. */
 type LinkMockProps = Omit<ComponentProps<"a">, "href"> & {
@@ -15,7 +16,8 @@ type LinkMockProps = Omit<ComponentProps<"a">, "href"> & {
 };
 
 vi.mock("@/lib/data/fetchers/analyzer", () => ({
-  saveAnalysis: vi.fn(),
+  saveDealState: vi.fn(),
+  publishAnalysis: vi.fn(),
   downloadAnalysisPdf: vi.fn(),
 }));
 vi.mock("@/lib/data", () => ({
@@ -41,7 +43,7 @@ vi.mock("next/link", () => ({
  */
 describe("AnalyzerHeaderActions -> SavedAnalysesPanel list refresh", () => {
   it("refreshes the saved-analyses panel after a successful Share-button save", async () => {
-    const mockSave = vi.mocked(saveAnalysis);
+    const mockSave = vi.mocked(publishAnalysis);
     mockSave.mockResolvedValue({ id: "row-1", share_token: "tok-123" });
 
     const mockFetchSaved = vi.mocked(fetchSavedAnalyses);
@@ -79,6 +81,7 @@ describe("AnalyzerHeaderActions -> SavedAnalysesPanel list refresh", () => {
               subjectLon: null,
               paramZip: undefined,
             }}
+            dealState={makeDealState()}
             headingLabel="200 Orlando Ave"
           />
           <SavedAnalysesPanel />
@@ -114,7 +117,7 @@ describe("AnalyzerHeaderActions -> SavedAnalysesPanel list refresh", () => {
 
     fireEvent.click(getByRole("button", { name: /share/i }));
 
-    // The click triggers saveSnapshot() -> saveAnalysis() -> success ->
+    // The click triggers publish() -> publishAnalysis() -> success ->
     // queryClient.invalidateQueries() -> SavedAnalysesPanel refetches and
     // now shows 2, with no page reload and no direct call between the two
     // components.
