@@ -32,6 +32,7 @@ import type {
 } from "serwist";
 
 import { registerPushHandlers } from "./sw-push";
+import { isOpaqueMapImageryUrl } from "@/lib/pwa/map-imagery-hosts";
 
 declare global {
   interface WorkerGlobalScope extends SerwistGlobalConfig {
@@ -178,6 +179,16 @@ const backendSwrAllowlist: RuntimeCaching = {
 // drop these back into defaultCache and resurrect the opaque-response bug above.
 // Derived rather than hardcoded so the next host change needs no edit here; the
 // try/catch matters because a throw at SW module scope aborts installation outright.
+// Street View images hit the same opaque-response bug documented above for
+// Supabase Storage: defaultCache's cross-origin route copies the body, throws
+// on an opaque one, and the handler synthesizes a 503. Confirmed in production
+// 2026-08-08 (browser 503, direct curl 200 for the identical URL).
+// MUST stay before `...defaultCache`.
+const streetViewNetworkOnly: RuntimeCaching = {
+  matcher: ({ url }) => isOpaqueMapImageryUrl(url),
+  handler: new NetworkOnly(),
+};
+
 const supabaseStorageHost = (() => {
   try {
     return new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").hostname;
@@ -239,6 +250,7 @@ const serwist = new Serwist({
   clientsClaim: true,
   navigationPreload: true,
   runtimeCaching: [
+    streetViewNetworkOnly,
     supabaseStorageNetworkOnly,
     backendSwrAllowlist,
     backendNetworkOnly,
