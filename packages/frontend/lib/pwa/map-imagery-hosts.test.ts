@@ -1,15 +1,13 @@
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { isOpaqueMapImageryUrl } from "./map-imagery-hosts";
 
 /**
- * Regression guard for the `cross-origin-copy-response` 503.
+ * Guards the routing predicate for Street View imagery.
  *
- * Street View images load cross-origin via <img>, so the browser hands the
- * service worker an OPAQUE response. Serwist's defaultCache cross-origin route
- * calls copyResponse on it, which throws on an opaque body, and the handler
- * then synthesizes a 503 — the image fails in the browser while a direct curl
- * of the same URL returns 200. Observed in production 2026-08-08; the same bug
- * was previously fixed for Supabase Storage (see app/sw.ts).
+ * Street View URLs are signature-bound to their exact query, so caching them is
+ * waste — the same reasoning as `supabaseStorageNetworkOnly` in app/sw.ts.
  */
 describe("isOpaqueMapImageryUrl", () => {
   it("matches the Street View Static image endpoint", () => {
@@ -61,5 +59,36 @@ describe("isOpaqueMapImageryUrl", () => {
         ),
       ),
     ).toBe(false);
+  });
+});
+
+/**
+ * Regression guard for the production failure of 2026-08-08.
+ *
+ * The service worker intercepts the <img> request and re-issues it with
+ * fetch(). A fetch() from a service worker is governed by `connect-src`, NOT
+ * `img-src` — so allowing the host in img-src alone left it blocked, workbox
+ * reported `no-response`, and the tile rendered broken while a direct curl of
+ * the identical URL returned 200. Mapbox was unaffected purely because
+ * api.mapbox.com already appears in connect-src.
+ *
+ * Both directives must list the host. Dropping either breaks Street View only
+ * in production, because Serwist is disabled in dev.
+ */
+describe("CSP allows Street View through the service worker", () => {
+  const config = readFileSync(join(process.cwd(), "next.config.mjs"), "utf8");
+
+  const directive = (name: string): string => {
+    const match = config.match(new RegExp(name + " [^;`]*"));
+    if (!match) throw new Error(name + " directive not found in next.config.mjs");
+    return match[0];
+  };
+
+  it("lists maps.googleapis.com in img-src so the <img> tag is allowed", () => {
+    expect(directive("img-src")).toContain("https://maps.googleapis.com");
+  });
+
+  it("lists maps.googleapis.com in connect-src so the SW fetch() is allowed", () => {
+    expect(directive("connect-src")).toContain("https://maps.googleapis.com");
   });
 });
