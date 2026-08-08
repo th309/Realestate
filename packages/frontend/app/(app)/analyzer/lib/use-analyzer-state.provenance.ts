@@ -8,6 +8,7 @@ import type {
   PropertyLookupResult,
 } from "@/lib/data";
 import type { DealInput } from "@propertyiq/analyzer-core";
+import type { DealStateV2 } from "./deal-state-types";
 
 /** Insurance has no RentCast source; estimate from price to match the backend
  *  prefill bundle (backend prefill-estimates.ts INSURANCE_RATE_ANNUAL). */
@@ -38,6 +39,13 @@ export interface AnalyzerStateOptions {
   paramAddress?: string;
   /** Explicit ZIP from `?zip=` URL param (highest priority). */
   paramZip?: string;
+  /**
+   * A saved deal to resume. When present, every `useState` in
+   * `useAnalyzerState` seeds from it instead of the empty defaults, and the
+   * `?address=` RentCast auto-fetch is suppressed — RentCast is a paid,
+   * quota-limited lookup and opening a saved deal is a page view.
+   */
+  initialState?: DealStateV2;
 }
 
 /** Provenance for one prefilled field, kept beside the plain-number input. */

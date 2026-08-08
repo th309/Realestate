@@ -27,11 +27,19 @@ import {
 } from "./use-analyzer-state.provenance";
 import { resolveMarketZip } from "./resolve-market-zip";
 import { getScoreLabel } from "@/app/components/scoring/score-labels";
+import {
+  resolveInitialAnalyzerState,
+  shouldAutoFetchProperty,
+} from "./use-analyzer-state.hydration";
 
 export type { FieldProvenance, ProvenanceMap };
 export { isDivergent };
 export type { AnalyzerAssumptions };
 export { DEFAULT_ASSUMPTIONS };
+// Re-exported so callers (and its test) can keep importing the auto-fetch
+// guard from the main hook module; the implementation lives in
+// use-analyzer-state.hydration.ts to keep this file under the line limit.
+export { shouldAutoFetchProperty };
 
 /**
  * Combines all the analyzer state + side effects into one consumable hook so
@@ -48,34 +56,35 @@ export function useAnalyzerState({
   initialAddress = "",
   paramAddress,
   paramZip,
+  initialState,
 }: AnalyzerStateOptions) {
-  // Empty initial state — analyzer waits for the user (or RentCast fetch) to
-  // supply numbers. Hardcoded defaults misled users into thinking the analyzer
-  // had already valued their property; null forces an explicit step.
-  const analyzer = useAnalyzer({
-    price: 0,
-    rentMonthly: null,
-    taxAnnual: null,
-    insuranceAnnual: null,
-  });
+  // A saved deal (initialState) overrides every default below to resume in
+  // place — see resolveInitialAnalyzerState for the empty-analyzer defaults.
+  const initial = resolveInitialAnalyzerState(initialState, initialAddress);
+  const analyzer = useAnalyzer(initial.input);
 
-  const [address, setAddress] = useState(initialAddress);
+  const [address, setAddress] = useState(initial.address);
   // Postcode of the suggestion the user picked from autocomplete. Mapbox hands
   // it to us as structured data, so it beats parsing the display string — and
   // it is the only market signal free-tier users get, since they never receive
   // a RentCast lookup. Cleared the moment the user edits the field by hand,
   // otherwise the previous property's ZIP would linger.
-  const [selectedZip, setSelectedZip] = useState<string | null>(null);
+  const [selectedZip, setSelectedZip] = useState<string | null>(
+    initial.selectedZip,
+  );
   const changeAddress = (next: string) => {
     setAddress(next);
     setSelectedZip(null);
   };
-  const [arvLocal, setArvLocal] = useState<number>(0);
-  const [rehabBudget, setRehabBudget] = useState<number>(45_000);
-  const [propertyType, setPropertyType] = useState<"sfh" | "mf">("sfh");
-  const [unitCount, setUnitCount] = useState<number | null>(1);
-  const [assumptions, setAssumptionsState] =
-    useState<AnalyzerAssumptions>(DEFAULT_ASSUMPTIONS);
+  const [arvLocal, setArvLocal] = useState<number>(initial.arvLocal);
+  const [rehabBudget, setRehabBudget] = useState<number>(initial.rehabBudget);
+  const [propertyType, setPropertyType] = useState<"sfh" | "mf">(
+    initial.propertyType,
+  );
+  const [unitCount, setUnitCount] = useState<number | null>(initial.unitCount);
+  const [assumptions, setAssumptionsState] = useState<AnalyzerAssumptions>(
+    initial.assumptions,
+  );
   const setAssumption = <K extends keyof AnalyzerAssumptions>(
     key: K,
     value: AnalyzerAssumptions[K],
@@ -129,7 +138,9 @@ export function useAnalyzerState({
     propertyLookup.data && "quotaExceeded" in propertyLookup.data,
   );
 
-  const [provenance, setProvenance] = useState<ProvenanceMap>({});
+  const [provenance, setProvenance] = useState<ProvenanceMap>(
+    initial.provenance,
+  );
   const prefill = useAnalyzerPrefill();
 
   const applyPrefillBundle = (
@@ -153,22 +164,25 @@ export function useAnalyzerState({
   }, [rentcastData, arvLocal, setAnalyzerInput]);
 
   // Auto-fetch on first render when address arrived via ?address= query param,
-  // saving the user a click in the common deep-link flow. Note: `mutate` from
+  // saving the user a click in the common deep-link flow — but never for a
+  // hydrated saved deal (see shouldAutoFetchProperty). Note: `mutate` from
   // useMutation is stable, so we only depend on the trigger conditions.
   const autoFetchedRef = useRef(false);
   const mutate = propertyLookup.mutate;
   useEffect(() => {
-    const trimmed = address.trim();
-    const shouldFetch =
-      !autoFetchedRef.current &&
-      isPro &&
-      trimmed.length > 5 &&
-      Boolean(paramAddress);
-    if (shouldFetch) {
-      autoFetchedRef.current = true;
-      mutate({ address: trimmed });
-    }
-  }, [isPro, address, paramAddress, mutate]);
+    if (
+      !shouldAutoFetchProperty({
+        isPro,
+        address,
+        paramAddress,
+        alreadyFetched: autoFetchedRef.current,
+        isHydrated: Boolean(initialState),
+      })
+    )
+      return;
+    autoFetchedRef.current = true;
+    mutate({ address: address.trim() });
+  }, [isPro, address, paramAddress, mutate, initialState]);
 
   const { projection, sensitivity, afterTax, breakEven, brrrrTimeline } =
     useDerivedAnalytics(analyzer.input, assumptions, arvLocal, rehabBudget);
@@ -217,6 +231,9 @@ export function useAnalyzerState({
     analyzer,
     address,
     setAddress: changeAddress,
+    selectedZip, // was internal-only; Task 11 needs it to build deal state
+    isHydrated: Boolean(initialState),
+    marketCapturedAt: initialState?.marketCapturedAt ?? null,
     arvLocal,
     setArvLocal,
     rehabBudget,
