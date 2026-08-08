@@ -226,6 +226,27 @@ export async function fetchSavedAnalysis(
   return res.json();
 }
 
+/**
+ * Autosave the working state of a saved deal.
+ *
+ * Writes `input_snapshot` and nothing else. Never returns a share token —
+ * autosave deliberately does not publish, so a link already distributed to
+ * a client keeps resolving to the version its owner chose to share.
+ */
+export async function patchDealState(
+  id: string,
+  inputSnapshot: Record<string, unknown>,
+): Promise<void> {
+  const authHeaders = await getAuthHeaders();
+  const res = await fetch(`${API_URL}/api/analyzer/saved/${id}/state`, {
+    method: "PATCH",
+    credentials: "include",
+    headers: { "Content-Type": "application/json", ...authHeaders },
+    body: JSON.stringify({ input_snapshot: inputSnapshot }),
+  });
+  if (!res.ok) throw new Error(`autosave failed: ${res.status}`);
+}
+
 export {
   fetchSharedAnalysisBranding,
   downloadAnalysisPdf,
