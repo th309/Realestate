@@ -19,6 +19,7 @@ import { StrategyKPI } from "./components/Hero/StrategyKPI";
 import { JumpBar } from "@/app/components/app-shell";
 import { getJumpItems } from "./lib/jump-items";
 import { MarketScoreStrip } from "./components/MarketScoreStrip";
+import { PropertyImagery } from "./components/PropertyImagery";
 import { StaleDealNotice } from "./components/cards/StaleDealNotice";
 import { useCurrentDealState } from "./lib/use-current-deal-state";
 import type { DealStateV2 } from "./lib/deal-state-types";
@@ -223,6 +224,16 @@ export default function AnalyzerClient({
         />
 
         {displayAddress && <MarketScoreStrip piqByGeo={piqByGeo} />}
+
+        {displayAddress && (
+          <div className="max-w-2xl">
+            <PropertyImagery
+              lat={compsView.subjectLat ?? null}
+              lon={compsView.subjectLon ?? null}
+              address={displayAddress}
+            />
+          </div>
+        )}
 
         <StaleDealNotice
           marketCapturedAt={state.isHydrated ? deal.marketCapturedAt : null}

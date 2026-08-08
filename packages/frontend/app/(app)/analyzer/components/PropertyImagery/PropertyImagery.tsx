@@ -40,7 +40,7 @@ export function PropertyImagery({ lat, lon, address }: PropertyImageryProps) {
   return (
     <div
       data-property-imagery
-      className="relative overflow-hidden rounded-xl border border-outline-variant bg-surface-container-low"
+      className="relative aspect-[16/10] overflow-hidden rounded-xl border border-outline-variant bg-surface-container-low"
     >
       <div
         role="group"

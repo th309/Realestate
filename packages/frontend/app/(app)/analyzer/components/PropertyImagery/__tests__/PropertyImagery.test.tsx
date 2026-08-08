@@ -95,4 +95,12 @@ describe("PropertyImagery", () => {
     );
     expect(container).toBeEmptyDOMElement();
   });
+
+  it("pins a 16:10 aspect ratio so both 640x400 sources fill without cropping", () => {
+    const { container } = render(
+      <PropertyImagery lat={40.4} lon={-88.9} address="200 Orlando Ave" />,
+    );
+    const panel = container.querySelector("[data-property-imagery]");
+    expect(panel?.className).toContain("aspect-[16/10]");
+  });
 });
