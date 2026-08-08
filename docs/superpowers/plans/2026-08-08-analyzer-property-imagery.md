@@ -1424,9 +1424,27 @@ curl -s "https://backend-production-ee4d.up.railway.app/api/street-view/resolve?
 
 Expected: `"available": false` with `"url": null`. Confirm in the UI that this address shows the Aerial view with no Street tab, and no error.
 
-- [ ] **Step 7: Confirm billing exposure**
+- [ ] **Step 7: Cap billing exposure (required, not advisory)**
 
-In Google Cloud → Billing, set a budget alert on the project. Expected steady-state cost is $0: the SKU includes 10,000 free requests per month and one Analyzer run costs one request.
+Google's signing scheme has no expiry parameter, so a signed URL is **replayable
+indefinitely** and every replay is a billed image request. On the public share page
+that URL sits in the page source. Our per-IP throttler limits only URL _minting_ —
+replay traffic goes straight to Google and never touches our infrastructure, so it
+is invisible to us and uncapped by us.
+
+Two controls, both required:
+
+1. **Hard daily quota cap.** Google Cloud → APIs & Services → Street View Static API
+   → Quotas → set a per-day request cap. This bounds worst-case spend regardless of
+   replay. Size it to expected daily analyses with generous headroom (e.g. 500/day
+   sits far under the 10,000/month free allowance while making runaway spend
+   impossible). Exceeding the cap degrades imagery to unavailable — which the UI
+   already handles as a hidden Street tab, not an error.
+2. **Budget alert** on the project as a secondary signal.
+
+Expected steady-state cost remains $0: the SKU includes 10,000 free requests per
+month and one Analyzer run costs one request. The cap exists for the abuse case,
+not the normal one.
 
 - [ ] **Step 8: Commit any config documentation**
 
