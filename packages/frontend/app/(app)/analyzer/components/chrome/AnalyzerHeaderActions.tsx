@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { ShareButton } from "./ShareButton";
 import { PdfButton } from "./PdfButton";
+import { SaveButton } from "./SaveButton";
 import { ShareAnalysisModal } from "./ShareAnalysisModal";
 import {
   downloadAnalysisPdf,
@@ -18,6 +19,7 @@ import {
 } from "../../lib/build-analyzer-snapshot";
 import { emitAnalyzerEvent } from "../../lib/analyzer-telemetry";
 import { SAVED_ANALYSES_QUERY_KEY } from "../SavedAnalysesPanel";
+import type { SaveStatus } from "../../lib/use-deal-autosave";
 
 interface Props {
   /** True if the caller is Pro+ (save endpoint requires Pro). */
@@ -39,6 +41,32 @@ interface Props {
    * success. Called with `null` on unmount to clear the reference.
    */
   onRegisterSave?: (saveNow: (() => Promise<boolean>) | null) => void;
+  /**
+   * Existing saved-deal id, once one exists. Determines whether the Save
+   * button reads "Save deal" (first save) or "Saved" (re-save), and is what
+   * Task 11 uses to turn on `useDealAutosave`. Optional/defaulted so this
+   * component still type-checks and works standalone before Task 11 threads
+   * it down through `AnalyzerHeader` / `AnalyzerClient`.
+   */
+  dealId?: string | null;
+  /**
+   * Debounced-autosave status (Task 8's `useDealAutosave`), threaded down so
+   * the Save button can report it. Defaults to `"idle"` until Task 11 wires
+   * the real hook through the header.
+   */
+  saveStatus?: SaveStatus;
+  /**
+   * Explicit Save-button click handler. Defaults to the same save-snapshot
+   * flow PDF/Share already use, so the button is functional even before
+   * Task 11 supplies a dedicated handler.
+   */
+  onSaveClick?: () => void;
+  /**
+   * Fires with the saved row's id after a successful save, so a parent
+   * (Task 11) can capture it and enable autosave for a previously-unsaved
+   * deal.
+   */
+  onSaved?: (dealId: string) => void;
 }
 
 /**
@@ -62,6 +90,10 @@ export function AnalyzerHeaderActions({
   aiPayload,
   headingLabel,
   onRegisterSave,
+  dealId = null,
+  saveStatus = "idle",
+  onSaveClick,
+  onSaved,
 }: Props) {
   const [shareToken, setShareToken] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -80,6 +112,8 @@ export function AnalyzerHeaderActions({
   extrasRef.current = extras;
   const aiPayloadRef = useRef<AiInsightPayload | null | undefined>(aiPayload);
   aiPayloadRef.current = aiPayload;
+  const onSavedRef = useRef(onSaved);
+  onSavedRef.current = onSaved;
 
   // Builds the snapshot (pre-awaiting AI narratives) and persists it, returning
   // the fresh share token. Upserts by (owner, property address) server-side —
@@ -131,6 +165,9 @@ export function AnalyzerHeaderActions({
       // same row rather than inserting a new one) or a brand-new save shows
       // up without a page reload.
       queryClient.invalidateQueries({ queryKey: SAVED_ANALYSES_QUERY_KEY });
+      // Lets a parent capture the row id (e.g. to enable autosave for a
+      // deal that previously had none — Task 11).
+      onSavedRef.current?.(result.id);
       return result.share_token;
     } catch (err) {
       const msg =
@@ -205,9 +242,25 @@ export function AnalyzerHeaderActions({
     }
   }, [isPro, ensureToken, headingLabel]);
 
+  // Falls back to the same save-snapshot flow PDF/Share use when the parent
+  // hasn't supplied a dedicated handler yet (Task 11 wires one through
+  // `useDealAutosave`'s retry). Keeps the button functional standalone.
+  const handleSaveClick = useCallback(() => {
+    if (onSaveClick) {
+      onSaveClick();
+      return;
+    }
+    void saveSnapshot();
+  }, [onSaveClick, saveSnapshot]);
+
   return (
     <>
       <div className="flex items-center gap-2">
+        <SaveButton
+          status={saveStatus}
+          hasRow={Boolean(dealId)}
+          onClick={handleSaveClick}
+        />
         <PdfButton onClick={handlePdfClick} loading={pdfInProgress} />
         <ShareButton onClick={handleShareClick} />
       </div>
