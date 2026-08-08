@@ -1,3 +1,4 @@
+import { createHmac } from 'crypto';
 import { signGoogleMapsUrl } from './google-url-signer';
 
 const URL_UNDER_TEST =
@@ -56,5 +57,26 @@ describe('signGoogleMapsUrl', () => {
       'vNIXE0xscrmjlyV-12Nj_BvUPaw=',
     );
     expect(a).not.toEqual(b);
+  });
+
+  it('uses the decoded secret bytes as the HMAC key, not the secret string', () => {
+    const secret = 'vNIXE0xscrmjlyV-12Nj_BvUPaw=';
+
+    // What a decode-skipping implementation would produce: HMAC keyed by the
+    // normalized secret STRING rather than its decoded bytes. Our signature
+    // must differ from this, which cross-alphabet equality cannot detect.
+    const normalized = secret.replace(/-/g, '+').replace(/_/g, '/');
+    const parsed = new URL(URL_UNDER_TEST);
+    const brokenSignature = createHmac('sha1', normalized)
+      .update(`${parsed.pathname}${parsed.search}`)
+      .digest('base64')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_');
+
+    const actual = new URL(
+      signGoogleMapsUrl(URL_UNDER_TEST, secret),
+    ).searchParams.get('signature');
+
+    expect(actual).not.toEqual(brokenSignature);
   });
 });
