@@ -1,15 +1,18 @@
 /**
- * Cross-origin map imagery that must bypass Serwist's defaultCache.
+ * Cross-origin map imagery that bypasses Serwist's defaultCache.
  *
- * Street View images are loaded cross-origin via <img>, so the browser hands
- * the service worker an OPAQUE response. defaultCache's generic cross-origin
- * route runs Serwist's copyResponse on it, which throws
- * `cross-origin-copy-response` on an opaque body — the handler then
- * synthesizes a 503. The image fails in the browser while a direct curl of the
- * identical URL returns 200, and nothing in the app's own logs shows a cause.
+ * PRECAUTION, not a fix for an observed failure. Added while chasing a
+ * production 503 on Street View images that turned out to be client-side (a
+ * browser extension or AV rule on one machine — the same URL loaded fine in
+ * Firefox and from a different origin in the same Chrome). Unregistering the
+ * service worker entirely did NOT change the 503, so the SW was ruled out.
  *
- * This is the same failure already documented for Supabase Storage in
- * app/sw.ts; see `supabaseStorageNetworkOnly` there.
+ * It is kept because the reasoning behind `supabaseStorageNetworkOnly` in
+ * app/sw.ts applies here too: cross-origin <img> loads yield OPAQUE responses,
+ * and each Street View URL carries a signature bound to its exact query, so a
+ * re-mint produces a different URL. Caching them is waste at best. Note Mapbox
+ * static images are also opaque cross-origin and work fine through
+ * defaultCache, so opaque responses are not universally a problem.
  *
  * Scoped to the Street View endpoints specifically rather than all of
  * maps.googleapis.com, so any future Google Maps service we adopt has to make

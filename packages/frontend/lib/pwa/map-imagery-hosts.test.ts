@@ -2,14 +2,13 @@ import { describe, it, expect } from "vitest";
 import { isOpaqueMapImageryUrl } from "./map-imagery-hosts";
 
 /**
- * Regression guard for the `cross-origin-copy-response` 503.
+ * Guards the routing predicate for Street View imagery.
  *
- * Street View images load cross-origin via <img>, so the browser hands the
- * service worker an OPAQUE response. Serwist's defaultCache cross-origin route
- * calls copyResponse on it, which throws on an opaque body, and the handler
- * then synthesizes a 503 — the image fails in the browser while a direct curl
- * of the same URL returns 200. Observed in production 2026-08-08; the same bug
- * was previously fixed for Supabase Storage (see app/sw.ts).
+ * Street View URLs are signature-bound to their exact query, so caching them is
+ * waste — the same reasoning as `supabaseStorageNetworkOnly` in app/sw.ts.
+ * This is NOT a fix for the 2026-08-08 production 503, which was proven
+ * client-side (unregistering the service worker did not change it; the same
+ * URL loaded in Firefox and from a different origin in the same Chrome).
  */
 describe("isOpaqueMapImageryUrl", () => {
   it("matches the Street View Static image endpoint", () => {
