@@ -288,6 +288,7 @@ export {
 
   // Property imagery (Street View availability for the Analyzer)
   usePropertyImagery,
+  useGeocodedAddress,
 } from "./hooks";
 
 // ============================================================================

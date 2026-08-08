@@ -81,6 +81,7 @@ import { ScreenerModule } from './screener/screener.module';
 import { UsageModule } from './usage/usage.module';
 import { MarketExplorerModule } from './market-explorer/market-explorer.module';
 import { StreetViewModule } from './street-view/street-view.module';
+import { GeocodingModule } from './geocoding/geocoding.module';
 
 @Module({
   imports: [
@@ -178,6 +179,7 @@ import { StreetViewModule } from './street-view/street-view.module';
     UsageModule,
     MarketExplorerModule,
     StreetViewModule,
+    GeocodingModule,
   ],
   controllers: [AppController],
   providers: [
