@@ -285,6 +285,9 @@ export {
   visitorListQueryKey,
   useVisitorTimeline,
   visitorTimelineQueryKey,
+
+  // Property imagery (Street View availability for the Analyzer)
+  usePropertyImagery,
 } from "./hooks";
 
 // ============================================================================
