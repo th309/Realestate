@@ -123,6 +123,33 @@ function defaultRentcastEcho(v: unknown): DealStateV2["rentcastEcho"] {
 }
 
 /**
+ * Coercion — NOT reduction — for a v2 blob's `input`.
+ *
+ * A v2 `input` is already a full `AnalyzerInputState`: `buildDealState` wrote
+ * it from live analyzer state. It needs its numbers coerced (values can come
+ * back off the wire as strings, `financing` can be partial), but it must keep
+ * every field. `migrateSnapshot` returns exactly six — it silently drops
+ * `arv`, `rehabBudget`, `propertyClass`, `unitCount`, `marketCapRatePct`,
+ * `targetDSCR`, `capexReserveAnnualPerUnit`, `holdingMonths`,
+ * `sellingCostsPct`, `refinanceLTVPct` and `financing.amortizationYears`.
+ *
+ * That was not merely lossy. `use-analyzer-state`'s input-sync effect puts all
+ * of them straight back on mount, so the rebuilt deal state could never match
+ * the restored one — the autosave fingerprint changed on first commit and
+ * every OPEN of a saved deal wrote to the database. Spreading the raw object
+ * first and the coerced core over it keeps both properties.
+ */
+function coerceDealStateInput(raw: unknown): DealStateV2["input"] {
+  const core = migrateSnapshot(raw);
+  const source = obj(raw);
+  return {
+    ...source,
+    ...core,
+    financing: { ...obj(source.financing), ...core.financing },
+  } as DealStateV2["input"];
+}
+
+/**
  * The single source of truth for "what a fully-defaulted `DealStateV2`
  * looks like." Both the v1 harvest path and the v2 self-repair path funnel
  * every field through here so a partially-populated nested object (an
@@ -130,11 +157,19 @@ function defaultRentcastEcho(v: unknown): DealStateV2["rentcastEcho"] {
  * defaults via a shallow spread. Never throws — every read is a `typeof`
  * check or an `obj()`/`num()`/`str()` coercion, never a direct property
  * access on a value that might not be an object.
+ *
+ * `coerceInput` is the one field the two paths must treat differently: v1's
+ * `input_snapshot` is an untyped legacy blob that SHOULD be reduced to a
+ * known `DealInput`, while v2's is already whole — see
+ * `coerceDealStateInput`.
  */
-function withDealStateDefaults(candidate: DealStateCandidate): DealStateV2 {
+function withDealStateDefaults(
+  candidate: DealStateCandidate,
+  coerceInput: (raw: unknown) => DealStateV2["input"] = migrateSnapshot,
+): DealStateV2 {
   return {
     v: DEAL_STATE_VERSION,
-    input: migrateSnapshot(candidate.input),
+    input: coerceInput(candidate.input),
     address: str(candidate.address, ""),
     selectedZip:
       typeof candidate.selectedZip === "string" ? candidate.selectedZip : null,
@@ -194,7 +229,10 @@ function withDealStateDefaults(candidate: DealStateCandidate): DealStateV2 {
 export function migrateDealState(row: LegacyRow): DealStateV2 {
   const snap = obj(row?.input_snapshot);
   if (snap.v === DEAL_STATE_VERSION) {
-    return withDealStateDefaults(snap as DealStateCandidate);
+    return withDealStateDefaults(
+      snap as DealStateCandidate,
+      coerceDealStateInput,
+    );
   }
 
   const result = obj(row?.result_snapshot);

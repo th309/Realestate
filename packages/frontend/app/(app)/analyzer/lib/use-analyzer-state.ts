@@ -255,6 +255,8 @@ export function useAnalyzerState({
     marketCapturedAt: initialState?.marketCapturedAt ?? null,
     /** "Update market data" only — see useMarketRefreshGate. */
     requestMarketRefresh: marketGate.requestMarketRefresh,
+    /** False while a saved deal is showing restored market data. */
+    marketDataEnabled: marketGate.enabled,
     arvLocal,
     setArvLocal,
     rehabBudget,

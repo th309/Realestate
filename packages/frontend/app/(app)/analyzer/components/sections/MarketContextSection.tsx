@@ -37,6 +37,14 @@ interface MarketContextSectionProps {
   /** Pro + has-input gate from the parent. Combined with geo availability to
    *  decide whether to fire per-geo AI requests. */
   aiEnabled?: boolean;
+  /**
+   * False while a saved deal is showing RESTORED market data — suppresses the
+   * three per-geo fetches so opening a saved deal writes nothing (the
+   * `fallback*` props above carry the saved values). Defaults true; see
+   * `useMarketContextByGeo`. NOT YET THREADED from `AnalyzerClient` —
+   * `AnalyzerSections` sits between them and is owned elsewhere.
+   */
+  marketDataEnabled?: boolean;
 }
 
 const PILL_ORDER: PillLevel[] = ["metro", "county", "zip"];
@@ -92,6 +100,7 @@ export function MarketContextSection({
   onRefreshAi,
   aiPayloadBase,
   aiEnabled,
+  marketDataEnabled = true,
 }: MarketContextSectionProps) {
   const availablePills = useMemo<PillLevel[]>(
     () => PILL_ORDER.filter((lvl) => idForLevel(chain, lvl) != null),
@@ -114,6 +123,7 @@ export function MarketContextSection({
     chain,
     aiPayloadBase,
     aiEnabled: aiEnabled ?? false,
+    enabled: marketDataEnabled,
   });
   const data = byGeo.dataByPill[effectivePill];
   const activeAi = byGeo.aiByPill[effectivePill];

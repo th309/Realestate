@@ -91,6 +91,20 @@ export default function AnalyzerClient({
     marketContext?.piq_score?.value ?? null,
   );
 
+  // MarketContextSection fires its own three per-geo market-context queries
+  // (useMarketContextByGeo) keyed off `chain` — a THIRD call site of the same
+  // queries usePiqByGeo and useAnalyzerState already gate. Withholding the
+  // chain while a saved deal shows restored data disables all three; every
+  // value then falls through to that section's `fallback*` props, which are
+  // fed from this same restored context. Interim: the section's own
+  // `marketDataEnabled` prop is the honest seam, but `AnalyzerSections` sits
+  // between us and is owned elsewhere. Cost until it is threaded — the
+  // metro/county/ZIP pills are hidden until the user refreshes.
+  const sectionsMarketContext =
+    state.marketDataEnabled || !marketContext
+      ? marketContext
+      : { ...marketContext, chain: null };
+
   // Per-deal UI state, so a resumed deal reopens in the mode it was left in.
   // The investor GOAL below is deliberately NOT restored — spec §4.6.
   const [analysisMode, setAnalysisMode] = useState<AnalysisMode>(
@@ -328,7 +342,7 @@ export default function AnalyzerClient({
                 {...vm.cashflow}
                 {...compsView}
                 displayAddress={displayAddress}
-                marketContext={marketContext}
+                marketContext={sectionsMarketContext}
                 sectionAi={sectionAi}
                 marketContextAi={{
                   aiPayloadBase: {

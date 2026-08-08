@@ -120,6 +120,44 @@ describe("migrateDealState hardens the v2 fast path", () => {
     const row = { ...V1_ROW, input_snapshot: validV2 };
     expect(migrateDealState(row)).toEqual(validV2);
   });
+
+  // A v2 `input` is a full AnalyzerInputState, not the six-field DealInput
+  // that `migrateSnapshot` reduces a legacy blob to. Reducing it here dropped
+  // these fields on read; `use-analyzer-state`'s input-sync effect then put
+  // them back on mount, so the rebuilt state never matched the restored one
+  // and autosave PATCHed the row on every OPEN of a saved deal.
+  it("preserves the v2 input fields that migrateSnapshot would drop", () => {
+    const input = {
+      ...validV2.input,
+      arv: 415_000,
+      rehabBudget: 62_500,
+      propertyClass: "commercial_mf",
+      unitCount: 8,
+      marketCapRatePct: 6.25,
+      targetDSCR: 1.25,
+      capexReserveAnnualPerUnit: 300,
+      holdingMonths: 9,
+      sellingCostsPct: 0.07,
+      refinanceLTVPct: 0.75,
+      financing: { ...validV2.input.financing, amortizationYears: 25 },
+    };
+    const row = { ...V1_ROW, input_snapshot: { ...validV2, input } };
+
+    expect(migrateDealState(row).input).toEqual(input);
+  });
+
+  it("still coerces stringified numbers on the v2 input", () => {
+    const row = {
+      ...V1_ROW,
+      input_snapshot: {
+        ...validV2,
+        input: { ...validV2.input, price: "425000", arv: 500_000 },
+      },
+    };
+    const s = migrateDealState(row);
+    expect(s.input.price).toBe(425_000);
+    expect(s.input.arv).toBe(500_000);
+  });
 });
 
 describe("migrateDealState never throws on malformed input", () => {
