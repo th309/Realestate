@@ -40,11 +40,11 @@ describe("PropertyImagery", () => {
     render(
       <PropertyImagery lat={40.4} lon={-88.9} address="200 Orlando Ave" />,
     );
-    expect(screen.getByRole("tab", { name: /street/i })).toHaveAttribute(
-      "aria-selected",
+    expect(screen.getByRole("button", { name: /street/i })).toHaveAttribute(
+      "aria-pressed",
       "true",
     );
-    expect(screen.getByRole("tab", { name: /aerial/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /aerial/i })).toBeInTheDocument();
     expect(
       screen.getByAltText(/street view of 200 orlando ave/i),
     ).toBeInTheDocument();
@@ -61,7 +61,7 @@ describe("PropertyImagery", () => {
     render(
       <PropertyImagery lat={40.4} lon={-88.9} address="200 Orlando Ave" />,
     );
-    await userEvent.click(screen.getByRole("tab", { name: /aerial/i }));
+    await userEvent.click(screen.getByRole("button", { name: /aerial/i }));
     expect(
       screen.getByAltText(/aerial view of 200 orlando ave/i),
     ).toBeInTheDocument();
@@ -77,7 +77,7 @@ describe("PropertyImagery", () => {
       <PropertyImagery lat={40.4} lon={-88.9} address="200 Orlando Ave" />,
     );
     expect(
-      screen.queryByRole("tab", { name: /street/i }),
+      screen.queryByRole("button", { name: /street/i }),
     ).not.toBeInTheDocument();
     expect(
       screen.getByAltText(/aerial view of 200 orlando ave/i),

@@ -43,14 +43,13 @@ export function PropertyImagery({ lat, lon, address }: PropertyImageryProps) {
       className="relative overflow-hidden rounded-xl border border-outline-variant bg-surface-container-low"
     >
       <div
-        role="tablist"
+        role="group"
         aria-label="Property imagery"
         className="absolute left-3 top-3 z-10 flex gap-1 rounded-full bg-surface/90 p-1 shadow-sm"
       >
         {streetUrl && (
           <button
-            role="tab"
-            aria-selected={active === "street"}
+            aria-pressed={active === "street"}
             onClick={() => setChosen("street")}
             className={`rounded-full px-3 py-1 text-xs font-medium transition-colors duration-200 ${
               active === "street"
@@ -63,8 +62,7 @@ export function PropertyImagery({ lat, lon, address }: PropertyImageryProps) {
         )}
         {aerialUrl && (
           <button
-            role="tab"
-            aria-selected={active === "aerial"}
+            aria-pressed={active === "aerial"}
             onClick={() => setChosen("aerial")}
             className={`rounded-full px-3 py-1 text-xs font-medium transition-colors duration-200 ${
               active === "aerial"
@@ -88,12 +86,15 @@ export function PropertyImagery({ lat, lon, address }: PropertyImageryProps) {
         className="block h-full w-full object-cover"
       />
 
-      {/* Google requires visible, unmodified attribution on Street View imagery.
-          Mapbox burns its own attribution into the aerial raster. */}
+      {/* Google requires visible, unobscured attribution on Street View imagery.
+          The scrim guarantees contrast over arbitrary photo content — a drop
+          shadow alone is not reliable against bright skies or white siding. */}
       {active === "street" && (
-        <span className="absolute bottom-2 left-3 text-[11px] font-medium text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
-          Google Maps
-        </span>
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent px-3 pt-6 pb-2">
+          <span className="text-[11px] font-medium text-white">
+            Google Maps
+          </span>
+        </div>
       )}
     </div>
   );
