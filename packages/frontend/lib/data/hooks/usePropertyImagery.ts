@@ -16,10 +16,14 @@ import {
 
 const TWO_HOURS = 1000 * 60 * 60 * 2;
 
-export function usePropertyImagery(lat: number | null, lon: number | null) {
+export function usePropertyImagery(
+  lat: number | null,
+  lon: number | null,
+  address?: string,
+) {
   return useQuery<StreetViewResolution>({
-    queryKey: ["street-view", lat, lon],
-    queryFn: () => fetchStreetView(lat as number, lon as number),
+    queryKey: ["street-view", lat, lon, address ?? null],
+    queryFn: () => fetchStreetView(lat as number, lon as number, address),
     enabled: lat != null && lon != null,
     staleTime: TWO_HOURS,
     gcTime: TWO_HOURS,

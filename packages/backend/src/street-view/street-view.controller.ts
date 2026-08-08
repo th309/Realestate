@@ -13,6 +13,6 @@ export class StreetViewController {
   async resolve(
     @Query() query: ResolveStreetViewDto,
   ): Promise<StreetViewResolution> {
-    return this.streetView.resolve(query.lat, query.lon);
+    return this.streetView.resolve(query.lat, query.lon, query.address);
   }
 }

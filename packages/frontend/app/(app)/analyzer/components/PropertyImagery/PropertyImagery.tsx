@@ -29,7 +29,11 @@ const LABEL =
  * empty frame.
  */
 export function PropertyImagery({ lat, lon, address }: PropertyImageryProps) {
-  const { data } = usePropertyImagery(lat, lon);
+  // An empty address must not reach Google as a literal lookup string; the
+  // alt-text fallback below is for humans, not for panorama selection.
+  const lookupAddress = address.trim() || undefined;
+  const { data } = usePropertyImagery(lat, lon, lookupAddress);
+  const label = lookupAddress ?? "this property";
 
   if (lat == null || lon == null) return null;
 
@@ -48,7 +52,7 @@ export function PropertyImagery({ lat, lon, address }: PropertyImageryProps) {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={streetUrl}
-            alt={`Street View of ${address}`}
+            alt={`Street View of ${label}`}
             className="block h-full w-full object-cover"
           />
           <figcaption className={LABEL}>Street</figcaption>
@@ -69,7 +73,7 @@ export function PropertyImagery({ lat, lon, address }: PropertyImageryProps) {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={aerialUrl}
-            alt={`Aerial view of ${address}`}
+            alt={`Aerial view of ${label}`}
             className="block h-full w-full object-cover"
           />
           <figcaption className={LABEL}>Aerial</figcaption>

@@ -32,6 +32,7 @@ import { useAnalyzerNotes } from "./lib/use-analyzer-notes";
 import { useAnalyzerChrome } from "./lib/use-analyzer-chrome";
 import { GoalPicker } from "./components/StrategyCompare/GoalPicker";
 import { useAnalyzerAnalysis } from "./lib/use-analyzer-analysis";
+import { useSubjectCoordinates } from "./lib/use-subject-coordinates";
 import {
   deriveDealReadout,
   useAnalyzerViewModel,
@@ -145,6 +146,12 @@ export default function AnalyzerClient({
     compsView,
     lookupErrorMsg,
   } = vm;
+
+  const { subjectLat, subjectLon } = useSubjectCoordinates(
+    compsView.subjectLat,
+    compsView.subjectLon,
+    displayAddress,
+  );
 
   const pickStrategy = (s: Strategy) => {
     setFocusedStrategy(s);
@@ -286,9 +293,9 @@ export default function AnalyzerClient({
                 gating on displayAddress would suppress imagery whenever a
                 lookup returns coordinates without a resolved_address. */}
             <PropertyImagery
-              lat={compsView.subjectLat ?? null}
-              lon={compsView.subjectLon ?? null}
-              address={displayAddress ?? "this property"}
+              lat={subjectLat}
+              lon={subjectLon}
+              address={displayAddress ?? ""}
             />
 
             <GradingBlock
@@ -351,6 +358,8 @@ export default function AnalyzerClient({
                 marginalTaxRate={assumptions.marginalTaxRate}
                 {...vm.cashflow}
                 {...compsView}
+                subjectLat={subjectLat}
+                subjectLon={subjectLon}
                 displayAddress={displayAddress}
                 marketContext={sectionsMarketContext}
                 sectionAi={sectionAi}

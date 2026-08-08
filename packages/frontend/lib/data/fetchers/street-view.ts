@@ -29,10 +29,17 @@ const UNAVAILABLE: StreetViewResolution = {
 export async function fetchStreetView(
   lat: number,
   lon: number,
+  address?: string,
 ): Promise<StreetViewResolution> {
   try {
+    const query = new URLSearchParams({ lat: String(lat), lon: String(lon) });
+    // The address decides which street the camera stands on — see the backend
+    // service. Without it Google returns the physically nearest panorama,
+    // which on a corner lot photographs the property's side wall.
+    if (address?.trim()) query.set("address", address.trim());
+
     return await fetchAPI<StreetViewResolution>(
-      `/api/street-view/resolve?lat=${lat}&lon=${lon}`,
+      `/api/street-view/resolve?${query.toString()}`,
     );
   } catch {
     return UNAVAILABLE;
