@@ -102,8 +102,8 @@ export class AnalyzerAiController {
    * entitlements polls) can spike past the global 20/sec short window and
    * 429 individual sections — producing the "narrative randomly missing"
    * bug. Defense remains intact: JwtAuthGuard (auth) + tierGate.requirePro
-   * (paid tier) + AiInsightsCache (24h Redis dedupe of same-payload calls,
-   * so re-requests are nearly free LLM-wise).
+   * (paid tier) + AiInsightsCache (two-tier Redis/Postgres dedupe of
+   * same-payload calls, so re-requests are nearly free LLM-wise).
    */
   @SkipThrottle()
   @Post('ai-insights/section')

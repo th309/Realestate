@@ -20,6 +20,7 @@ import { ThresholdsService } from './thresholds.service';
 import { MarketResolutionService } from './market-resolution.service';
 import { AiInsightsService } from './ai-insights.service';
 import { AiInsightsCache } from './ai-insights.cache';
+import { AiInsightsStore } from './ai-insights.store';
 import { FreePreviewMiddleware } from './free-preview.middleware';
 import { MetricResolutionModule } from '../metric-resolution/metric-resolution.module';
 import { ScoringModule } from '../scoring/scoring.module';
@@ -58,6 +59,7 @@ import { OnboardingModule } from '../onboarding/onboarding.module';
     MarketResolutionService,
     AiInsightsService,
     AiInsightsCache,
+    AiInsightsStore,
     FreePreviewMiddleware,
   ],
   exports: [
