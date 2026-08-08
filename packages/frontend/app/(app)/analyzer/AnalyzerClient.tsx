@@ -225,16 +225,6 @@ export default function AnalyzerClient({
 
         {displayAddress && <MarketScoreStrip piqByGeo={piqByGeo} />}
 
-        {displayAddress && (
-          <div className="max-w-2xl">
-            <PropertyImagery
-              lat={compsView.subjectLat ?? null}
-              lon={compsView.subjectLon ?? null}
-              address={displayAddress}
-            />
-          </div>
-        )}
-
         <StaleDealNotice
           marketCapturedAt={state.isHydrated ? deal.marketCapturedAt : null}
           onRefresh={deal.refreshMarketData}
@@ -291,6 +281,15 @@ export default function AnalyzerClient({
                 noGoalFit={noGoalFit}
               />
             )}
+
+            {/* No address guard: the panel self-guards on coordinates, and
+                gating on displayAddress would suppress imagery whenever a
+                lookup returns coordinates without a resolved_address. */}
+            <PropertyImagery
+              lat={compsView.subjectLat ?? null}
+              lon={compsView.subjectLon ?? null}
+              address={displayAddress ?? "this property"}
+            />
 
             <GradingBlock
               result={grading.data}
