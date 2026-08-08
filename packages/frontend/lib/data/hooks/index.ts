@@ -180,3 +180,6 @@ export {
   useVisitorTimeline,
   visitorTimelineQueryKey,
 } from "./useVisitorTimeline";
+
+// Property imagery (Street View availability for the Analyzer)
+export { usePropertyImagery } from "./usePropertyImagery";
