@@ -80,6 +80,7 @@ import { SeoRevalidationModule } from './seo-revalidation/seo-revalidation.modul
 import { ScreenerModule } from './screener/screener.module';
 import { UsageModule } from './usage/usage.module';
 import { MarketExplorerModule } from './market-explorer/market-explorer.module';
+import { StreetViewModule } from './street-view/street-view.module';
 
 @Module({
   imports: [
@@ -176,6 +177,7 @@ import { MarketExplorerModule } from './market-explorer/market-explorer.module';
     ScreenerModule,
     UsageModule,
     MarketExplorerModule,
+    StreetViewModule,
   ],
   controllers: [AppController],
   providers: [
