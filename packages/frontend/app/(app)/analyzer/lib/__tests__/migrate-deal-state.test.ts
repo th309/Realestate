@@ -72,7 +72,7 @@ describe("migrateDealState upconverts a legacy v1 row", () => {
   });
 });
 
-describe("migrateDealState passes a v2 blob through untouched", () => {
+describe("migrateDealState repairs a v2 blob without discarding valid state", () => {
   it("returns the stored state as-is", () => {
     const v2 = {
       ...migrateDealState(V1_ROW),
@@ -82,6 +82,36 @@ describe("migrateDealState passes a v2 blob through untouched", () => {
     const out = migrateDealState({ ...V1_ROW, input_snapshot: v2 });
     expect(out.label).toBe("renamed");
     expect(out.notes).toBe("edited");
+  });
+});
+
+describe("migrateDealState hardens the v2 fast path", () => {
+  const validV2 = migrateDealState(V1_ROW);
+
+  it("repairs an empty assumptions object back to full defaults", () => {
+    const row = { ...V1_ROW, input_snapshot: { ...validV2, assumptions: {} } };
+    expect(migrateDealState(row).assumptions).toEqual(DEFAULT_ASSUMPTIONS);
+  });
+
+  it("repairs a v2 row missing assumptions entirely", () => {
+    const { assumptions: _drop, ...withoutAssumptions } = validV2;
+    const row = { ...V1_ROW, input_snapshot: withoutAssumptions };
+    expect(migrateDealState(row).assumptions).toEqual(DEFAULT_ASSUMPTIONS);
+  });
+
+  it("preserves a partial assumptions override and defaults the rest", () => {
+    const row = {
+      ...V1_ROW,
+      input_snapshot: { ...validV2, assumptions: { marginalTaxRate: 0.37 } },
+    };
+    const s = migrateDealState(row);
+    expect(s.assumptions.marginalTaxRate).toBe(0.37);
+    expect(s.assumptions.landValuePct).toBe(DEFAULT_ASSUMPTIONS.landValuePct);
+  });
+
+  it("round-trips a valid, complete v2 state unchanged", () => {
+    const row = { ...V1_ROW, input_snapshot: validV2 };
+    expect(migrateDealState(row)).toEqual(validV2);
   });
 });
 
