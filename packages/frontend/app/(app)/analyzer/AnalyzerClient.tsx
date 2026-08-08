@@ -26,7 +26,7 @@ import { useAnalyzerDefaultsPrefill } from "./lib/use-analyzer-defaults-prefill"
 import { StrategyKPI } from "./components/Hero/StrategyKPI";
 import { JumpBar } from "@/app/components/app-shell";
 import { getJumpItems } from "./lib/jump-items";
-import { PropertyHeader } from "./components/PropertyHeader";
+import { MarketScoreStrip } from "./components/MarketScoreStrip";
 import { AnalyzerSidebar } from "./components/chrome/AnalyzerSidebar";
 import { SavedAnalysesPanel } from "./components/SavedAnalysesPanel";
 import { RentcastBanners } from "./components/RentcastBanners";
@@ -38,7 +38,7 @@ import { useUpgradeProps } from "./lib/use-upgrade-props";
 import { deriveCashflowSummary } from "./lib/cashflow-summary";
 import { useSectionAiInsights } from "./lib/use-section-ai-insights";
 import { buildCompsViewProps } from "./lib/comps-view-props";
-import type { Strategy } from "./lib/strategy-tile-mappers";
+import { STRATEGY_LABEL, type Strategy } from "./lib/strategy-tile-mappers";
 import type { AnalysisMode } from "./components/InputPanel/StrategyControls";
 
 export default function AnalyzerClient({
@@ -66,7 +66,7 @@ export default function AnalyzerClient({
     analyzer, address, arvLocal, setArvLocal, rehabBudget,
     setRehabBudget, assumptions, setAssumption, propertyLookup, rentcastData,
     quotaExceeded, projection, afterTax, breakEven, brrrrTimeline,
-    marketContext, piqByGeo,
+    marketContext, piqByGeo, piqByGeoResolving,
   } = state;
   const { rental, flip, brrrr } = analyzer;
 
@@ -86,7 +86,7 @@ export default function AnalyzerClient({
 
   const [analysisMode, setAnalysisMode] = useState<AnalysisMode>("focused");
   // prettier-ignore
-  const { selectedGoal, setSelectedGoal, bestPlay, noGoalFit } = useSelectedGoal(
+  const { selectedGoal, activeGoal, setSelectedGoal, bestPlay, noGoalFit } = useSelectedGoal(
     analyzer, projection, assumptions, analysisMode, hasGradableInput,
   );
   const [focusedStrategy, setFocusedStrategy] = useState<Strategy>(bestPlay);
@@ -176,7 +176,7 @@ export default function AnalyzerClient({
   });
 
   const sectionAi = useSectionAiInsights({
-    enabled: isPro && hasGradableInput,
+    enabled: isPro && hasGradableInput && !piqByGeoResolving, // see usePiqByGeo.isResolving
     input: analyzer.input,
     rental,
     flip,
@@ -186,7 +186,7 @@ export default function AnalyzerClient({
     grading: grading.data ?? null,
     strategy: toEngineStrategy(activeStrategy) ?? null,
     piqByGeo,
-    goal: selectedGoal,
+    goal: activeGoal,
     projection,
   });
 
@@ -221,8 +221,10 @@ export default function AnalyzerClient({
   );
 
   return (
-    <main className="min-h-screen bg-surface">
-      <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-8">
+    // `data-piq-theme` maps the M3 neutrals onto the piq palette for this
+    // subtree so shared shells restyle with it — see globals.css.
+    <main data-piq-theme className="min-h-screen bg-piq-canvas">
+      <div className="max-w-7xl mx-auto px-4 md:px-6 py-5 md:py-6">
         <AnalyzerHeader
           isPro={isPro}
           headingLabel={displayAddress ?? "analysis"}
@@ -231,23 +233,23 @@ export default function AnalyzerClient({
           compsView={compsView}
           activeStrategy={activeStrategy}
           activeEngineStrategy={toEngineStrategy(activeStrategy) ?? null}
-          selectedGoal={selectedGoal ?? null}
+          selectedGoal={activeGoal}
           displayAddress={displayAddress}
           paramZip={params.zip}
           notes={notesState.notes}
           shareNotes={notesState.shareNotes}
           onRegisterSave={notesState.registerSave}
+          strategyLabel={STRATEGY_LABEL[activeStrategy]}
         />
 
-        {displayAddress && (
-          <PropertyHeader address={displayAddress} piqByGeo={piqByGeo} />
-        )}
+        {displayAddress && <MarketScoreStrip piqByGeo={piqByGeo} />}
 
-        {/* Mockup: `grid-template-columns: 344px minmax(0, 1fr)` above 1140px,
-            single column below. The input column is a fixed 344px, not a
-            fraction — that width is what the panel's two-up field grid is
-            designed against. */}
-        <div className="grid grid-cols-1 items-start gap-4 min-[1140px]:grid-cols-[344px_minmax(0,1fr)]">
+        {/* Spec: `344px minmax(0, 1fr)` above 1140px, single column below. The
+            input column is a fixed 344px, not a fraction — that width is what
+            the panel's two-up field grid is designed against. Cells stretch
+            rather than start-align, so the sidebar can stick — see
+            AnalyzerSidebar. */}
+        <div className="grid grid-cols-1 gap-4 min-[1140px]:grid-cols-[344px_minmax(0,1fr)]">
           <AnalyzerSidebar
             inputPanel={inputPanel}
             propertyRecord={rentcastData?.property_record}

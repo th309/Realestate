@@ -149,6 +149,7 @@ export function GradingResultPanel({
       marketAdjustment={result.marketAdjustment}
       finalGpa={result.finalGpa}
       finalLetter={result.letter}
+      presetLabel={presetLabel}
     />
   );
 

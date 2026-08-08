@@ -102,26 +102,69 @@
   --foreground: var(--md-on-surface);
 
   /* ===========================================================================
-     PROPERTYIQ ANALYZER PALETTE (Robinhood-grade polish layer)
-     Scoped to app/analyzer/components/primitives/* — distinct from M3 tokens.
-     Slate-text + sharp accent palette for headline metrics and charts.
+     PROPERTYIQ ANALYZER PALETTE
+     Scoped to app/(app)/analyzer/** — distinct from the M3 tokens above.
+     Values are taken from docs/superpowers/mockups/2026-08-02/piq-analyzer-mockup.html,
+     which is the approved visual spec for the Deal Analyzer. The neutrals are
+     indigo-tinted rather than slate so the dashboard sits in the brand's hue
+     family; the accents are tuned dark enough to read as TEXT on a pale card,
+     which the old bright-fill values (#ffb300 amber at 1.9:1, #00c853 green at
+     2.0:1) were not.
+
+     Three-part accent pattern, mirroring M3's colour/on-colour/container:
+       --piq-X         the accent as text or a stroke on a pale surface
+       --piq-X-soft    its tinted container fill (badges, tiles, callouts)
+       --piq-green-bright  the saturated FILL green, for bars only — never text
      ========================================================================= */
+
+  /* Neutrals — canvas is the page, surface is a card, soft is a recessed well */
+  --piq-canvas: #f5f6fa;
+  --piq-surface: #ffffff;
+  --piq-surface-dark: #1a1a2e;
+  --piq-soft: #edeff7;
+  --piq-border: #e4e7f2;
+
+  /* Text ramp: ink for headings and figures, body for prose, muted for labels.
+     `muted` is the spec's #8b91a8 nudged one step darker: at the original it
+     measured 2.90:1 on the page canvas, just under the 3:1 floor for UI text,
+     and micro-labels sit on canvas as often as on a card. */
+  --piq-text-primary: #12141d;
+  --piq-text-body: #5b6076;
+  --piq-text-muted: #8389a2;
+
+  /* Accents */
   --piq-indigo: #3949ab;
   /* Foreground for anything FILLED with --piq-indigo. Indigo flips from deep
      to pale in dark mode, so white text on it drops to a 2.66:1 ratio. */
   --piq-on-indigo: #ffffff;
   --piq-indigo-dark: #1a237e;
-  --piq-green: #00c853;
-  --piq-red: #e53935;
-  --piq-amber: #ffb300;
-  --piq-teal: #00acc1;
-  --piq-orange: #fb8c00;
-  --piq-surface: #ffffff;
-  --piq-surface-dark: #1a1a2e;
-  --piq-canvas: #f8fafc;
-  --piq-text-primary: #0f172a;
-  --piq-text-muted: #64748b;
-  --piq-border: #e2e8f0;
+  --piq-indigo-soft: #eef0fb;
+  /* Green and amber are one step darker than the spec's #00a84a / #e07b00.
+     Those two are the only accents in the set that don't clear AA as text on
+     a white card (3.13:1 and 3.00:1) or inside their own container (2.84:1
+     and 2.73:1) — and both carry real copy: the market-adjustment row, the
+     grade pills, the positive-figure treatment. Darkening them also fixes the
+     jump-bar tiles, which put white on the same fills at 3.1:1. The hue and
+     saturation are unchanged; only lightness moved. The saturated spec green
+     survives as `--piq-green-bright` for bar fills, where the 3:1 non-text
+     floor applies instead. */
+  --piq-green: #008139;
+  --piq-green-bright: #00c853;
+  --piq-green-soft: #e6f8ee;
+  --piq-red: #b3261e;
+  --piq-red-soft: #fdecea;
+  --piq-amber: #a95d00;
+  --piq-amber-soft: #fff3e0;
+  --piq-orange: #d2691e;
+  --piq-violet: #7c4dff;
+  --piq-violet-soft: #f1ecff;
+  --piq-teal: #00838f;
+  --piq-teal-soft: #e0f7fa;
+
+  /* Card elevation. Two stacked low-opacity layers, not a single blur — the
+     tight one draws the edge, the wide one gives it lift off the canvas. */
+  --piq-shadow:
+    0 1px 2px rgba(18, 20, 29, 0.05), 0 2px 8px rgba(18, 20, 29, 0.04);
 }
 
 /* PropertyIQ Dark Mode (brand spec §3.4) */
@@ -205,26 +248,44 @@
     --md-inverse-primary: #3949ab;
 
     /* PropertyIQ analyzer palette — dark values.
-       These were defined ONLY in :root, so in dark mode --piq-text-primary
-       stayed #0f172a (near-black slate) and --piq-surface stayed #ffffff.
+       These were once defined ONLY in :root, so in dark mode
+       --piq-text-primary stayed near-black and --piq-surface stayed white.
        Every analyzer primitive built on this palette rendered dark text on a
        dark surface: the inactive strategy chips ("Fix & Flip", "BRRRR")
-       measured a 1.05 contrast ratio, i.e. invisible. Values follow the same
-       dark treatment as the M3 tokens above. */
+       measured a 1.05 contrast ratio, i.e. invisible. Every token in the light
+       block above must therefore have a value here too.
+
+       The accents invert: on a dark card the pale tint is the readable text
+       colour and the deep one becomes the container. --piq-green-bright is the
+       exception — it is a bar fill, so it stays saturated in both schemes. */
+    --piq-canvas: #0f1119;
+    --piq-surface: #1a1d29;
+    --piq-surface-dark: #0f1119;
+    --piq-soft: #232838;
+    --piq-border: #2a2f42;
+
+    --piq-text-primary: #edeff7;
+    --piq-text-body: #a5abc2;
+    --piq-text-muted: #797f96;
+
     --piq-indigo: #8c9ae8;
     --piq-on-indigo: #12141d;
     --piq-indigo-dark: #5c6bc0;
+    --piq-indigo-soft: #232841;
     --piq-green: #3dd87a;
+    --piq-green-bright: #00c853;
+    --piq-green-soft: #17301f;
     --piq-red: #f2b8b5;
+    --piq-red-soft: #33201f;
     --piq-amber: #ffb74d;
-    --piq-teal: #4dd0e1;
+    --piq-amber-soft: #33280f;
     --piq-orange: #ffa726;
-    --piq-surface: #1a1d29;
-    --piq-surface-dark: #0f1119;
-    --piq-canvas: #0f1119;
-    --piq-text-primary: #edeff7;
-    --piq-text-muted: #a5abc2;
-    --piq-border: #2a2f42;
+    --piq-violet: #b39dff;
+    --piq-violet-soft: #241f38;
+    --piq-teal: #4dd0e1;
+    --piq-teal-soft: #13292e;
+
+    --piq-shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
 
     /* Legacy mappings */
     --background: var(--md-surface);
@@ -294,6 +355,38 @@
   --color-background: var(--md-surface);
   --color-foreground: var(--md-on-surface);
 
+  /* Analyzer palette as Tailwind utilities — `bg-piq-surface`, `text-piq-ink`,
+     `border-piq-line`, `shadow-piq`, `rounded-piq`. The analyzer is styled
+     against these rather than the M3 set; mixing the two is what produced
+     lavender `outline-variant` hairlines and navy headings on a spec that
+     calls for near-black on a fine indigo-grey rule. */
+  --color-piq-canvas: var(--piq-canvas);
+  --color-piq-surface: var(--piq-surface);
+  --color-piq-soft: var(--piq-soft);
+  --color-piq-line: var(--piq-border);
+  --color-piq-ink: var(--piq-text-primary);
+  --color-piq-body: var(--piq-text-body);
+  --color-piq-muted: var(--piq-text-muted);
+  --color-piq-indigo: var(--piq-indigo);
+  --color-piq-on-indigo: var(--piq-on-indigo);
+  --color-piq-indigo-soft: var(--piq-indigo-soft);
+  --color-piq-green: var(--piq-green);
+  --color-piq-green-bright: var(--piq-green-bright);
+  --color-piq-green-soft: var(--piq-green-soft);
+  --color-piq-red: var(--piq-red);
+  --color-piq-red-soft: var(--piq-red-soft);
+  --color-piq-amber: var(--piq-amber);
+  --color-piq-amber-soft: var(--piq-amber-soft);
+  --color-piq-violet: var(--piq-violet);
+  --color-piq-violet-soft: var(--piq-violet-soft);
+  --color-piq-teal: var(--piq-teal);
+  --color-piq-teal-soft: var(--piq-teal-soft);
+
+  --shadow-piq: var(--piq-shadow);
+  /* The spec's card radius. Between Tailwind's rounded-xl (12) and 2xl (16),
+     so it needs its own token rather than the nearest default. */
+  --radius-piq: 14px;
+
   /* M3 Typography - Roboto */
   --font-sans: var(--font-roboto);
   --font-mono: var(--font-roboto-mono);
@@ -316,6 +409,60 @@ body {
 }
 
 /* =============================================================================
+   ANALYZER THEME SCOPE
+   Re-points the M3 neutrals at the piq palette for the subtree marked
+   `data-piq-theme` — the Deal Analyzer.
+
+   Why a scoped remap rather than restyling components: the analyzer shares
+   KpiTile, JumpBar and DataTable with the map, markets and screener. Rewriting
+   those in piq tokens would drag three other pages along; forking them would
+   duplicate the shells. Overriding the tokens underneath them instead means a
+   shared component renders in the analyzer's palette inside the analyzer and
+   its normal M3 palette everywhere else, with no per-component branching.
+
+   The page background is NOT part of this. M3 uses one `surface` for both the
+   page and its cards, which is why the analyzer's cards used to sit flat on
+   the canvas; the spec separates them (#f5f6fa page, #ffffff card). So
+   `--md-surface` becomes the CARD white here, and the page element carries
+   `bg-piq-canvas` explicitly.
+   ============================================================================= */
+[data-piq-theme] {
+  --md-surface: var(--piq-surface);
+  --md-surface-bright: var(--piq-surface);
+  --md-surface-container-lowest: var(--piq-canvas);
+  --md-surface-container-low: var(--piq-canvas);
+  --md-surface-container: var(--piq-soft);
+  --md-surface-container-high: var(--piq-soft);
+  --md-surface-container-highest: var(--piq-soft);
+  --md-surface-dim: var(--piq-canvas);
+
+  --md-on-surface: var(--piq-text-primary);
+  /* Body, not muted. The spec's `--muted` (#8b91a8) is a 2.9:1 label colour it
+     uses only for 10px uppercase eyebrows; `on-surface-variant` also carries
+     real prose here, so it maps to `--body` (#5b6076, 6.0:1) and micro-labels
+     ask for `text-piq-muted` explicitly. */
+  --md-on-surface-variant: var(--piq-text-body);
+
+  --md-outline-variant: var(--piq-border);
+  --md-outline: var(--piq-text-muted);
+
+  --md-primary: var(--piq-indigo);
+  --md-on-primary: var(--piq-on-indigo);
+  --md-primary-container: var(--piq-indigo-soft);
+  --md-on-primary-container: var(--piq-indigo);
+
+  --md-tertiary: var(--piq-green);
+  --md-tertiary-text: var(--piq-green);
+  --md-tertiary-container: var(--piq-green-soft);
+
+  --md-error: var(--piq-red);
+  --md-error-container: var(--piq-red-soft);
+
+  --md-warning: var(--piq-amber);
+  --md-warning-container: var(--piq-amber-soft);
+}
+
+/* =============================================================================
    MOBILE SAFE-AREA UTILITIES
    env(safe-area-inset-*) only resolves to non-zero when viewport-fit=cover is
    set (see app/layout.tsx viewport export). Use .pb-safe on fixed bottom bars
@@ -330,6 +477,67 @@ body {
 }
 .pt-safe {
   padding-top: env(safe-area-inset-top);
+}
+
+/* =============================================================================
+   ANALYZER RANGE INPUT
+   The spec's `.trk` — a 5px rail with an indigo fill and a white knob ringed
+   in indigo. `accent-color` alone gets the hue right but keeps the platform's
+   solid thumb and thicker rail, which reads heavier than the rest of the
+   panel's hairline vocabulary.
+
+   The fill is painted with a gradient driven by `--piq-range-pct`, which the
+   component sets from its value: WebKit has no ::-webkit-slider-progress, so
+   a filled lower track has to come from the background either way. Firefox
+   gets the same look natively via ::-moz-range-progress.
+   ============================================================================= */
+.piq-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 14px;
+  background: transparent;
+  cursor: pointer;
+}
+.piq-range::-webkit-slider-runnable-track {
+  height: 5px;
+  border-radius: 99px;
+  background: linear-gradient(
+    to right,
+    var(--piq-indigo) 0 var(--piq-range-pct, 0%),
+    var(--piq-border) var(--piq-range-pct, 0%) 100%
+  );
+}
+.piq-range::-moz-range-track {
+  height: 5px;
+  border-radius: 99px;
+  background: var(--piq-border);
+}
+.piq-range::-moz-range-progress {
+  height: 5px;
+  border-radius: 99px;
+  background: var(--piq-indigo);
+}
+.piq-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -4.5px;
+  border-radius: 50%;
+  background: var(--piq-surface);
+  border: 2px solid var(--piq-indigo);
+}
+.piq-range::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--piq-surface);
+  border: 2px solid var(--piq-indigo);
+}
+.piq-range:focus-visible {
+  outline: 2px solid var(--piq-indigo);
+  outline-offset: 4px;
 }
 
 /* Sidebar width utility - fixed on mobile, dynamic on desktop */

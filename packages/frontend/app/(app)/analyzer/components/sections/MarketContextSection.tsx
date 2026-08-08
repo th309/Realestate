@@ -2,6 +2,7 @@
 import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
+import { PiqSegmented } from "../primitives/card";
 import { SectionWrapper } from "./SectionWrapper";
 import { MetricBlock } from "../primitives/MetricBlock";
 import type { MarketContextChain } from "@/lib/data";
@@ -245,7 +246,7 @@ export function MarketContextSection({
   );
 }
 
-/** Pill row mirroring StrategyChips for visual unity. */
+/** Geography selector — the shared segmented control, not a bespoke pill row. */
 function GeoPills({
   pills,
   active,
@@ -256,40 +257,14 @@ function GeoPills({
   onChange: (lvl: PillLevel) => void;
 }) {
   return (
-    <div
-      role="tablist"
-      aria-label="Market context geography"
-      className="flex items-center gap-2 flex-wrap mb-3"
-      data-geo-pills
-    >
-      <span className="text-xs uppercase font-semibold text-on-surface-variant mr-1">
-        View at
-      </span>
-      {pills.map((p) => {
-        const isActive = p === active;
-        return (
-          <button
-            key={p}
-            type="button"
-            role="tab"
-            aria-selected={isActive}
-            onClick={() => onChange(p)}
-            className="rounded-full px-3 py-1 text-xs font-semibold transition-colors"
-            style={{
-              background: isActive ? "var(--md-primary)" : "transparent",
-              color: isActive
-                ? "var(--md-on-primary)"
-                : "var(--md-on-surface-variant)",
-              border: isActive
-                ? "0.5px solid var(--md-primary)"
-                : "0.5px solid var(--md-outline-variant)",
-              letterSpacing: "0.02em",
-            }}
-          >
-            {PILL_LABEL[p]}
-          </button>
-        );
-      })}
+    <div className="mb-3" data-geo-pills>
+      <PiqSegmented
+        label="View at"
+        ariaLabel="Market context geography"
+        value={active}
+        onChange={onChange}
+        options={pills.map((p) => ({ value: p, label: PILL_LABEL[p] }))}
+      />
     </div>
   );
 }

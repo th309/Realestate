@@ -8,15 +8,17 @@ interface AdvisoriesStripProps {
 
 /**
  * Semantic tokens, not literals. These were hardcoded as #00C853 / #FFB300 /
- * #E53935 — near-misses for the tokens they should have been (--md-tertiary
- * IS #00c853 in light mode) that stayed fixed in dark mode. They escaped the
- * "analyzer: 0 hex" audit because the hex guard only matches Tailwind
- * arbitrary values (`[#...]`), not hex inside a style object.
+ * #E53935 — values that stayed fixed in dark mode and, in the amber's case,
+ * sat at 1.9:1 on a white pill. They escaped the "analyzer: 0 hex" audit
+ * because the hex guard only matches Tailwind arbitrary values (`[#...]`), not
+ * hex inside a style object. They now point at the analyzer palette directly
+ * rather than at the M3 tokens, so the chips are right whether or not the
+ * `data-piq-theme` scope is above them.
  */
 const STATUS_COLOR: Record<AdvisoryResult["status"], string> = {
-  pass: "var(--md-tertiary)",
-  marginal: "var(--md-warning)",
-  fail: "var(--md-error)",
+  pass: "var(--piq-green)",
+  marginal: "var(--piq-amber)",
+  fail: "var(--piq-red)",
 };
 
 function StatusIcon({ status }: { status: AdvisoryResult["status"] }) {
@@ -89,7 +91,7 @@ export function AdvisoriesStrip({ advisories }: AdvisoriesStripProps) {
             aria-label={`${a.label} status: ${a.status}, value: ${formatted}`}
             // Mockup `.rule`: pill tinted by status — border at 40% of the
             // status colour, label in the status colour, mono value.
-            className="inline-flex items-center gap-[7px] rounded-full bg-surface px-3 py-1.5 text-xs font-semibold"
+            className="inline-flex items-center gap-[7px] rounded-full bg-piq-surface px-[13px] py-1.5 text-[12.5px] font-semibold shadow-piq"
             style={{
               border: `1px solid color-mix(in srgb, ${color} 45%, transparent)`,
               color,

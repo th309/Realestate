@@ -1,17 +1,20 @@
 "use client";
 import { useState, ReactNode } from "react";
-import { piq } from "../primitives/piqTokens";
+import { RotateCw } from "lucide-react";
 import { AIAnnotation } from "../ai/AIAnnotation";
-import { LightbulbIcon } from "../primitives/LightbulbIcon";
+import { PiqCard, PiqCardHeader, PiqInsightStrip } from "../primitives/card";
+import { getSectionChrome } from "./section-chrome";
 
 interface SectionWrapperProps {
   id: string;
   title: string;
+  /** Right-rail micro-label — "Monthly", "30Y", "3 comps". */
+  label?: string;
   defaultOpen?: boolean;
   onRefresh?: () => void;
   /**
-   * AI insight text for the section. When null/undefined/empty the lightbulb
-   * row is hidden entirely. Previously the wrapper rendered the lightbulb
+   * AI insight text for the section. When null/undefined/empty the insight
+   * strip is hidden entirely. Previously the wrapper rendered the lightbulb
    * whenever an `aiAnnotation` JSX element was passed — but the inner
    * component returns null when text is empty, leaving an empty lightbulb
    * shell. Taking the text directly fixes that.
@@ -23,9 +26,21 @@ interface SectionWrapperProps {
   children: ReactNode;
 }
 
+/**
+ * Shell for every analyzer detail section: the mockup's `.card` with a `.sh`
+ * header bar and, when the AI has something to say, a full-bleed `.ai` strip
+ * along the foot.
+ *
+ * The insight sits outside the padded body on purpose. As a floating box
+ * inside the padding it read as one more element in the stack; running edge to
+ * edge under a rule reads as a footnote to the whole card, which is what it
+ * is. Tone and icon come from the section registry rather than props so the
+ * hue assignment stays in one place.
+ */
 export function SectionWrapper({
   id,
   title,
+  label,
   defaultOpen = true,
   onRefresh,
   aiText,
@@ -36,73 +51,57 @@ export function SectionWrapper({
 }: SectionWrapperProps) {
   const [open, setOpen] = useState(defaultOpen);
   const hasInsight = aiIsLoading || Boolean(aiText && aiText.trim().length > 0);
+  const { tone, icon } = getSectionChrome(id);
+
   return (
-    <section
-      data-section={id}
-      className="rounded-xl bg-surface border border-outline-variant overflow-hidden"
-    >
-      <header
-        className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-surface-container-low"
-        onClick={() => setOpen((o) => !o)}
-      >
-        <h3 className="text-sm font-semibold text-on-surface">
-          <span
-            data-section-chevron
-            aria-hidden
-            className="inline-block w-3 mr-2"
-          >
-            {open ? "▾" : "▸"}
-          </span>
-          {title}
-        </h3>
-        {onRefresh && (
-          <button
-            data-section-refresh
-            aria-label="Refresh insight"
-            onClick={(e) => {
-              e.stopPropagation();
-              onRefresh();
-            }}
-            className="text-on-surface-variant hover:text-primary text-base px-2"
-          >
-            ↻
-          </button>
-        )}
-      </header>
-      {open && (
-        <div className="px-4 pb-4 space-y-3">
-          {children}
-          {hasInsight && (
-            <div
-              data-section-ai
-              className="flex gap-2 items-start"
-              style={{
-                fontSize: "13px",
-                color: piq.textMuted,
-                padding: "12px",
-                borderRadius: 8,
-                background: "rgba(57, 73, 171, 0.04)",
-                lineHeight: 1.5,
-              }}
-            >
-              <span
-                aria-hidden
-                style={{ flexShrink: 0, color: piq.indigo, marginTop: 1 }}
+    // Full height so a two-up row ends on one line. Ragged card bottoms read
+    // as an unfinished layout, and the slack is absorbed by the chart body
+    // below, which simply gets more vertical resolution — not by a band of
+    // empty card.
+    <PiqCard fullHeight>
+      <section data-section={id} className="flex h-full flex-col">
+        <PiqCardHeader
+          icon={icon}
+          tone={tone}
+          title={title}
+          label={label}
+          open={open}
+          onToggle={() => setOpen((o) => !o)}
+          actions={
+            onRefresh ? (
+              <button
+                type="button"
+                data-section-refresh
+                aria-label="Refresh insight"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRefresh();
+                }}
+                className="grid h-7 w-7 place-items-center rounded-lg text-piq-muted transition-colors duration-200 hover:bg-piq-canvas hover:text-piq-indigo"
               >
-                <LightbulbIcon />
-              </span>
-              <div className="flex-1">
-                <AIAnnotation
-                  text={aiText}
-                  isStale={aiIsStale}
-                  isLoading={aiIsLoading}
-                  onRefresh={onRefreshAi}
-                />
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-    </section>
+                <RotateCw size={14} strokeWidth={2} aria-hidden />
+              </button>
+            ) : undefined
+          }
+        />
+        {open && (
+          <>
+            <div className="flex-1 space-y-3 p-4">{children}</div>
+            {hasInsight && (
+              <PiqInsightStrip>
+                <div data-section-ai>
+                  <AIAnnotation
+                    text={aiText}
+                    isStale={aiIsStale}
+                    isLoading={aiIsLoading}
+                    onRefresh={onRefreshAi}
+                  />
+                </div>
+              </PiqInsightStrip>
+            )}
+          </>
+        )}
+      </section>
+    </PiqCard>
   );
 }

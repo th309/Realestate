@@ -1,7 +1,7 @@
 "use client";
 
+import { Star } from "lucide-react";
 import { KpiTile } from "@/app/components/app-shell";
-import { piq } from "../primitives/piqTokens";
 import { formatNumericValue } from "../primitives/MetricBlock";
 import {
   directionalLevel,
@@ -79,15 +79,16 @@ export function StrategyKPI({
           Only the "BEST PLAY" badge surfaces here (compare mode only). */}
       {isCompareWinner && (
         <div className="flex items-center gap-2">
+          {/* Tinted container + accent text, like every other chip on the
+              page — not ink on a solid amber fill. The accent amber is tuned
+              to be legible AS TEXT on a pale surface, so using it as a fill
+              under dark text inverts the pairing it was chosen for. */}
           <span
             aria-label={`${STRATEGY_LABEL[active]} is the best play`}
-            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wider"
-            style={{
-              background: piq.amber,
-              color: piq.textPrimary,
-            }}
+            className="inline-flex items-center gap-1 rounded-full bg-piq-amber-soft px-2 py-0.5 text-[10px] font-bold tracking-wider text-piq-amber"
           >
-            ★ BEST PLAY
+            <Star size={10} fill="currentColor" strokeWidth={0} aria-hidden />
+            BEST PLAY
           </span>
         </div>
       )}

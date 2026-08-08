@@ -8,6 +8,7 @@ import type {
   BrrrrResult,
 } from "@propertyiq/analyzer-core";
 import { piq } from "../primitives/piqTokens";
+import { PiqSegmented } from "../primitives/card";
 import { SectionWrapper } from "./SectionWrapper";
 import { DirectionalBars } from "../primitives/DirectionalBars";
 import type { BarItem } from "../primitives/DirectionalBars";
@@ -123,44 +124,13 @@ export function SensitivitySection({
       aiIsLoading={aiIsLoading}
       onRefreshAi={onRefreshAi}
     >
-      {/* Metric chip selector */}
-      <div className="flex flex-wrap items-center gap-2">
-        <span
-          style={{
-            fontSize: "11px",
-            color: piq.textMuted,
-            fontWeight: 600,
-            letterSpacing: "0.08em",
-            textTransform: "uppercase",
-            marginRight: 4,
-          }}
-        >
-          Sensitivity for:
-        </span>
-        {metrics.map((m) => {
-          const isActive = m.key === selectedKey;
-          return (
-            <button
-              key={m.key}
-              type="button"
-              onClick={() => setSelectedKey(m.key)}
-              aria-pressed={isActive}
-              className="inline-flex items-center rounded-full transition-colors"
-              style={{
-                padding: "5px 12px",
-                fontSize: "12px",
-                fontWeight: 500,
-                background: isActive ? piq.indigo : "transparent",
-                color: isActive ? "#FFFFFF" : piq.textPrimary,
-                border: `0.5px solid ${isActive ? piq.indigo : piq.border}`,
-                cursor: "pointer",
-              }}
-            >
-              {m.label}
-            </button>
-          );
-        })}
-      </div>
+      <PiqSegmented
+        label="Sensitivity for"
+        ariaLabel="Sensitivity metric"
+        value={selectedKey}
+        onChange={setSelectedKey}
+        options={metrics.map((m) => ({ value: m.key, label: m.label }))}
+      />
 
       {/* Headline + confidence */}
       <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-6 items-end">

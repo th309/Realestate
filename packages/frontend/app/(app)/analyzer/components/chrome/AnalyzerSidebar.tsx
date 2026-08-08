@@ -21,13 +21,21 @@ interface AnalyzerSidebarProps {
  * reachability guard — a tall variant (commercial underwriting group, flip +
  * BRRRR fields, per-field provenance rows) must still reach its last control
  * rather than sit pinned with its bottom off-screen.
+ *
+ * `h-full` is load-bearing and easy to delete by accident. A sticky element
+ * only sticks within its own containing block, so this wrapper has to span the
+ * grid row for the panel to follow the scroll. Without it — and with
+ * `items-start` on the parent grid, which was the bug — the wrapper collapses
+ * to the panel's own height (~950px) against a results column several thousand
+ * pixels tall. The inputs then scroll away for most of the page and leave a
+ * 344px empty gutter beside every chart.
  */
 export function AnalyzerSidebar({
   inputPanel,
   propertyRecord,
 }: AnalyzerSidebarProps) {
   return (
-    <div className="hidden min-[1140px]:block">
+    <div className="hidden h-full min-[1140px]:block">
       <div className="sticky top-6 max-h-[calc(100dvh-3rem)] space-y-4 overflow-y-auto overscroll-contain">
         {inputPanel}
         {propertyRecord && <PropertyRecordCard record={propertyRecord} />}

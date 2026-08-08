@@ -29,11 +29,17 @@ export type MetricBlockProps = {
   className?: string;
 };
 
+/**
+ * Only the value scales. The label is a fixed 10px micro-label at every size —
+ * it names the figure rather than competing with it, and holding it constant
+ * is what lets a `lg` headline and an `sm` inline stat share a column without
+ * reading as two different components.
+ */
 const SIZE = {
-  sm: { value: "text-base", label: "text-[11px]" },
-  md: { value: "text-xl", label: "text-xs" },
-  lg: { value: "text-4xl", label: "text-[13px]" },
-  xl: { value: "text-[56px]", label: "text-sm" },
+  sm: { value: "text-base" },
+  md: { value: "text-xl" },
+  lg: { value: "text-4xl" },
+  xl: { value: "text-[56px]" },
 } as const;
 
 /**
@@ -132,21 +138,21 @@ export function MetricBlock({
       data-variant={variant}
       className={`flex flex-col gap-1 ${className}`}
     >
-      <div
-        className={`${sz.label} font-medium`}
-        style={{
-          color: piq.textMuted,
-          letterSpacing: "0.02em",
-        }}
-      >
+      {/* The spec's `.lab` — every micro-label on the page is 10px/700 at
+          0.11em uppercase, so a headline's caption matches the KPI captions
+          and card eyebrows instead of being a third label style. */}
+      <div className="text-[10px] font-bold uppercase tracking-[0.11em] text-piq-muted">
         {label}
       </div>
+      {/* Mono, not sans. This is the page's headline figure; the spec sets
+          every number in the mono face, and a 36px sans value beside mono KPI
+          tiles and a mono grading table read as a different quantity. */}
       <div
-        className={`${sz.value} font-semibold`}
+        className={`${sz.value} font-mono font-semibold`}
         style={{
           color: valueColor,
           fontVariantNumeric: "tabular-nums",
-          letterSpacing: "-0.02em",
+          letterSpacing: "-0.03em",
           lineHeight: 1,
         }}
       >

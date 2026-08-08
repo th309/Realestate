@@ -4,6 +4,7 @@ import type { DealGradingResult } from "@propertyiq/analyzer-core";
 import { getGradeColor } from "../../lib/grade-colors";
 import { useCountUp } from "../../lib/use-count-up";
 import type { SectionAiProps } from "../../lib/use-section-ai-insights";
+import { PiqCard, withMonoNumerals } from "../primitives/card";
 import "./grade-pulse.css";
 
 interface RecommendationCardProps {
@@ -18,6 +19,30 @@ interface RecommendationCardProps {
   aiProps?: SectionAiProps;
 }
 
+/** The spec's `.vc`: a canvas-filled pill whose value is set in mono. */
+function VerdictChip({ label, value }: { label: string; value: string }) {
+  return (
+    // The literal space is for textContent, not layout — the flex gap handles
+    // the spacing, but without it the pill copies as "Floored atD".
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-piq-line bg-piq-canvas px-3 py-[5px] text-[11.5px] font-semibold text-piq-body">
+      {label}{" "}
+      <b className="font-mono font-semibold tabular-nums text-piq-ink">
+        {value}
+      </b>
+    </span>
+  );
+}
+
+/**
+ * The verdict: a large grade mark, the call in plain words, and the reasoning
+ * underneath.
+ *
+ * The narrative is set as body prose rather than the italic indigo it used to
+ * be. A full paragraph in italic is slower to read and, in the brand's indigo,
+ * read as a pull-quote — decoration rather than the actual finding. It is the
+ * most important text on the page, so it gets the plainest treatment; only the
+ * figures inside it shift to mono, which is where the eye is going anyway.
+ */
 export function RecommendationCard({
   result,
   onCustomizeClick,
@@ -28,99 +53,75 @@ export function RecommendationCard({
   const gpa = useCountUp(result.finalGpa, { durationMs: 600, precision: 2 });
   const marketAdj = result.marketAdjustment;
   const marketAdjSign = marketAdj >= 0 ? "+" : "";
+  const aiText = aiProps?.aiText?.trim();
 
   return (
-    <div
-      data-recommendation-card
-      data-grade={result.letter}
-      className="rounded-2xl border border-outline-variant bg-surface relative overflow-hidden"
-    >
+    <PiqCard topAccent={color.fg}>
       <div
-        aria-hidden
-        className="absolute inset-x-0 top-0 h-[3px]"
-        style={{ background: color.fg }}
-      />
-      <div className="p-6 grid grid-cols-[auto_1fr] gap-6 items-center">
+        data-recommendation-card
+        data-grade={result.letter}
+        className="grid grid-cols-1 gap-5 p-[26px] sm:grid-cols-[118px_minmax(0,1fr)] sm:items-start"
+      >
         <div
           data-grade-letter
           role="img"
           aria-label={`Grade ${result.letter}, ${result.label}`}
-          className="piq-grade-letter rounded-2xl flex items-center justify-center px-6 py-2 tabular-nums"
-          style={
-            {
-              color: color.fg,
-              background: color.bg,
-              fontFamily: "var(--font-roboto-mono)",
-              fontSize: "96px",
-              fontWeight: 700,
-              lineHeight: 1,
-              "--piq-grade-glow": color.glow,
-            } as React.CSSProperties
-          }
+          className="piq-grade-letter grid size-[106px] place-items-center rounded-[22px] font-mono text-[56px] font-bold leading-none tabular-nums"
+          style={{
+            color: color.fg,
+            background: color.bg,
+            border: `1px solid color-mix(in srgb, ${color.fg} 25%, transparent)`,
+          }}
         >
           {result.letter}
         </div>
 
-        <div className="flex flex-col gap-2 min-w-0">
+        <div className="min-w-0">
           <h2
             data-recommendation-label
-            className="text-2xl font-semibold text-on-surface leading-tight"
-            style={{ fontFamily: "var(--font-source-serif)" }}
+            className="text-[26px] font-bold leading-tight tracking-[-0.02em] text-piq-ink"
           >
             {result.label}
           </h2>
+
           {aiProps?.aiIsLoading ? (
             <p
               data-recommendation-summary
               data-ai-loading
-              className="text-base italic text-primary opacity-70 leading-snug"
+              className="mt-2.5 text-[14.5px] italic leading-[1.65] text-piq-muted"
             >
               Generating deal analysis…
-            </p>
-          ) : aiProps?.aiText && aiProps.aiText.trim().length > 0 ? (
-            <p
-              data-recommendation-summary
-              data-ai-source="llm"
-              className="text-base italic text-primary leading-snug"
-            >
-              {aiProps.aiText}
             </p>
           ) : (
             <p
               data-recommendation-summary
-              data-ai-source="fallback"
-              className="text-base text-on-surface-variant leading-snug"
+              data-ai-source={aiText ? "llm" : "fallback"}
+              className="mt-2.5 text-[14.5px] leading-[1.65] text-piq-body"
             >
-              {result.summary}
+              {withMonoNumerals(aiText || result.summary)}
             </p>
           )}
-          <div data-recommendation-meta className="mt-1 flex flex-wrap gap-2">
-            <span
-              data-meta-pill="gpa"
-              className="rounded-full border border-outline-variant px-3 py-1 text-xs text-on-surface-variant tabular-nums"
-            >
-              GPA {gpa.toFixed(2)} / 4.00
+
+          <div
+            data-recommendation-meta
+            className="mt-4 flex flex-wrap items-center gap-[7px]"
+          >
+            <span data-meta-pill="gpa">
+              <VerdictChip label="GPA" value={`${gpa.toFixed(2)} / 4.00`} />
             </span>
-            <span
-              data-meta-pill="market-adj"
-              className="rounded-full border border-outline-variant px-3 py-1 text-xs text-on-surface-variant tabular-nums"
-            >
-              Market adj {marketAdjSign}
-              {marketAdj.toFixed(2)}
+            <span data-meta-pill="market-adj">
+              <VerdictChip
+                label="Market adj"
+                value={`${marketAdjSign}${marketAdj.toFixed(2)}`}
+              />
             </span>
             {result.flooredAt && (
-              <span
-                data-meta-pill="floored"
-                className="rounded-full border border-outline-variant px-3 py-1 text-xs text-on-surface-variant/70 tabular-nums"
-              >
-                Floored at {result.flooredAt}
+              <span data-meta-pill="floored">
+                <VerdictChip label="Floored at" value={result.flooredAt} />
               </span>
             )}
-            <span
-              data-meta-pill="customize"
-              className="rounded-full border border-outline-variant px-3 py-1 text-xs text-on-surface-variant"
-            >
-              Graded against {presetLabel} criteria
+            <span data-meta-pill="customize">
+              <VerdictChip label="Graded against" value={presetLabel} />
             </span>
             {onCustomizeClick && (
               <button
@@ -128,7 +129,7 @@ export function RecommendationCard({
                 data-testid="grade-edit-criteria"
                 onClick={onCustomizeClick}
                 aria-label="Edit grading criteria"
-                className="rounded-full border border-outline-variant px-3 py-1 text-xs font-semibold text-primary transition-colors duration-200 hover:bg-surface-container"
+                className="rounded-full border border-piq-line px-3 py-[5px] text-[11.5px] font-bold text-piq-indigo transition-colors duration-200 hover:bg-piq-canvas"
               >
                 Edit criteria
               </button>
@@ -136,6 +137,6 @@ export function RecommendationCard({
           </div>
         </div>
       </div>
-    </div>
+    </PiqCard>
   );
 }

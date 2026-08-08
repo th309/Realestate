@@ -1,5 +1,6 @@
 "use client";
 
+import { MapPin } from "lucide-react";
 import { AnalyzerHeaderActions } from "./AnalyzerHeaderActions";
 import {
   buildShareBundle,
@@ -27,6 +28,8 @@ interface Props {
    *  Resolves true/false so the caller can tell a real save from a guarded
    *  one (e.g. no resolved property address). */
   onRegisterSave?: (saveNow: (() => Promise<boolean>) | null) => void;
+  /** Active strategy, shown in the subline — "Buy & Hold", "BRRRR". */
+  strategyLabel?: string;
 }
 
 /**
@@ -76,11 +79,31 @@ export function AnalyzerHeader(p: Props) {
     shareNotes: p.shareNotes,
   });
 
+  // Spec head: a 23px near-black title over a single subline that says what is
+  // loaded and how it is being read. The address used to sit in its own boxed
+  // strip below, which spent a full card's height restating one line of text.
+  const subline = [p.displayAddress, p.strategyLabel]
+    .filter(Boolean)
+    .join(" · ");
+
   return (
-    <header className="flex items-center justify-between mb-4 gap-4">
-      <h1 className="text-xl md:text-2xl font-bold text-on-surface">
-        Deal Analyzer
-      </h1>
+    <header className="mb-4 flex flex-wrap items-start justify-between gap-4">
+      <div className="min-w-0">
+        <h1 className="text-[23px] font-bold leading-tight tracking-[-0.02em] text-piq-ink">
+          Deal Analyzer
+        </h1>
+        {subline && (
+          <p className="mt-0.5 flex items-center gap-[7px] text-[13px] text-piq-body">
+            <MapPin
+              size={14}
+              strokeWidth={2}
+              aria-hidden
+              className="flex-none text-piq-indigo"
+            />
+            <span className="min-w-0 truncate">{subline}</span>
+          </p>
+        )}
+      </div>
       <AnalyzerHeaderActions
         isPro={p.isPro}
         headingLabel={p.headingLabel}

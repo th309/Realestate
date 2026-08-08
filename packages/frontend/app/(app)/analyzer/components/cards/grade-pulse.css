@@ -1,12 +1,3 @@
-@keyframes piq-grade-pulse-glow {
-  from {
-    box-shadow: 0 0 0 0 var(--piq-grade-glow);
-  }
-  to {
-    box-shadow: 0 0 24px 4px var(--piq-grade-glow);
-  }
-}
-
 @keyframes piq-grade-scale-in {
   from {
     transform: scale(0.85);
@@ -18,8 +9,19 @@
   }
 }
 
+/*
+  Entrance only. This used to pair the scale-in with an infinite alternating
+  glow, which left a coloured halo pulsing behind the grade for as long as the
+  page was open — ambient decoration on the one element that least needs help
+  being noticed, and a permanent distraction while reading the verdict beside
+  it. The mark settles and then holds still.
+*/
 .piq-grade-letter {
-  animation:
-    piq-grade-scale-in 0.3s ease-out both,
-    piq-grade-pulse-glow 2s ease-in-out 0.3s infinite alternate;
+  animation: piq-grade-scale-in 0.3s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .piq-grade-letter {
+    animation: none;
+  }
 }

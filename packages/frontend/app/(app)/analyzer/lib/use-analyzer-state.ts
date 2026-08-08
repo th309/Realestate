@@ -187,7 +187,9 @@ export function useAnalyzerState({
     enabled: Boolean(zip),
   });
   const marketContext = marketContextQuery.data;
-  const { piqByGeo } = usePiqByGeo(marketContext?.chain);
+  const { piqByGeo, isResolving: piqByGeoResolving } = usePiqByGeo(
+    marketContext?.chain,
+  );
 
   const verdictPayload = useMemo(
     () => ({
@@ -239,6 +241,7 @@ export function useAnalyzerState({
     marketContext,
     marketContextLoading: marketContextQuery.isLoading,
     piqByGeo,
+    piqByGeoResolving,
     provenance,
     applyPrefillBundle,
     prefill,

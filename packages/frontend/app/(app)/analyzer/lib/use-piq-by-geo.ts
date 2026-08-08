@@ -20,6 +20,19 @@ export interface PiqByGeo {
  */
 export function usePiqByGeo(chain: MarketContextChain | null | undefined): {
   piqByGeo: PiqByGeo;
+  /**
+   * True until every enabled level has settled. A `null` score is ambiguous on
+   * its own — it means "this level has no score" AND "this level hasn't
+   * loaded yet" — so anything that snapshots `piqByGeo` into a payload needs
+   * this to tell the two apart.
+   *
+   * Without it the batched AI call fires on a half-resolved snapshot: it burns
+   * an LLM generation on scores that are about to change (the fingerprint is
+   * built from them, so the key never matches the settled one and the cache
+   * can't hit), and risks a narrative citing PIQ scores that disagree with the
+   * ones rendered in the header.
+   */
+  isResolving: boolean;
 } {
   const zip = chain?.zip;
   const countyFips = chain?.county_fips;
@@ -35,11 +48,23 @@ export function usePiqByGeo(chain: MarketContextChain | null | undefined): {
     enabled: Boolean(cbsaCode),
   });
 
+  // A disabled query (no id at that level) is settled by definition — it will
+  // never produce a score, so waiting on it would hang the gate forever for
+  // any unmetropolitan ZIP.
+  const pending =
+    (Boolean(zip) && zipQuery.isLoading) ||
+    (Boolean(countyFips) && countyQuery.isLoading) ||
+    (Boolean(cbsaCode) && metroQuery.isLoading);
+
   return {
     piqByGeo: {
       zip: zipQuery.data?.piq_score?.value ?? null,
       county: countyQuery.data?.piq_score?.value ?? null,
       metro: metroQuery.data?.piq_score?.value ?? null,
     },
+    // The chain itself arrives async. Before it lands there are no ids to
+    // query, so every level reads null — indistinguishable from "no scores
+    // anywhere" without this guard.
+    isResolving: !chain || pending,
   };
 }

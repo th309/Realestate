@@ -17,7 +17,7 @@ describe("AutoKillBanner", () => {
     const { container, getByText } = render(
       <AutoKillBanner autoKills={kills} />,
     );
-    expect(getByText("Auto-Kill Triggered")).toBeTruthy();
+    expect(getByText("Auto-kill triggered")).toBeTruthy();
     expect(container.querySelectorAll("[data-auto-kill-item]").length).toBe(2);
     expect(container.querySelector("[data-auto-kill-subtext]")).toBeTruthy();
     expect(getByText("DSCR is below 1.0")).toBeTruthy();

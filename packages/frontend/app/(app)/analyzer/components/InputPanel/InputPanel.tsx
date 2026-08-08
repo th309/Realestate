@@ -148,7 +148,7 @@ export function InputPanel({
     <aside
       data-input-panel
       data-input-panel-sticky
-      className="rounded-2xl bg-surface border border-outline-variant p-5 space-y-4"
+      className="space-y-4 rounded-piq border border-piq-line bg-piq-surface p-4 shadow-piq"
     >
       <PropertyTypeToggle
         propertyType={propertyType}
@@ -364,14 +364,17 @@ export function InputPanel({
         />
       )}
 
-      <div className="text-[10px] text-on-surface-variant pt-2 border-t border-outline-variant">
-        Initial cash:{" "}
-        <span className="font-mono">
+      {/* The spec's `.cashline`: the one figure the panel produces rather than
+          collects, so it sits on its own rule at the foot with the label left
+          and the number right — a total, not another caption. */}
+      <div className="flex items-baseline justify-between gap-3 border-t border-piq-line pt-3.5 text-[12.5px] text-piq-body">
+        <span>Initial cash</span>
+        <b className="font-mono font-semibold tabular-nums text-piq-ink">
           {fmtUsd(
             input.price * input.financing.downPaymentPct +
               input.price * (input.financing.closingCostsPct ?? 0.03),
           )}
-        </span>
+        </b>
       </div>
 
       <MetricMathPanel

@@ -125,11 +125,16 @@ export function AnalyzerSections({
   return (
     <>
       {/*
-        Above 1240px the projection and the cash-flow waterfall sit side by
-        side; below it they stack. Pairing the two widest blocks cuts roughly
-        40% of the scroll needed to reach the improvement levers.
+        Two-up rows above 1240px, stacked below — the spec's core layout move,
+        and the reason it claims ~40% less scrolling to reach the levers.
+
+        Charts pair; blocks that genuinely need the full measure do not. A
+        single-series line chart stretched across 1600px is mostly empty, so
+        every chart here has a partner. The two exceptions below earn their
+        width: comps carries a map beside its distribution, and market context
+        is a single rank of metric tiles that reads like the KPI row.
       */}
-      <div className="grid grid-cols-1 items-start gap-6 min-[1240px]:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 min-[1240px]:grid-cols-2">
         <div id="projection" className="min-w-0 scroll-mt-20">
           <ProjectionSection
             input={input}
@@ -148,17 +153,34 @@ export function AnalyzerSections({
           />
         </div>
       </div>
-      <SensitivitySection
-        input={input}
-        rental={rental}
-        flip={flip}
-        brrrr={brrrr}
-        arv={arvLocal}
-        rehabBudget={rehabBudget}
-        activeStrategy={activeStrategy}
-        salesComps={salesComps}
-        {...sectionAi.sensitivity}
-      />
+
+      {/* After-tax moves up beside sensitivity rather than sitting last: both
+          answer "what happens to this cash flow when something changes", and
+          the two are a close height match, which is what keeps a paired row
+          from leaving a dead column. */}
+      <div className="grid grid-cols-1 gap-6 min-[1240px]:grid-cols-2">
+        <div id="sensitivity" className="min-w-0 scroll-mt-20">
+          <SensitivitySection
+            input={input}
+            rental={rental}
+            flip={flip}
+            brrrr={brrrr}
+            arv={arvLocal}
+            rehabBudget={rehabBudget}
+            activeStrategy={activeStrategy}
+            salesComps={salesComps}
+            {...sectionAi.sensitivity}
+          />
+        </div>
+        <div id="aftertax" className="min-w-0 scroll-mt-20">
+          <AfterTaxSection
+            afterTax={afterTax}
+            marginalTaxRate={marginalTaxRate}
+            {...sectionAi.after_tax}
+          />
+        </div>
+      </div>
+
       <div id="comps" className="scroll-mt-20">
         <CompsSection
           subjectLat={subjectLat}
@@ -187,11 +209,6 @@ export function AnalyzerSections({
           aiEnabled={marketContextAi.aiEnabled}
         />
       </div>
-      <AfterTaxSection
-        afterTax={afterTax}
-        marginalTaxRate={marginalTaxRate}
-        {...sectionAi.after_tax}
-      />
       <NotesSection
         initialNotes={notes}
         initialShare={shareNotes}
