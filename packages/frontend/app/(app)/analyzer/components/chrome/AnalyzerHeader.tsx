@@ -7,6 +7,7 @@ import {
   mapStrategyToBestPlay,
 } from "../../lib/build-share-bundle";
 import { deriveCashflowSummary } from "../../lib/cashflow-summary";
+import type { SaveStatus } from "../../lib/use-deal-autosave";
 
 interface Props {
   isPro: boolean;
@@ -30,6 +31,11 @@ interface Props {
   onRegisterSave?: (saveNow: (() => Promise<boolean>) | null) => void;
   /** Active strategy, shown in the subline — "Buy & Hold", "BRRRR". */
   strategyLabel?: string;
+  /** Saved-deal row id, once one exists. Pass-throughs to AnalyzerHeaderActions. */
+  dealId?: string | null;
+  saveStatus?: SaveStatus;
+  onSaveClick?: () => void;
+  onSaved?: (dealId: string) => void;
 }
 
 /**
@@ -108,6 +114,10 @@ export function AnalyzerHeader(p: Props) {
         isPro={p.isPro}
         headingLabel={p.headingLabel}
         onRegisterSave={p.onRegisterSave}
+        dealId={p.dealId}
+        saveStatus={p.saveStatus}
+        onSaveClick={p.onSaveClick}
+        onSaved={p.onSaved}
         {...bundle}
       />
     </header>

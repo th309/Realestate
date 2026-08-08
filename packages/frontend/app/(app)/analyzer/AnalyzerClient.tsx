@@ -5,43 +5,51 @@ import { useEntitlements } from "@/lib/entitlements";
 import { AnalyzerHeader } from "./components/chrome/AnalyzerHeader";
 import { StrategyCompare } from "./components/StrategyCompare/StrategyCompare";
 import { AnalyzerInputPanel } from "./components/InputPanel/AnalyzerInputPanel";
-import { MobileInputSheet } from "./components/chrome/MobileInputSheet";
+import { AnalyzerOverlays } from "./components/chrome/AnalyzerOverlays";
 import { AnalyzerEmptyState } from "./components/chrome/AnalyzerEmptyState";
 import { EditInputsBar } from "./components/chrome/EditInputsBar";
 import { useAnalyzerState } from "./lib/use-analyzer-state";
 import { buildStrategyCompareProps } from "./lib/strategy-compare-builders";
-import { deriveVerdict } from "./lib/format-helpers";
 import { GradingBlock } from "./components/cards/GradingBlock";
 import { AdvisoriesStrip } from "./components/cards/AdvisoriesStrip";
 import { AnalyzerSections } from "./components/AnalyzerSections";
-import { CustomizeThresholdsDrawer } from "./components/CustomizeThresholdsDrawer/CustomizeThresholdsDrawer";
-import type { ThresholdsTabId } from "./components/CustomizeThresholdsDrawer/useDrawerState";
 import { toEngineStrategy, useGradingResult } from "./lib/use-grading-result";
 import { useAnalyzerDefaultsPrefill } from "./lib/use-analyzer-defaults-prefill";
 import { StrategyKPI } from "./components/Hero/StrategyKPI";
 import { JumpBar } from "@/app/components/app-shell";
 import { getJumpItems } from "./lib/jump-items";
 import { MarketScoreStrip } from "./components/MarketScoreStrip";
+import { StaleDealNotice } from "./components/cards/StaleDealNotice";
+import { useCurrentDealState } from "./lib/use-current-deal-state";
+import type { DealStateV2 } from "./lib/deal-state-types";
 import { AnalyzerSidebar } from "./components/chrome/AnalyzerSidebar";
 import { SavedAnalysesPanel } from "./components/SavedAnalysesPanel";
 import { RentcastBanners } from "./components/RentcastBanners";
 import { useSelectedGoal } from "./lib/use-selected-goal";
 import { useAnalyzerNotes } from "./lib/use-analyzer-notes";
-import { useMobileInputFocus } from "./lib/use-mobile-input-focus";
+import { useAnalyzerChrome } from "./lib/use-analyzer-chrome";
 import { GoalPicker } from "./components/StrategyCompare/GoalPicker";
 import { useUpgradeProps } from "./lib/use-upgrade-props";
 import { useSectionAiInsights } from "./lib/use-section-ai-insights";
-import { useAnalyzerViewModel } from "./lib/use-analyzer-view-model";
+import {
+  deriveDealReadout,
+  useAnalyzerViewModel,
+} from "./lib/use-analyzer-view-model";
 import { STRATEGY_LABEL, type Strategy } from "./lib/strategy-tile-mappers";
 import type { AnalysisMode } from "./components/InputPanel/StrategyControls";
 
 export default function AnalyzerClient({
   searchParamsPromise,
+  dealId: savedDealId,
+  initialState,
 }: {
   searchParamsPromise: Promise<{
     address?: string;
     zip?: string;
   }>;
+  /** Set when resuming a saved deal — turns on autosave. See SavedDealLoader. */
+  dealId?: string;
+  initialState?: DealStateV2;
 }) {
   const params = use(searchParamsPromise);
   const entitlements = useEntitlements();
@@ -54,7 +62,10 @@ export default function AnalyzerClient({
     initialAddress: params.address ?? "",
     paramAddress: params.address,
     paramZip: params.zip,
+    initialState,
   });
+  // Null until the first deliberate save materializes a row (onSaved).
+  const [dealId, setDealId] = useState<string | null>(savedDealId ?? null);
   // prettier-ignore
   const {
     analyzer, address, arvLocal, setArvLocal, rehabBudget,
@@ -64,32 +75,24 @@ export default function AnalyzerClient({
   } = state;
   const { rental, flip, brrrr } = analyzer;
 
-  const [inputsOpenMobile, setInputsOpenMobile] = useState(false);
+  const chrome = useAnalyzerChrome();
   const notesState = useAnalyzerNotes();
+  const { hasGradableInput, verdict } = deriveDealReadout(
+    analyzer.input,
+    rental,
+    marketContext?.piq_score?.value ?? null,
+  );
 
-  const verdict = deriveVerdict({
-    capRatePct: rental.capRatePct,
-    dscr: rental.dscr,
-    cashflowMonthly: rental.cashflowMonthly,
-    piqScore: marketContext?.piq_score?.value ?? null,
-  });
-
-  const hasGradableInput =
-    (analyzer.input.price ?? 0) > 0 &&
-    ((analyzer.input.rentMonthly ?? 0) > 0 || rental.capRatePct != null);
-
-  const [analysisMode, setAnalysisMode] = useState<AnalysisMode>("focused");
+  // Per-deal UI state, so a resumed deal reopens in the mode it was left in.
+  // The investor GOAL below is deliberately NOT restored — spec §4.6.
+  const [analysisMode, setAnalysisMode] = useState<AnalysisMode>(
+    initialState?.analysisMode ?? "focused",
+  );
   // prettier-ignore
   const { selectedGoal, activeGoal, setSelectedGoal, bestPlay, noGoalFit } = useSelectedGoal(
     analyzer, projection, assumptions, analysisMode, hasGradableInput,
   );
   const [focusedStrategy, setFocusedStrategy] = useState<Strategy>(bestPlay);
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [drawerTab, setDrawerTab] = useState<ThresholdsTabId>("thresholds");
-  const openDrawer = (tab: ThresholdsTabId) => {
-    setDrawerTab(tab);
-    setDrawerOpen(true);
-  };
 
   useAnalyzerDefaultsPrefill({
     setInput: analyzer.setInput,
@@ -111,6 +114,7 @@ export default function AnalyzerClient({
   const {
     activeStrategy,
     presetLabel,
+    savedThresholds,
     displayAddress,
     compsView,
     lookupErrorMsg,
@@ -127,11 +131,6 @@ export default function AnalyzerClient({
     subjectLon,
     mapboxToken,
   } = compsView;
-
-  // Single entry point for property input on mobile: open the sheet. Focus
-  // management on open lives in useMobileInputFocus.
-  const openInputs = () => setInputsOpenMobile(true);
-  useMobileInputFocus(inputsOpenMobile);
 
   const pickStrategy = (s: Strategy) => {
     setFocusedStrategy(s);
@@ -191,6 +190,18 @@ export default function AnalyzerClient({
     projection,
   });
 
+  const deal = useCurrentDealState({
+    state,
+    initialState,
+    dealId,
+    isPro,
+    analysisMode,
+    activeGoal,
+    thresholds: presetLabel === "Custom" ? savedThresholds : undefined,
+    notes: notesState.notes,
+    shareNotes: notesState.shareNotes,
+  });
+
   const inputPanel = (
     <AnalyzerInputPanel
       state={state}
@@ -199,7 +210,7 @@ export default function AnalyzerClient({
       analysisMode={analysisMode}
       onAnalysisModeChange={setAnalysisMode}
       onStrategyChange={setFocusedStrategy}
-      onCustomizeClick={() => openDrawer("assumptions")}
+      onCustomizeClick={() => chrome.openDrawer("assumptions")}
     />
   );
 
@@ -223,9 +234,19 @@ export default function AnalyzerClient({
           shareNotes={notesState.shareNotes}
           onRegisterSave={notesState.registerSave}
           strategyLabel={STRATEGY_LABEL[activeStrategy]}
+          dealId={dealId}
+          saveStatus={deal.saveStatus}
+          onSaved={setDealId}
+          onSaveClick={deal.saveStatus === "error" ? deal.retrySave : undefined}
         />
 
         {displayAddress && <MarketScoreStrip piqByGeo={piqByGeo} />}
+
+        <StaleDealNotice
+          marketCapturedAt={state.isHydrated ? deal.marketCapturedAt : null}
+          onRefresh={deal.refreshMarketData}
+          isRefreshing={deal.isRefreshingMarket}
+        />
 
         {/* Spec: `344px minmax(0, 1fr)` above 1140px, single column below. The
             input column is a fixed 344px, not a fraction — that width is what
@@ -246,7 +267,7 @@ export default function AnalyzerClient({
               />
             )}
             <SavedAnalysesPanel />
-            {hasGradableInput && <EditInputsBar onClick={openInputs} />}
+            {hasGradableInput && <EditInputsBar onClick={chrome.openInputs} />}
 
             <RentcastBanners
               lookupErrorMsg={lookupErrorMsg}
@@ -257,7 +278,9 @@ export default function AnalyzerClient({
 
             {/* Replaces the em-dash KPI row and $0 chart that used to render
                 pre-input; absorbs the start CTA for the sheet. */}
-            {!hasGradableInput && <AnalyzerEmptyState onStart={openInputs} />}
+            {!hasGradableInput && (
+              <AnalyzerEmptyState onStart={chrome.openInputs} />
+            )}
 
             {hasGradableInput && analysisMode === "compare" && (
               <GoalPicker
@@ -286,8 +309,8 @@ export default function AnalyzerClient({
               strategy={toEngineStrategy(activeStrategy) ?? "BUY_AND_HOLD"}
               onApplyLever={analyzer.setInput}
               {...upgradeProps}
-              onCustomizeClick={() => openDrawer("thresholds")}
-              onEditAutoKillCriteria={() => openDrawer("autokill")}
+              onCustomizeClick={() => chrome.openDrawer("thresholds")}
+              onEditAutoKillCriteria={() => chrome.openDrawer("autokill")}
               presetLabel={presetLabel}
               aiProps={sectionAi.recommendation_analysis}
             />
@@ -364,19 +387,12 @@ export default function AnalyzerClient({
         </div>
       </div>
 
-      <MobileInputSheet
-        open={inputsOpenMobile}
-        onClose={() => setInputsOpenMobile(false)}
+      <AnalyzerOverlays
+        chrome={chrome}
+        strategy={toEngineStrategy(activeStrategy) ?? "BUY_AND_HOLD"}
       >
         {inputPanel}
-      </MobileInputSheet>
-
-      <CustomizeThresholdsDrawer
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        strategy={toEngineStrategy(activeStrategy) ?? "BUY_AND_HOLD"}
-        initialTab={drawerTab}
-      />
+      </AnalyzerOverlays>
     </main>
   );
 }
