@@ -179,7 +179,15 @@ export interface SavedAnalysis {
 export type SaveAnalysisPayload = Omit<
   SavedAnalysis,
   "id" | "share_token" | "created_at"
->;
+> & {
+  /**
+   * Existing row to update, once one exists. Present once a deal has been
+   * saved once — updates that row in place instead of falling back to the
+   * `(owner, address)` upsert, which would create a second row the moment
+   * the user edits a saved deal's address.
+   */
+  id?: string;
+};
 
 export async function saveAnalysis(
   payload: SaveAnalysisPayload,

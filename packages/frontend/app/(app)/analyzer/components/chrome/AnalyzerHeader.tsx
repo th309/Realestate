@@ -2,6 +2,7 @@
 
 import { MapPin } from "lucide-react";
 import { AnalyzerHeaderActions } from "./AnalyzerHeaderActions";
+import { DealLabelField } from "./DealLabelField";
 import {
   buildShareBundle,
   mapStrategyToBestPlay,
@@ -36,6 +37,13 @@ interface Props {
   saveStatus?: SaveStatus;
   onSaveClick?: () => void;
   onSaved?: (dealId: string) => void;
+  /**
+   * User-editable deal name. Only rendered (as `DealLabelField`, replacing
+   * the static heading) once `dealId` is set — an unsaved analysis has
+   * nothing to name yet.
+   */
+  label?: string | null;
+  onLabelChange?: (next: string) => void;
 }
 
 /**
@@ -95,9 +103,17 @@ export function AnalyzerHeader(p: Props) {
   return (
     <header className="mb-4 flex flex-wrap items-start justify-between gap-4">
       <div className="min-w-0">
-        <h1 className="text-[23px] font-bold leading-tight tracking-[-0.02em] text-piq-ink">
-          Deal Analyzer
-        </h1>
+        {p.dealId ? (
+          <DealLabelField
+            label={p.label ?? null}
+            fallback={p.displayAddress ?? "analysis"}
+            onChange={p.onLabelChange ?? (() => {})}
+          />
+        ) : (
+          <h1 className="text-[23px] font-bold leading-tight tracking-[-0.02em] text-piq-ink">
+            Deal Analyzer
+          </h1>
+        )}
         {subline && (
           <p className="mt-0.5 flex items-center gap-[7px] text-[13px] text-piq-body">
             <MapPin
@@ -115,6 +131,7 @@ export function AnalyzerHeader(p: Props) {
         headingLabel={p.headingLabel}
         onRegisterSave={p.onRegisterSave}
         dealId={p.dealId}
+        label={p.label}
         saveStatus={p.saveStatus}
         onSaveClick={p.onSaveClick}
         onSaved={p.onSaved}

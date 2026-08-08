@@ -50,6 +50,12 @@ interface Props {
    */
   dealId?: string | null;
   /**
+   * User-editable deal name (`DealLabelField`), threaded down so an
+   * explicit Save carries the current rename — not just autosave's
+   * `input_snapshot` copy. `null`/undefined saves as unnamed.
+   */
+  label?: string | null;
+  /**
    * Debounced-autosave status (Task 8's `useDealAutosave`), threaded down so
    * the Save button can report it. Defaults to `"idle"` until Task 11 wires
    * the real hook through the header.
@@ -91,6 +97,7 @@ export function AnalyzerHeaderActions({
   headingLabel,
   onRegisterSave,
   dealId = null,
+  label = null,
   saveStatus = "idle",
   onSaveClick,
   onSaved,
@@ -114,10 +121,15 @@ export function AnalyzerHeaderActions({
   aiPayloadRef.current = aiPayload;
   const onSavedRef = useRef(onSaved);
   onSavedRef.current = onSaved;
+  const dealIdRef = useRef(dealId);
+  dealIdRef.current = dealId;
+  const labelRef = useRef(label);
+  labelRef.current = label;
 
   // Builds the snapshot (pre-awaiting AI narratives) and persists it, returning
-  // the fresh share token. Upserts by (owner, property address) server-side —
-  // repeat saves of the same property update the existing row rather than
+  // the fresh share token. Once `dealId` exists the row is updated BY ID
+  // server-side; before that it upserts by (owner, property address) — either
+  // way, repeat saves of the same deal update the existing row rather than
   // creating a new one. Requires a resolved address: manual/numbers-only
   // analyses (no address entered, RentCast unresolved) have no property to
   // key the save on, so the backend now rejects address_full being blank —
@@ -158,7 +170,10 @@ export function AnalyzerHeaderActions({
         aiNarratives: narratives ?? extrasRef.current?.aiNarratives,
       };
       const result = await saveAnalysis(
-        buildAnalyzerSnapshot(stateRef.current, derivedRef.current, merged),
+        buildAnalyzerSnapshot(stateRef.current, derivedRef.current, merged, {
+          id: dealIdRef.current ?? undefined,
+          label: labelRef.current,
+        }),
       );
       setShareToken(result.share_token);
       // Refresh the "Saved analyses" panel so a re-save (which upserts the

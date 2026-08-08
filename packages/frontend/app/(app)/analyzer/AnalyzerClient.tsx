@@ -13,7 +13,7 @@ import { buildStrategyCompareProps } from "./lib/strategy-compare-builders";
 import { GradingBlock } from "./components/cards/GradingBlock";
 import { AdvisoriesStrip } from "./components/cards/AdvisoriesStrip";
 import { AnalyzerSections } from "./components/AnalyzerSections";
-import { toEngineStrategy, useGradingResult } from "./lib/use-grading-result";
+import { toEngineStrategy } from "./lib/use-grading-result";
 import { useAnalyzerDefaultsPrefill } from "./lib/use-analyzer-defaults-prefill";
 import { StrategyKPI } from "./components/Hero/StrategyKPI";
 import { JumpBar } from "@/app/components/app-shell";
@@ -29,8 +29,7 @@ import { useSelectedGoal } from "./lib/use-selected-goal";
 import { useAnalyzerNotes } from "./lib/use-analyzer-notes";
 import { useAnalyzerChrome } from "./lib/use-analyzer-chrome";
 import { GoalPicker } from "./components/StrategyCompare/GoalPicker";
-import { useUpgradeProps } from "./lib/use-upgrade-props";
-import { useSectionAiInsights } from "./lib/use-section-ai-insights";
+import { useAnalyzerAnalysis } from "./lib/use-analyzer-analysis";
 import {
   deriveDealReadout,
   useAnalyzerViewModel,
@@ -68,10 +67,9 @@ export default function AnalyzerClient({
   const [dealId, setDealId] = useState<string | null>(savedDealId ?? null);
   // prettier-ignore
   const {
-    analyzer, address, arvLocal, setArvLocal, rehabBudget,
-    setRehabBudget, assumptions, setAssumption, propertyLookup, rentcastData,
-    quotaExceeded, projection, afterTax, breakEven, brrrrTimeline,
-    marketContext, piqByGeo, piqByGeoResolving,
+    analyzer, address, arvLocal, rehabBudget, assumptions, setAssumption,
+    propertyLookup, rentcastData, quotaExceeded, projection, afterTax,
+    breakEven, brrrrTimeline, marketContext, piqByGeo,
   } = state;
   const { rental, flip, brrrr } = analyzer;
 
@@ -119,18 +117,6 @@ export default function AnalyzerClient({
     compsView,
     lookupErrorMsg,
   } = vm;
-  const { grossRentMonthly, debtServiceMonthly, opexAnnual, vacancyMonthly } =
-    vm.cashflow;
-  const {
-    salesComps,
-    rentalComps,
-    pricePerSqftValues,
-    yourPricePerSqft,
-    subjectPrice,
-    subjectLat,
-    subjectLon,
-    mapboxToken,
-  } = compsView;
 
   const pickStrategy = (s: Strategy) => {
     setFocusedStrategy(s);
@@ -148,46 +134,12 @@ export default function AnalyzerClient({
     onPickStrategy: pickStrategy,
   });
 
-  const grading = useGradingResult({
-    input: analyzer.input,
+  const { grading, upgradeProps, sectionAi } = useAnalyzerAnalysis({
+    state,
+    isPro,
     activeStrategy,
     hasGradableInput,
-    piqScore: marketContext?.piq_score?.value,
-    arv: arvLocal,
-    rehabBudget,
-    holdingMonths: assumptions.holdingMonths,
-    sellingCostsPct: assumptions.sellingCostsPct,
-    marketZip: marketContext?.geo_id ?? undefined,
-    refinanceLTVPct: assumptions.refinanceLTVPct,
-    seasoningMonths: assumptions.seasoningMonths,
-    rehabMonths: assumptions.rehabMonths,
-  });
-  const upgradeProps = useUpgradeProps({
-    input: analyzer.input,
-    setInput: analyzer.setInput,
-    arvLocal,
-    setArvLocal,
-    rehabBudget,
-    setRehabBudget,
-    assumptions,
-    setAssumption,
-    marketZip: marketContext?.geo_id ?? undefined,
-    marketPiqScore: marketContext?.piq_score?.value,
-  });
-
-  const sectionAi = useSectionAiInsights({
-    enabled: isPro && hasGradableInput && !piqByGeoResolving, // see usePiqByGeo.isResolving
-    input: analyzer.input,
-    rental,
-    flip,
-    brrrr,
-    rentcast: rentcastData,
-    piq: marketContext,
-    grading: grading.data ?? null,
-    strategy: toEngineStrategy(activeStrategy) ?? null,
-    piqByGeo,
-    goal: activeGoal,
-    projection,
+    activeGoal,
   });
 
   const deal = useCurrentDealState({
@@ -235,6 +187,8 @@ export default function AnalyzerClient({
           onRegisterSave={notesState.registerSave}
           strategyLabel={STRATEGY_LABEL[activeStrategy]}
           dealId={dealId}
+          label={deal.label}
+          onLabelChange={deal.setLabel}
           saveStatus={deal.saveStatus}
           onSaved={setDealId}
           onSaveClick={deal.saveStatus === "error" ? deal.retrySave : undefined}
@@ -342,6 +296,9 @@ export default function AnalyzerClient({
               </div>
             )}
 
+            {/* vm.cashflow and compsView are spread whole: both are props
+                objects built for this component by deriveCashflowSummary /
+                buildCompsViewProps. */}
             {hasGradableInput && (
               <AnalyzerSections
                 input={analyzer.input}
@@ -354,19 +311,9 @@ export default function AnalyzerClient({
                 rehabBudget={rehabBudget}
                 activeStrategy={activeStrategy}
                 marginalTaxRate={assumptions.marginalTaxRate}
-                grossRentMonthly={grossRentMonthly}
-                vacancyMonthly={vacancyMonthly}
-                opexAnnual={opexAnnual}
-                debtServiceMonthly={debtServiceMonthly}
-                subjectLat={subjectLat}
-                subjectLon={subjectLon}
+                {...vm.cashflow}
+                {...compsView}
                 displayAddress={displayAddress}
-                pricePerSqftValues={pricePerSqftValues}
-                yourPricePerSqft={yourPricePerSqft}
-                subjectPrice={subjectPrice}
-                salesComps={salesComps}
-                rentalComps={rentalComps}
-                mapboxToken={mapboxToken}
                 marketContext={marketContext}
                 sectionAi={sectionAi}
                 marketContextAi={{

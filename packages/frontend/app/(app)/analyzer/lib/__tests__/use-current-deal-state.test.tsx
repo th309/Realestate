@@ -104,4 +104,13 @@ describe("useCurrentDealState", () => {
     const { result } = renderDealState();
     expect(result.current.dealState.activeGoalAtSave).toBeNull();
   });
+
+  it("seeds the deal label from the saved row and persists edits to it", () => {
+    const { result } = renderDealState({
+      label: "Duplex deal",
+    } as DealStateV2);
+    expect(result.current.label).toBe("Duplex deal");
+    act(() => result.current.setLabel("Renamed"));
+    expect(result.current.dealState.label).toBe("Renamed");
+  });
 });

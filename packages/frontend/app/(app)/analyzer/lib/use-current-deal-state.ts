@@ -48,6 +48,9 @@ export interface CurrentDealState {
   dealState: DealStateV2;
   saveStatus: SaveStatus;
   retrySave: () => void;
+  /** User-facing deal name. Seeded from the saved row; edits autosave. */
+  label: string | null;
+  setLabel: (next: string | null) => void;
   /** Live staleness clock — the saved value until an explicit refresh. */
   marketCapturedAt: string;
   refreshMarketData: () => void;
@@ -90,6 +93,11 @@ export function useCurrentDealState({
     () => state.marketCapturedAt ?? new Date().toISOString(),
   );
   const [isRefreshingMarket, setIsRefreshingMarket] = useState(false);
+  // Editable here rather than in AnalyzerClient: the label is deal state, so
+  // it belongs beside the builder that persists it.
+  const [label, setLabel] = useState<string | null>(
+    initialState?.label ?? null,
+  );
 
   const {
     analyzer,
@@ -106,7 +114,6 @@ export function useCurrentDealState({
   } = state;
   const { input } = analyzer;
   const { zip: piqZip, county: piqCounty, metro: piqMetro } = piqByGeo;
-  const savedLabel = initialState?.label ?? null;
   const savedEcho = initialState?.rentcastEcho ?? null;
 
   const dealState = useMemo(
@@ -115,7 +122,7 @@ export function useCurrentDealState({
         input,
         address,
         selectedZip: selectedZip ?? null,
-        label: savedLabel,
+        label,
         arvLocal,
         rehabBudget,
         propertyType,
@@ -144,7 +151,7 @@ export function useCurrentDealState({
       input,
       address,
       selectedZip,
-      savedLabel,
+      label,
       arvLocal,
       rehabBudget,
       propertyType,
@@ -186,6 +193,8 @@ export function useCurrentDealState({
     dealState,
     saveStatus: autosave.status,
     retrySave: autosave.retry,
+    label,
+    setLabel,
     marketCapturedAt,
     refreshMarketData,
     isRefreshingMarket,

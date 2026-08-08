@@ -76,11 +76,18 @@ export interface AnalyzerSnapshotExtras {
  * out of `AnalyzerClient` to keep that React component under its 400-line
  * limit. Address fields prefer the RentCast-resolved values (canonical) and
  * fall back to user-typed address.
+ *
+ * `opts.id` carries the saved-deal row id, once one exists — see
+ * `AnalyzerPersistenceService.save()` on the backend, which updates that
+ * row in place instead of re-deriving it from `(owner, address)`. `opts.label`
+ * is the user-editable deal name (`DealLabelField`); omitted/undefined saves
+ * as `null`, matching a deal that has never been named.
  */
 export function buildAnalyzerSnapshot(
   state: AnalyzerSnapshotState,
   derived: AnalyzerSnapshotDerived,
   extras: AnalyzerSnapshotExtras = {},
+  opts: { id?: string; label?: string | null } = {},
 ): SaveAnalysisPayload {
   const rec = state.rentcastData?.property_record ?? null;
   const result: RichResultSnapshot = {
@@ -109,7 +116,8 @@ export function buildAnalyzerSnapshot(
   };
 
   return {
-    label: null,
+    ...(opts.id ? { id: opts.id } : {}),
+    label: opts.label ?? null,
     address_full: derived.displayAddress ?? null,
     address_city: rec?.city ?? state.address.trim(),
     address_state: rec?.state ?? "",
