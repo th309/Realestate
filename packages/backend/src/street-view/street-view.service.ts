@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { signGoogleMapsUrl } from './google-url-signer';
+import { bearingBetween } from './geo-bearing';
 
 const METADATA_ENDPOINT =
   'https://maps.googleapis.com/maps/api/streetview/metadata';
@@ -59,6 +60,7 @@ export class StreetViewService {
         status?: string;
         pano_id?: string;
         date?: string;
+        location?: { lat?: number; lng?: number };
       };
 
       if (body.status !== 'OK' || !body.pano_id) {
@@ -70,8 +72,19 @@ export class StreetViewService {
         return UNAVAILABLE;
       }
 
+      // Panoramas are shot from the road, so the camera's default heading
+      // follows the street and typically frames a neighbouring property. Aim it
+      // from the panorama's own position at the subject coordinates instead.
+      const panoLat = body.location?.lat;
+      const panoLon = body.location?.lng;
+      const heading =
+        panoLat != null && panoLon != null
+          ? bearingBetween(panoLat, panoLon, lat, lon)
+          : null;
+
       const imageUrl = signGoogleMapsUrl(
         `${IMAGE_ENDPOINT}?size=640x400&scale=2&fov=80&pitch=0` +
+          (heading != null ? `&heading=${heading.toFixed(2)}` : '') +
           `&pano=${encodeURIComponent(body.pano_id)}&key=${this.apiKey}`,
         this.signingSecret,
       );
