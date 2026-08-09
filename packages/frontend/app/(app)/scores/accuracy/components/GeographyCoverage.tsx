@@ -172,24 +172,24 @@ export function GeographyCoverage() {
             >
               <CartesianGrid
                 strokeDasharray="3 3"
-                stroke="var(--outline-variant)"
+                stroke="var(--color-outline-variant)"
                 opacity={0.5}
               />
               <XAxis
                 dataKey="name"
-                tick={{ fontSize: 11, fill: "var(--on-surface-variant)" }}
+                tick={{ fontSize: 11, fill: "var(--color-on-surface-variant)" }}
                 tickLine={false}
-                axisLine={{ stroke: "var(--outline-variant)" }}
+                axisLine={{ stroke: "var(--color-outline-variant)" }}
               />
               <YAxis
-                tick={{ fontSize: 11, fill: "var(--on-surface-variant)" }}
+                tick={{ fontSize: 11, fill: "var(--color-on-surface-variant)" }}
                 tickLine={false}
-                axisLine={{ stroke: "var(--outline-variant)" }}
+                axisLine={{ stroke: "var(--color-outline-variant)" }}
               />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "var(--surface-container)",
-                  border: "1px solid var(--outline-variant)",
+                  backgroundColor: "var(--color-surface-container)",
+                  border: "1px solid var(--color-outline-variant)",
                   borderRadius: "8px",
                   fontSize: "12px",
                 }}
@@ -198,7 +198,7 @@ export function GeographyCoverage() {
               <Bar
                 dataKey="correlation3y"
                 name="3-Year"
-                fill="var(--primary)"
+                fill="var(--color-primary)"
                 radius={[4, 4, 0, 0]}
               />
             </BarChart>
@@ -206,7 +206,7 @@ export function GeographyCoverage() {
         </div>
         <div className="mt-2 flex justify-center gap-6 text-xs text-on-surface-variant">
           <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded bg-[var(--primary)]" />
+            <div className="w-3 h-3 rounded bg-[var(--color-primary)]" />
             <span>3-Year Correlation</span>
           </div>
         </div>

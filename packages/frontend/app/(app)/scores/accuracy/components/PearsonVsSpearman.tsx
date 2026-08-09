@@ -101,7 +101,7 @@ export function PearsonVsSpearman() {
                 y1="100"
                 x2="190"
                 y2="100"
-                stroke="var(--outline-variant)"
+                stroke="var(--color-outline-variant)"
                 strokeWidth="0.5"
               />
               <line
@@ -109,7 +109,7 @@ export function PearsonVsSpearman() {
                 y1="10"
                 x2="30"
                 y2="100"
-                stroke="var(--outline-variant)"
+                stroke="var(--color-outline-variant)"
                 strokeWidth="0.5"
               />
               {/* Scattered dots — loose cloud */}
@@ -117,98 +117,98 @@ export function PearsonVsSpearman() {
                 cx="45"
                 cy="85"
                 r="3"
-                fill="var(--on-surface-variant)"
+                fill="var(--color-on-surface-variant)"
                 opacity="0.4"
               />
               <circle
                 cx="55"
                 cy="50"
                 r="3"
-                fill="var(--on-surface-variant)"
+                fill="var(--color-on-surface-variant)"
                 opacity="0.4"
               />
               <circle
                 cx="65"
                 cy="75"
                 r="3"
-                fill="var(--on-surface-variant)"
+                fill="var(--color-on-surface-variant)"
                 opacity="0.4"
               />
               <circle
                 cx="70"
                 cy="30"
                 r="3"
-                fill="var(--on-surface-variant)"
+                fill="var(--color-on-surface-variant)"
                 opacity="0.4"
               />
               <circle
                 cx="85"
                 cy="60"
                 r="3"
-                fill="var(--on-surface-variant)"
+                fill="var(--color-on-surface-variant)"
                 opacity="0.4"
               />
               <circle
                 cx="95"
                 cy="55"
                 r="3"
-                fill="var(--on-surface-variant)"
+                fill="var(--color-on-surface-variant)"
                 opacity="0.4"
               />
               <circle
                 cx="100"
                 cy="80"
                 r="3"
-                fill="var(--on-surface-variant)"
+                fill="var(--color-on-surface-variant)"
                 opacity="0.4"
               />
               <circle
                 cx="115"
                 cy="45"
                 r="3"
-                fill="var(--on-surface-variant)"
+                fill="var(--color-on-surface-variant)"
                 opacity="0.4"
               />
               <circle
                 cx="125"
                 cy="35"
                 r="3"
-                fill="var(--on-surface-variant)"
+                fill="var(--color-on-surface-variant)"
                 opacity="0.4"
               />
               <circle
                 cx="130"
                 cy="65"
                 r="3"
-                fill="var(--on-surface-variant)"
+                fill="var(--color-on-surface-variant)"
                 opacity="0.4"
               />
               <circle
                 cx="145"
                 cy="40"
                 r="3"
-                fill="var(--on-surface-variant)"
+                fill="var(--color-on-surface-variant)"
                 opacity="0.4"
               />
               <circle
                 cx="155"
                 cy="15"
                 r="3"
-                fill="var(--on-surface-variant)"
+                fill="var(--color-on-surface-variant)"
                 opacity="0.4"
               />
               <circle
                 cx="165"
                 cy="50"
                 r="3"
-                fill="var(--on-surface-variant)"
+                fill="var(--color-on-surface-variant)"
                 opacity="0.4"
               />
               <circle
                 cx="175"
                 cy="25"
                 r="3"
-                fill="var(--on-surface-variant)"
+                fill="var(--color-on-surface-variant)"
                 opacity="0.4"
               />
               {/* Fitted line */}
@@ -217,7 +217,7 @@ export function PearsonVsSpearman() {
                 y1="85"
                 x2="180"
                 y2="20"
-                stroke="var(--error)"
+                stroke="var(--color-error)"
                 strokeWidth="2"
                 strokeDasharray="6 3"
               />
@@ -226,7 +226,7 @@ export function PearsonVsSpearman() {
                 y="115"
                 textAnchor="middle"
                 fontSize="8"
-                fill="var(--on-surface-variant)"
+                fill="var(--color-on-surface-variant)"
               >
                 Score
               </text>
@@ -235,7 +235,7 @@ export function PearsonVsSpearman() {
                 y="55"
                 textAnchor="middle"
                 fontSize="8"
-                fill="var(--on-surface-variant)"
+                fill="var(--color-on-surface-variant)"
                 transform="rotate(-90, 18, 55)"
               >
                 Return
@@ -292,7 +292,7 @@ export function PearsonVsSpearman() {
                 y1="100"
                 x2="190"
                 y2="100"
-                stroke="var(--outline-variant)"
+                stroke="var(--color-outline-variant)"
                 strokeWidth="0.5"
               />
               <line
@@ -300,7 +300,7 @@ export function PearsonVsSpearman() {
                 y1="10"
                 x2="30"
                 y2="100"
-                stroke="var(--outline-variant)"
+                stroke="var(--color-outline-variant)"
                 strokeWidth="0.5"
               />
               {/* Q1 dots (red — bottom quintile) */}
@@ -379,7 +379,7 @@ export function PearsonVsSpearman() {
                 y="115"
                 textAnchor="middle"
                 fontSize="8"
-                fill="var(--on-surface-variant)"
+                fill="var(--color-on-surface-variant)"
               >
                 Score
               </text>
@@ -388,7 +388,7 @@ export function PearsonVsSpearman() {
                 y="55"
                 textAnchor="middle"
                 fontSize="8"
-                fill="var(--on-surface-variant)"
+                fill="var(--color-on-surface-variant)"
                 transform="rotate(-90, 18, 55)"
               >
                 Return

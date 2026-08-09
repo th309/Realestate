@@ -181,7 +181,7 @@ export function ConnectedTooltip({
               className="h-full rounded-full transition-all duration-400 ease-out"
               style={{
                 width: `${((currentIndex + 1) / totalSteps) * 100}%`,
-                background: "linear-gradient(90deg, var(--primary), #00c853)",
+                background: "linear-gradient(90deg, var(--color-primary), #00c853)",
               }}
             />
           </div>

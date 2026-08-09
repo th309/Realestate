@@ -176,7 +176,7 @@ export function ScoreVsReturnScatter({ scoreType, geography, horizon }: Props) {
           <ScatterChart margin={{ top: 10, right: 10, left: 0, bottom: 5 }}>
             <CartesianGrid
               strokeDasharray="3 3"
-              stroke="var(--outline-variant)"
+              stroke="var(--color-outline-variant)"
               opacity={0.5}
             />
             <XAxis
@@ -184,29 +184,29 @@ export function ScoreVsReturnScatter({ scoreType, geography, horizon }: Props) {
               dataKey="x"
               name="Score"
               domain={[0, 100]}
-              tick={{ fontSize: 11, fill: "var(--on-surface-variant)" }}
+              tick={{ fontSize: 11, fill: "var(--color-on-surface-variant)" }}
               tickLine={false}
-              axisLine={{ stroke: "var(--outline-variant)" }}
+              axisLine={{ stroke: "var(--color-outline-variant)" }}
               label={{
                 value: "Score",
                 position: "bottom",
                 fontSize: 11,
-                fill: "var(--on-surface-variant)",
+                fill: "var(--color-on-surface-variant)",
               }}
             />
             <YAxis
               type="number"
               dataKey="y"
               name="Excess Return"
-              tick={{ fontSize: 11, fill: "var(--on-surface-variant)" }}
+              tick={{ fontSize: 11, fill: "var(--color-on-surface-variant)" }}
               tickLine={false}
-              axisLine={{ stroke: "var(--outline-variant)" }}
+              axisLine={{ stroke: "var(--color-outline-variant)" }}
               tickFormatter={(v) => `${v}%`}
             />
             <Tooltip
               contentStyle={{
-                backgroundColor: "var(--surface-container)",
-                border: "1px solid var(--outline-variant)",
+                backgroundColor: "var(--color-surface-container)",
+                border: "1px solid var(--color-outline-variant)",
                 borderRadius: "8px",
                 fontSize: "12px",
               }}
@@ -221,7 +221,7 @@ export function ScoreVsReturnScatter({ scoreType, geography, horizon }: Props) {
             />
             <ReferenceLine
               y={0}
-              stroke="var(--outline)"
+              stroke="var(--color-outline)"
               strokeDasharray="3 3"
             />
             <Scatter
