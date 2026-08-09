@@ -122,9 +122,13 @@ export interface PageMetric {
   /** Distinct visitors who saw the page — the honest second dimension. */
   visitors: number;
   /**
-   * Optional because they are not derivable from a pageview-event rollup.
-   * They were previously hardcoded to 0, which rendered as a real "0%" bounce
-   * on every row. Undefined means "not measured", and the UI shows a dash.
+   * Computed by analytics_page_performance by joining pageviews back to their
+   * session (bounce/exit/landing page, session duration, signup attribution).
+   * Still optional: bounceRate is undefined when no session ENTERED on this
+   * page (nothing to compute a bounce rate over), and conversionRate is
+   * undefined when visitors is 0. Undefined means "not measured" — the UI
+   * shows a dash rather than a fabricated zero, which is what a prior,
+   * simpler pageview-only rollup used to hardcode here.
    */
   bounceRate?: number;
   avgTimeSeconds?: number;

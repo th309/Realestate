@@ -154,9 +154,16 @@ export class OverviewDataFetcherService {
     startDate: Date,
     filters: AnalyticsFilters,
   ): Promise<PageMetric[]> {
+    // analytics_page_performance (not analytics_top_pages, which only ever
+    // returns page_path/views/visitors) joins each pageview back to its
+    // session, so bounce rate, avg session time and signups ARE measurable
+    // per page. bounce_rate is null when nobody entered on that page (no
+    // sessions to compute a bounce rate over) — Number(null) is 0, which
+    // would silently reintroduce the fake "0%" this table used to show, so
+    // every field below is explicitly `== null ? undefined : Number(...)`.
     const { data, error } = await this.supabase
       .getClient()
-      .rpc('analytics_top_pages', {
+      .rpc('analytics_page_performance', {
         p_start: startDate.toISOString(),
         p_end: null,
         p_traffic: this.segment(filters),
@@ -171,16 +178,28 @@ export class OverviewDataFetcherService {
       return [];
     }
 
-    // bounceRate / avgTimeSeconds / conversionRate are deliberately absent:
-    // they are not derivable from a pageview rollup, and hardcoding 0 rendered
-    // a real-looking "0%" on every row.
-    return (data ?? []).map(
-      (row: any): PageMetric => ({
+    return (data ?? []).map((row: any): PageMetric => {
+      const visitors = Number(row.visitors);
+      const signups = row.signups == null ? null : Number(row.signups);
+      return {
         pagePath: row.page_path,
         views: Number(row.views),
-        visitors: Number(row.visitors),
-      }),
-    );
+        visitors,
+        bounceRate:
+          row.bounce_rate == null ? undefined : Number(row.bounce_rate),
+        avgTimeSeconds:
+          row.avg_session_seconds == null
+            ? undefined
+            : Number(row.avg_session_seconds),
+        // Visitor-scoped, matching the overview KPI's own conversion-rate
+        // convention (converted visitors / unique visitors). `signups` counts
+        // distinct SESSIONS with a signup that included this page, so a
+        // visitor converting across two sessions is double-counted — an
+        // acceptable approximation for a top-10 page breakdown.
+        conversionRate:
+          signups === null || visitors === 0 ? undefined : signups / visitors,
+      };
+    });
   }
 
   async fetchQuickFunnelStageCounts(

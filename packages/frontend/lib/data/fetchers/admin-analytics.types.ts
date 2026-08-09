@@ -83,9 +83,12 @@ export interface PageMetric {
   /** Distinct visitors who saw the page. */
   visitors: number;
   /**
-   * Optional — not derivable from a pageview rollup. These were previously
-   * hardcoded to 0 server-side, which rendered as a real "0%" on every row.
-   * Undefined means "not measured"; render a dash, never a zero.
+   * Computed server-side by joining pageviews back to their session (see
+   * analytics_page_performance). Still optional: bounceRate is undefined
+   * when no session ENTERED on this page, and conversionRate is undefined
+   * when visitors is 0. Undefined means "not measured"; render a dash, never
+   * a zero — a prior, simpler pageview-only rollup hardcoded these to 0,
+   * which rendered as a real-looking "0%" on every row.
    */
   bounceRate?: number;
   avgTimeSeconds?: number;

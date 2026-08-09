@@ -37,10 +37,12 @@ function formatPercent(value: number): string {
 }
 
 /**
- * Bounce rate, time on page and conversion are not derivable from a pageview
- * rollup. The backend used to hardcode them to 0, which rendered as a real
- * "0.0%" on every row — a measurement that never existed. They are optional
- * now, and an absent value shows a dash rather than a confident zero.
+ * Bounce rate, avg time and conversion are computed server-side (see
+ * PageMetric), but stay undefined for the population they can't be measured
+ * over — e.g. bounceRate needs at least one session that ENTERED on this
+ * page. A prior, simpler pageview-only rollup hardcoded these to 0, which
+ * rendered as a real-looking "0.0%" on every row; an absent value shows a
+ * dash instead of a confident zero.
  */
 function orDash(
   value: number | undefined,
