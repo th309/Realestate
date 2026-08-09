@@ -61,6 +61,28 @@ export class ReportAiService {
     }
   }
 
+  /** Streaming counterpart of generateConversationResponse() — yields text deltas. */
+  async *streamConversationResponse(
+    userMessage: string,
+    history: ConversationMessage[],
+    report: any,
+    newsContext?: string,
+  ): AsyncGenerator<string> {
+    const systemPrompt = buildConversationSystemPrompt(report, newsContext);
+    const messages = buildConversationMessages(history, userMessage);
+
+    try {
+      yield* this.aiProvider.streamWithMessages(
+        AI_PURPOSES.CONVERSATION,
+        [{ role: 'system', content: systemPrompt }, ...messages],
+        4096,
+      );
+    } catch (error) {
+      this.logger.error('Conversation stream failed:', error);
+      yield 'I apologize, but I encountered an error analyzing your question. Please try again.';
+    }
+  }
+
   /** Generate investment analysis */
   async generateInvestmentAnalysis(
     geographyName: string,

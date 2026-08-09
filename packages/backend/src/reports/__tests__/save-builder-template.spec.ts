@@ -39,6 +39,7 @@ describe('ReportsService.saveBuilderTemplate', () => {
       null as any,
       null as any,
       null as any,
+      null as any,
     );
 
     const result = await service.saveBuilderTemplate('user-1234abcd', {

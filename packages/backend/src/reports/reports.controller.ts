@@ -1,8 +1,9 @@
 /**
  * PropertyIQ Reports Controller
  *
- * API endpoints for report generation, retrieval, and sharing.
- * Protected endpoints use JwtAuthGuard; template browsing and shared reports are public.
+ * API endpoints for report generation and retrieval. Sharing/conversation
+ * endpoints live in report-sharing.controller.ts (CLAUDE.md §1.3 split).
+ * Protected endpoints use JwtAuthGuard; template browsing is public.
  */
 
 import {
@@ -22,17 +23,21 @@ import { Response } from 'express';
 import { JwtAuthGuard } from '../common/guards';
 import { AuthUserId } from '../common/decorators';
 import { ReportsService } from './reports.service';
+import { ReportTemplateCatalogService } from './report-template-catalog.service';
+import { ReportsNarrativeRegenerationService } from './reports-narrative-regeneration.service';
 import {
   GenerateReportDto,
-  SendMessageDto,
-  CreateShareDto,
   SaveBuilderTemplateDto,
 } from './dto/generate-report.dto';
 import { STATIC_SAMPLE_REPORT } from './static-sample-report';
 
 @Controller('api/reports')
 export class ReportsController {
-  constructor(private readonly reportsService: ReportsService) {}
+  constructor(
+    private readonly reportsService: ReportsService,
+    private readonly reportTemplateCatalog: ReportTemplateCatalogService,
+    private readonly reportsNarrativeRegeneration: ReportsNarrativeRegenerationService,
+  ) {}
 
   /**
    * Get available report templates (public)
@@ -43,7 +48,7 @@ export class ReportsController {
   async getTemplates() {
     // Public catalog — intentionally not filtered by a client-supplied tier
     // (the old `?tier=` was dead-plumbing the service already ignored).
-    return this.reportsService.getTemplates();
+    return this.reportTemplateCatalog.getTemplates();
   }
 
   /**
@@ -53,7 +58,7 @@ export class ReportsController {
    */
   @Get('templates/:slug')
   async getTemplate(@Param('slug') slug: string) {
-    const template = await this.reportsService.getTemplateBySlug(slug);
+    const template = await this.reportTemplateCatalog.getTemplateBySlug(slug);
     if (!template) {
       throw new HttpException(
         `Template not found: ${slug}`,
@@ -73,23 +78,6 @@ export class ReportsController {
     const SAMPLE_REPORT_ID = 'f4b04e7c-34cc-4e38-bdac-541fff06de1e';
     const report = await this.reportsService.getReport(SAMPLE_REPORT_ID);
     return report ?? STATIC_SAMPLE_REPORT;
-  }
-
-  /**
-   * Get a shared report (public)
-   *
-   * GET /reports/shared/:token
-   */
-  @Get('shared/:token')
-  async getSharedReport(@Param('token') token: string) {
-    const report = await this.reportsService.getSharedReport(token);
-    if (!report) {
-      throw new HttpException(
-        'Shared report not found or expired',
-        HttpStatus.NOT_FOUND,
-      );
-    }
-    return report;
   }
 
   /**
@@ -228,65 +216,13 @@ export class ReportsController {
     @Body() body: { user_inputs: Record<string, any> },
     @AuthUserId() userId: string,
   ) {
-    return this.reportsService.regenerateNarratives(
+    return this.reportsNarrativeRegeneration.regenerateNarratives(
       id,
       userId,
       body.user_inputs,
     );
   }
 
-  /**
-   * Send a message in report conversation
-   *
-   * POST /reports/:id/conversation
-   */
-  @UseGuards(JwtAuthGuard)
-  @Post(':id/conversation')
-  async sendMessage(
-    @Param('id') reportId: string,
-    @Body() dto: SendMessageDto,
-    @AuthUserId() userId: string,
-  ) {
-    return this.reportsService.sendConversationMessage(
-      reportId,
-      userId,
-      dto.content,
-    );
-  }
-
-  /**
-   * Get report conversation
-   *
-   * GET /reports/:id/conversation
-   */
-  @UseGuards(JwtAuthGuard)
-  @Get(':id/conversation')
-  async getConversation(
-    @Param('id') reportId: string,
-    @AuthUserId() userId: string,
-  ) {
-    return this.reportsService.getConversation(reportId, userId);
-  }
-
-  /**
-   * Create a share link for a report
-   *
-   * POST /reports/:id/share
-   */
-  @UseGuards(JwtAuthGuard)
-  @Post(':id/share')
-  async createShare(
-    @Param('id') reportId: string,
-    @Body() dto: CreateShareDto,
-    @AuthUserId() userId: string,
-  ) {
-    const shareToken = await this.reportsService.createShareLink(
-      reportId,
-      userId,
-      dto.access_level || 'view',
-      dto.expires_in_days,
-    );
-
-    return { share_token: shareToken };
-  }
+  // Sharing, conversations, and share-link creation live in
+  // ReportSharingController (report-sharing.controller.ts).
 }

@@ -20,8 +20,12 @@ import {
 } from './ai-provider.types';
 import { AiConfigResolver } from './ai-config-resolver';
 import { AiShadowService } from './ai-shadow.service';
-import { executeStream } from './ai-stream-executor';
 import { executeCompletion } from './ai-completion-executor';
+import {
+  streamCompletion,
+  streamMessagesCompletion,
+  StreamMethodDeps,
+} from './ai-provider-stream-methods';
 import { AiCompletionCache } from './ai-completion-cache';
 import { AiSpendGuard } from './ai-spend-guard';
 import { getSharedSpendGuard } from './ai-spend-guard.shared';
@@ -202,63 +206,42 @@ export class AiProviderService {
 
   /**
    * Stream an AI completion as an async generator of text deltas.
-   *
-   * Resolves config the same way as `complete()` and re-uses `buildMessages()`
-   * for system-prompt / reasoner-quirk handling. Yields each non-empty
-   * `choices[0].delta.content` chunk from the OpenAI-compatible stream.
-   * Usage telemetry is logged once when the stream ends (success or failure).
+   * Orchestration lives in ai-provider-stream-methods.ts (file-size split).
    */
   async *stream(
     purpose: string,
     request: AiCompletionRequest,
   ): AsyncGenerator<string> {
-    const requestId = randomUUID();
-    const config = await this.configResolver.resolve(purpose);
-    // Backstop applies to streaming too: spend recorded by prior calls can trip
-    // the cap and halt a runaway stream loop before it dispatches.
-    this.spendGuard.assertUnderCap();
-    const client = getOrCreateClient(this.clientCache, config, this.logger);
-    const messages = buildMessages(config, request);
-    const temperature =
-      request.temperature ??
-      config.temperature ??
-      PROVIDER_PRESETS[config.provider].defaultTemperature;
+    yield* streamCompletion(this.streamDeps(), purpose, request);
+  }
 
-    const startedAt = Date.now();
-    let buffered = '';
+  /**
+   * Streaming counterpart of `completeWithMessages()` — yields text deltas
+   * for a multi-turn conversation instead of returning one full response.
+   */
+  async *streamWithMessages(
+    purpose: string,
+    messages: OpenAI.ChatCompletionMessageParam[],
+    maxTokens: number,
+  ): AsyncGenerator<string> {
+    yield* streamMessagesCompletion(
+      this.streamDeps(),
+      purpose,
+      messages,
+      maxTokens,
+    );
+  }
 
-    try {
-      for await (const delta of executeStream({
-        client,
-        supabase: this.supabase,
-        logger: this.logger,
-        purpose,
-        config,
-        messages,
-        request,
-        temperature,
-        activeTestRunId: this.activeTestRunId,
-      })) {
-        buffered += delta;
-        yield delta;
-      }
-    } finally {
-      const durationMs = Date.now() - startedAt;
-      // Fire-and-forget shadow dispatch after stream completes, errors, or
-      // the consumer disconnects. Usage tokens are not captured here because
-      // the executor logs them internally; shadow runs without primary usage.
-      void this.shadow.runShadow({
-        purpose,
-        requestId,
-        primaryConfig: config,
-        primaryResult: { content: buffered, usage: undefined, durationMs },
-        callArgs: {
-          messages: messages as Array<{ role: string; content: unknown }>,
-          options: { maxTokens: request.maxTokens, temperature },
-        },
-        primaryFailedOver: false,
-      });
-    }
+  private streamDeps(): StreamMethodDeps {
+    return {
+      configResolver: this.configResolver,
+      clientCache: this.clientCache,
+      supabase: this.supabase,
+      logger: this.logger,
+      spendGuard: this.spendGuard,
+      shadow: this.shadow,
+      activeTestRunId: this.activeTestRunId,
+    };
   }
 
   /**

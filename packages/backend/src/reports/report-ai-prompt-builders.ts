@@ -75,6 +75,7 @@ Guidelines:
 5. Acknowledge limitations when asked about unavailable data
 6. Provide actionable recommendations
 7. Keep responses under 300 words unless more detail is requested
+8. Write in plain prose only: no markdown or formatting (no bold, italics, headers, bullets, numbered lists, or backticks), and no em-dashes (use a comma, period, or "and"). For multiple points, use plain sentences like "First, ... Second, ... Third, ..." instead of a markdown list
 
 When using news context:
 - Reference specific developments, employers, or events when they support your analysis
