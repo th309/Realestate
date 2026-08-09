@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEntitlements } from "@/lib/entitlements/EntitlementsContext";
 import { useAuth } from "@/lib/auth";
 import { generateReport as generateReportAPI } from "@/lib/data";
+import { trackEvent, flush } from "@/lib/analytics/tracker";
 import { SocialProofBadge } from "@/app/components/social-proof/SocialProofBadge";
 import type { UserType, Geography, GeographyType } from "./types";
 import type { Market } from "./components/reportBuilderTypes";
@@ -108,6 +109,7 @@ export function ReportCreationPage({ recentReports }: ReportCreationPageProps) {
     // before the reportsLocked gate and ahead of entitlementsLoading, since it
     // depends on none of that state.
     if (!user?.id) {
+      trackEvent("conversion.signup_prompt_shown", { surface: "reports" });
       setShowSignupPrompt(true);
       return;
     }
@@ -118,16 +120,24 @@ export function ReportCreationPage({ recentReports }: ReportCreationPageProps) {
     // generating-then-paywalling. Dismiss does not re-enable generation — the
     // card stays until the user upgrades.
     if (reportsLocked) {
+      trackEvent("paywall.view", {
+        surface: "reports",
+        market_count: markets.length,
+      });
       setShowReportsPaywall(true);
       return;
     }
+
+    const templateSlug = markets.length > 1 ? "comparison" : "propertyiq";
+    trackEvent("feature.report_generate_start", {
+      market_count: markets.length,
+      template: templateSlug,
+    });
 
     setIsGenerating(true);
     setError(null);
 
     try {
-      const templateSlug = markets.length > 1 ? "comparison" : "propertyiq";
-
       const userType: UserType = "universal";
 
       const primaryMarket = markets[0];
@@ -193,6 +203,11 @@ export function ReportCreationPage({ recentReports }: ReportCreationPageProps) {
         userId: user.id,
         userTier: effectiveTier || undefined,
       });
+      trackEvent("feature.report_generate_requested", {
+        report_id: data.report_id,
+        market_count: markets.length,
+      });
+      flush();
       setIsGenerating(false);
       // Clear localStorage prefill now that the report was successfully generated
       try {

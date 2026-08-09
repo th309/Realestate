@@ -12,6 +12,7 @@ import { getTemplate } from "./components/templates";
 import { PersonalizationPanel } from "./components/PersonalizationPanel";
 import { usePersonalization } from "./hooks/usePersonalization";
 import { GeneratingState } from "./components/GeneratingState";
+import { useReportGenerateSuccessTracking } from "./hooks/useReportGenerateSuccessTracking";
 import { formatSectionName } from "./components/utils/sectionDisplay";
 import { resolveReportTemplateType } from "./components/utils/resolveReportTemplateType";
 import { ReportHeader } from "./components/ReportHeader";
@@ -118,6 +119,8 @@ export function ReportViewer({ reportId, isSample }: ReportViewerProps) {
     }
   }, [loading, report, reportId]);
 
+  const trackGenerateStatus = useReportGenerateSuccessTracking(reportId);
+
   useEffect(() => {
     let pollTimer: ReturnType<typeof setTimeout> | null = null;
     let cancelled = false;
@@ -139,6 +142,7 @@ export function ReportViewer({ reportId, isSample }: ReportViewerProps) {
         outcome = data
           ? { kind: "report", status: data.status as ReportStatus }
           : { kind: "missing" };
+        trackGenerateStatus(data?.status);
       } catch {
         consecutiveNetworkErrors += 1;
         outcome = { kind: "networkError" };
@@ -190,7 +194,7 @@ export function ReportViewer({ reportId, isSample }: ReportViewerProps) {
       cancelled = true;
       if (pollTimer) clearTimeout(pollTimer);
     };
-  }, [reportId, userId, isSample]);
+  }, [reportId, userId, isSample, trackGenerateStatus]);
 
   // Loading State
   if (loading) {

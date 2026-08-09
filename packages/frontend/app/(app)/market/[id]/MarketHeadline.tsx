@@ -6,6 +6,7 @@ import { Sparkles } from "lucide-react";
 import { fetchMarketHeadline, type MarketSnapshotCard } from "@/lib/data";
 import { useEntitlements } from "@/lib/entitlements";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { trackEvent } from "@/lib/analytics/tracker";
 import {
   buildHeadlineSummary,
   type HeadlineSummary,
@@ -71,13 +72,35 @@ export function MarketHeadline({
         propertyiq: score != null ? { score, grade: scoreGrade } : null,
       },
     })
-      .then((result) =>
-        setAiContent({ headline: result.headline, summary: result.summary }),
-      )
+      .then((result) => {
+        setAiContent({ headline: result.headline, summary: result.summary });
+        trackEvent("feature.market_insight_view", {
+          geo_id: geoId,
+          geo_type: geoType,
+          view,
+        });
+      })
       .catch(() => (fetchedRef.current = null))
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [geoId, view, aiEnabled]);
+
+  // The !aiEnabled branch above returns before ever fetching, so a
+  // non-entitled visitor silently gets the deterministic fallback with no
+  // gate UI and no signal — this soft-gate was invisible to analytics.
+  // Mirrors the fetchedRef guard above so it fires once per (geoId, view).
+  const gatedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (aiEnabled) return;
+    const key = `${geoId}:${view}`;
+    if (gatedRef.current === key) return;
+    gatedRef.current = key;
+    trackEvent("paywall.view", {
+      surface: "market_insight",
+      geo_id: geoId,
+      geo_type: geoType,
+    });
+  }, [geoId, view, geoType, aiEnabled]);
 
   const content = aiEnabled ? (aiContent ?? fallback) : fallback;
 

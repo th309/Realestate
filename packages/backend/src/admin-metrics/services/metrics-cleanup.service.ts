@@ -13,7 +13,6 @@
  *     - admin_alerts
  *     - admin_score_snapshots
  *     - admin_user_snapshots
- *     - admin_page_views
  *
  * Each table is pruned independently — one failure does not prevent
  * other tables from being cleaned up.
@@ -62,11 +61,6 @@ const RETENTION_POLICY: TableRetentionConfig[] = [
   },
   {
     table: 'admin_user_snapshots',
-    timestampColumn: 'timestamp',
-    retentionDays: ONE_YEAR_DAYS,
-  },
-  {
-    table: 'admin_page_views',
     timestampColumn: 'timestamp',
     retentionDays: ONE_YEAR_DAYS,
   },

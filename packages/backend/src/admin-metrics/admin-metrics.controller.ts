@@ -113,16 +113,6 @@ export class AdminMetricsController {
     return { success: true, data };
   }
 
-  @Get('page-views')
-  async getPageViews(@Query() query: QueryMetricsDto) {
-    const data = await this.queryService.queryTimeSeries(
-      'admin_page_views',
-      query.from,
-      query.to,
-    );
-    return { success: true, data };
-  }
-
   @Get('coverage')
   async getCoverage() {
     const data = await this.queryService.getCoverage();

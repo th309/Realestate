@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { trackPaywallEvent } from "@/lib/entitlements/api";
+import { trackEvent, flush } from "@/lib/analytics/tracker";
 import { useDismissable } from "@/lib/entitlements/useDismissable";
 import { useModalHistory } from "@/lib/pwa/use-modal-history";
 
@@ -74,6 +75,17 @@ export function AnonCaptureModal({
       "click_upgrade",
       window.location.pathname,
     );
+    // Mirrors the same call on the canonical signup page (app/(app)/auth/sign-up/page.tsx)
+    // immediately before its signInWithOAuth. Without this, a Google signup started
+    // from this modal skips signup_oauth_click entirely and jumps straight to
+    // signup_complete, which is what made the funnel's "Engaged a path" stage
+    // undercount relative to "Account created". Flushed immediately because
+    // signInWithOAuth does a full-page redirect that would discard the batched queue.
+    trackEvent("conversion.signup_oauth_click", {
+      provider: "google",
+      surface: "anon_capture_modal",
+    });
+    flush();
     const supabase = createSupabaseBrowserClient();
     const callbackUrl = `${window.location.origin}/auth/callback?tos=1&next=${encodeURIComponent(returnTo)}`;
     await supabase.auth.signInWithOAuth({

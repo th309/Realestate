@@ -5,7 +5,8 @@
  * page view.
  * Extracted to keep the main hook under the 300-line hard limit (CLAUDE.md §1.3).
  */
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { trackEvent } from "@/lib/analytics/tracker";
 import type { AnalyzerInputState } from "@/lib/analyzer/useAnalyzer";
 import {
   DEFAULT_ASSUMPTIONS,
@@ -67,17 +68,70 @@ export function resolveInitialAnalyzerState(
  * The saved parcel echo renders instead, and the existing "Fetch property"
  * button remains the user's explicit refresh.
  */
-export function shouldAutoFetchProperty(args: {
+export interface AutoFetchGateArgs {
   isPro: boolean;
   address: string;
   paramAddress?: string;
   alreadyFetched: boolean;
   isHydrated: boolean;
-}): boolean {
+}
+
+export function shouldAutoFetchProperty(args: AutoFetchGateArgs): boolean {
   if (args.alreadyFetched || args.isHydrated) return false;
   return (
     args.isPro && args.address.trim().length > 5 && Boolean(args.paramAddress)
   );
+}
+
+/**
+ * True when the Pro gate is the ONLY thing suppressing the auto-fetch — the
+ * same inputs for a Pro user would have fetched. Keeps the paywall signal off
+ * the far more common "nothing to auto-fetch anyway" paths (no ?address=,
+ * saved deal, already fetched), which are not paywall encounters.
+ */
+export function isAutoFetchProGated(args: AutoFetchGateArgs): boolean {
+  return !args.isPro && shouldAutoFetchProperty({ ...args, isPro: true });
+}
+
+/**
+ * Owns the deep-link auto-fetch effect, and reports the free-tier suppression
+ * that it used to swallow silently.
+ *
+ * Ref-latched twice over: the effect re-runs on every address keystroke, so
+ * `autoFetchedRef` keeps the paid RentCast lookup to one call, and
+ * `paywallTrackedRef` keeps a blocked deep-link to one `paywall.view` per
+ * mount rather than one per render.
+ */
+export function useAnalyzerAutoFetch(args: {
+  isPro: boolean;
+  address: string;
+  paramAddress?: string;
+  isHydrated: boolean;
+  mutate: (vars: { address: string }) => void;
+}): void {
+  const { isPro, address, paramAddress, isHydrated, mutate } = args;
+  const autoFetchedRef = useRef(false);
+  const paywallTrackedRef = useRef(false);
+  // `mutate` from useMutation is stable, so the trigger conditions are the
+  // only real dependencies.
+  useEffect(() => {
+    const gate: AutoFetchGateArgs = {
+      isPro,
+      address,
+      paramAddress,
+      alreadyFetched: autoFetchedRef.current,
+      isHydrated,
+    };
+    if (isAutoFetchProGated(gate)) {
+      if (paywallTrackedRef.current) return;
+      paywallTrackedRef.current = true;
+      trackEvent("paywall.view", { surface: "analyzer_auto_fetch" });
+      return;
+    }
+    if (!shouldAutoFetchProperty(gate)) return;
+    autoFetchedRef.current = true;
+    mutate({ address: address.trim() });
+  }, [isPro, address, paramAddress, mutate, isHydrated]);
 }
 
 export interface MarketRefreshGate {

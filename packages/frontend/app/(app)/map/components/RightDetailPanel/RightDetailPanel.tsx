@@ -195,6 +195,8 @@ export function RightDetailPanel({
                 score={scoreData?.propertyiq}
                 isLoading={scoreData?.isLoading}
                 onUpgradeClick={() => (window.location.href = "/pricing")}
+                geoLevel={geoLevel}
+                regionId={geography.id}
               />
             </div>
           )}

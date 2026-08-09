@@ -71,16 +71,6 @@ export interface UserSnapshot {
   mrr_cents: number;
 }
 
-export interface PageViewRow {
-  id: string;
-  timestamp: string;
-  page_path: string;
-  view_count: number;
-  unique_visitors: number;
-  avg_session_duration_ms: number;
-  bounce_rate: number;
-}
-
 export interface ApiTimingEntry {
   endpoint: string;
   duration_ms: number;

@@ -3,7 +3,7 @@
 import { lazy, Suspense } from "react";
 import type { TimeRange } from "../hooks/useTimeRange";
 
-// Lazy-load panel content to avoid loading all 15 panels upfront
+// Lazy-load panel content to avoid loading all 14 panels upfront
 const DataFeedsPanel = lazy(() =>
   import("./DataFeedsPanel").then((m) => ({ default: m.DataFeedsPanel })),
 );
@@ -48,9 +48,6 @@ const UsersGrowthPanel = lazy(() =>
 const RevenueMrrPanel = lazy(() =>
   import("./RevenueMrrPanel").then((m) => ({ default: m.RevenueMrrPanel })),
 );
-const FeatureUsagePanel = lazy(() =>
-  import("./FeatureUsagePanel").then((m) => ({ default: m.FeatureUsagePanel })),
-);
 const TierDistributionPanel = lazy(() =>
   import("./TierDistributionPanel").then((m) => ({
     default: m.TierDistributionPanel,
@@ -94,7 +91,6 @@ const PANEL_MAP: Record<
   "score-computation": ScoreComputationPanel,
   "users-growth": UsersGrowthPanel,
   "revenue-mrr": RevenueMrrPanel,
-  "feature-usage": FeatureUsagePanel,
   "tier-distribution": TierDistributionPanel,
   "feedback-queue": FeedbackQueuePanel,
 };
