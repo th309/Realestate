@@ -5,6 +5,7 @@
  */
 import { API_URL } from "./base";
 import { getAuthHeaders } from "./auth-headers";
+import type { PropertyLookupResult } from "./property-lookup";
 
 export type PrefillConfidenceGrade = "a" | "b" | "c" | "f";
 
@@ -37,6 +38,16 @@ export interface AnalyzerPrefillBundle {
     state: string | null;
   };
   hasParcelData: boolean;
+  /**
+   * The full RentCast parcel payload behind `fields` — identical in shape to
+   * what GET /property-lookup returns, comps included. Null for non-Pro
+   * callers and on lookup failure.
+   *
+   * This is what lets an autocomplete selection populate the comps panel: the
+   * backend already made (and paid for) this exact call, so the client renders
+   * comps from it instead of waiting for the user to press "Fetch property".
+   */
+  parcel: PropertyLookupResult | null;
   fields: Record<PrefillFieldKey, PrefillField>;
   notes: string[];
 }

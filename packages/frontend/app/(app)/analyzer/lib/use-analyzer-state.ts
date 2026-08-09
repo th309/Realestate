@@ -288,6 +288,7 @@ export function useAnalyzerState({
     handleAddressSelect: async (s: AddressSuggestion) => {
       setAddress(s.full);
       setSelectedZip(s.postalCode ?? null);
+      prefill.reset(); // clears the stale parcel — see pickCompsSource
       const bundle = await prefill.mutateAsync({
         zip: s.postalCode ?? undefined,
         address: isPro ? s.full : undefined,

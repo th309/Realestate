@@ -1,5 +1,6 @@
 "use client";
 import type { PropertyLookupResult } from "@/lib/data";
+import { isRealAddressMismatch } from "../lib/address-match";
 
 interface RentcastBannersProps {
   lookupErrorMsg: string | null;
@@ -19,17 +20,14 @@ export function RentcastBanners({
   rentcastData,
   address,
 }: RentcastBannersProps) {
-  const normalizedInput = address
-    .trim()
-    .toLowerCase()
-    .replace(/[,\s]+/g, " ");
-  const normalizedResolved = rentcastData?.resolved_address
-    ?.toLowerCase()
-    .replace(/[,\s]+/g, " ");
+  // Only a genuine substitution (different house number or ZIP) warrants the
+  // banner — see isRealAddressMismatch for why abbreviation differences must
+  // not. The old inline compare fired on every autocomplete pick, because
+  // Mapbox says "South Market Street, Maryland" where RentCast says "S Market
+  // St, MD".
   const showMismatch =
     !!rentcastData?.resolved_address &&
-    !!address.trim() &&
-    normalizedResolved !== normalizedInput;
+    isRealAddressMismatch(address, rentcastData.resolved_address);
 
   return (
     <>

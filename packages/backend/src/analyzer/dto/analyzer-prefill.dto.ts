@@ -1,5 +1,6 @@
 import { IsOptional, IsString, Matches, MaxLength } from 'class-validator';
 import type { ConfidenceGrade, PrefillGeoLevel } from '../prefill-grade';
+import type { PropertyLookupDto } from './property-lookup.dto';
 
 /** Query params for GET /api/analyzer/prefill. ZIP is the geo anchor; address
  *  (when present + caller is Pro) drives the RentCast parcel layer. */
@@ -45,6 +46,20 @@ export interface AnalyzerPrefillDto {
   };
   /** True when the RentCast parcel layer was applied (Pro + quota available). */
   hasParcelData: boolean;
+  /**
+   * The whole RentCast parcel payload behind `fields` — property record, AVM,
+   * rent estimate, and BOTH comp sets. Null for non-Pro callers and whenever
+   * the lookup failed.
+   *
+   * Handed back whole rather than cherry-picked: this bundle is assembled from
+   * the exact `lookupProperty()` call the "Fetch property" button makes, so
+   * returning the identical shape lets the client render comps off either path
+   * with no second mapping to keep in sync. Before this, prefill fetched the
+   * comps, RentCast billed us for them, and they were dropped on the floor —
+   * so the comps panel read "fetch property data to populate" while price and
+   * rent right above it already showed RentCast provenance.
+   */
+  parcel: PropertyLookupDto | null;
   fields: Record<PrefillFieldKey, PrefillFieldDto>;
   notes: string[];
 }
