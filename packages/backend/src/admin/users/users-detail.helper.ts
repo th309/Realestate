@@ -55,37 +55,57 @@ export async function fetchUserDetail(
     .eq('is_active', true)
     .single();
 
+  // reports_generated_this_month (below) is never written anywhere in the
+  // backend — see getReportCountsForUsers for the real source (the `reports`
+  // table) that this counts against instead.
+  const monthStart = new Date();
+  monthStart.setUTCDate(1);
+  monthStart.setUTCHours(0, 0, 0, 0);
+
   // Get usage counts
-  const [overrideCount, paywallCount, savedQueries, watchlist, alerts] =
-    await Promise.all([
-      client
-        .from('user_feature_overrides')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId)
-        .then((r) => r.count || 0),
-      client
-        .from('paywall_events')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId)
-        .eq('event_type', 'view')
-        .then((r) => r.count || 0),
-      client
-        .from('analytics_saved_queries')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId)
-        .then((r) => r.count || 0),
-      client
-        .from('analytics_watchlist')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId)
-        .then((r) => r.count || 0),
-      client
-        .from('analytics_alerts')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId)
-        .eq('is_active', true)
-        .then((r) => r.count || 0),
-    ]);
+  const [
+    overrideCount,
+    paywallCount,
+    savedQueries,
+    watchlist,
+    alerts,
+    reportsGenerated,
+  ] = await Promise.all([
+    client
+      .from('user_feature_overrides')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .then((r) => r.count || 0),
+    client
+      .from('paywall_events')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('event_type', 'view')
+      .then((r) => r.count || 0),
+    client
+      .from('analytics_saved_queries')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .then((r) => r.count || 0),
+    client
+      .from('analytics_watchlist')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .then((r) => r.count || 0),
+    client
+      .from('analytics_alerts')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .then((r) => r.count || 0),
+    client
+      .from('reports')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('status', 'ready')
+      .gte('created_at', monthStart.toISOString())
+      .then((r) => r.count || 0),
+  ]);
 
   return {
     id: profile.id,
@@ -111,7 +131,7 @@ export async function fetchUserDetail(
     betaTesterId: betaTester?.id,
     overrideCount,
     paywallHits: paywallCount,
-    reportsGenerated: profile.reports_generated_this_month || 0,
+    reportsGenerated,
     savedQueriesCount: savedQueries,
     watchlistCount: watchlist,
     alertsCount: alerts,
