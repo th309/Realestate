@@ -76,7 +76,7 @@ export default function AnalyzerClient({
   const {
     analyzer, address, arvLocal, rehabBudget, assumptions, setAssumption,
     propertyLookup, rentcastData, quotaExceeded, projection, afterTax,
-    breakEven, brrrrTimeline, marketContext, piqByGeo,
+    breakEven, brrrrTimeline, marketContext, piqByGeo, prefill,
   } = state;
   const { rental, flip, brrrr } = analyzer;
 
@@ -133,6 +133,7 @@ export default function AnalyzerClient({
     resolvedAddress: rentcastData?.resolved_address,
     address,
     rentcastData,
+    prefillParcel: prefill.data?.parcel ?? null,
     price: analyzer.input.price ?? 0,
     input: analyzer.input,
     rental,

@@ -22,6 +22,7 @@ import type {
   AnalyzerPrefillQueryDto,
   PrefillFieldDto,
 } from './dto/analyzer-prefill.dto';
+import type { PropertyLookupDto } from './dto/property-lookup.dto';
 
 /** Whole months between an as-of date/year and `now` (0 if unparseable). */
 function monthsStaleFrom(asOf: string | null, now: Date): number {
@@ -176,11 +177,15 @@ export class AnalyzerPrefillService {
     const notes: string[] = [];
     let resolvedAddress: string | null = null;
     let hasParcelData = false;
+    // Surfaced to the caller so the comps it contains are usable. See
+    // AnalyzerPrefillDto.parcel for why the whole payload rides along.
+    let parcelPayload: PropertyLookupDto | null = null;
 
     // Parcel layer (Pro + address only).
     if (ctx.isPro && query.address) {
       try {
         const parcel = await this.analyzer.lookupProperty(query.address);
+        parcelPayload = parcel;
         resolvedAddress = parcel.resolved_address ?? null;
         if (parcel.avm?.value != null)
           price = parcelField(parcel.avm.value, null);
@@ -225,6 +230,7 @@ export class AnalyzerPrefillService {
         state: chain.state ?? null,
       },
       hasParcelData,
+      parcel: parcelPayload,
       fields: {
         price,
         rentMonthly,

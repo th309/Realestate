@@ -159,6 +159,60 @@ describe('AnalyzerPrefillService.getPrefillBundle', () => {
     expect(bundle.fields.hoaMonthly).toMatchObject({ value: 45, kind: 'data' });
   });
 
+  it('pro tier: hands back the parcel payload so its comps are usable', async () => {
+    // Regression: prefill made the same paid lookupProperty() call the "Fetch
+    // property" button makes, then returned only price/rent/tax/hoa. The comps
+    // were billed for and discarded, so picking an address from autocomplete
+    // filled the money fields from RentCast while the comps panel still read
+    // "fetch property data to populate".
+    const salesComps = [{ address: '9 Elm St', price: 410000, sqft: 1500 }];
+    const rentalComps = [{ address: '11 Elm St', rent: 2100, sqft: 1450 }];
+    const { service } = makeService({
+      metrics: {},
+      rentcast: {
+        avm: { value: 425000 },
+        rent: { value: 1950 },
+        property_record: { sqft: 1600, lat: 30.26, lon: -97.74 },
+        sales_comps: salesComps,
+        rental_comps: rentalComps,
+        resolved_address: '123 Main St, Austin, TX 78702',
+      },
+    });
+
+    const bundle = await service.getPrefillBundle(
+      { zip: '78702', address: '123 Main St, Austin, TX 78702' },
+      { isPro: true, now: NOW },
+    );
+
+    expect(bundle.parcel?.sales_comps).toEqual(salesComps);
+    expect(bundle.parcel?.rental_comps).toEqual(rentalComps);
+    // The subject's own sqft/coords ride along too — the comps chart needs
+    // them for price-per-sqft and the map needs them for the subject pin.
+    expect(bundle.parcel?.property_record).toMatchObject({ sqft: 1600 });
+  });
+
+  it('free tier: no parcel payload, so no RentCast data leaks to non-Pro', async () => {
+    const { service } = makeService({
+      metrics: {},
+      rentcast: { avm: { value: 425000 }, sales_comps: [{ address: 'x' }] },
+    });
+    const bundle = await service.getPrefillBundle(
+      { zip: '78702', address: '123 Main St' },
+      { isPro: false, now: NOW },
+    );
+    expect(bundle.parcel).toBeNull();
+  });
+
+  it('pro tier: parcel is null when the lookup fails', async () => {
+    const { service, analyzerStub } = makeService({ metrics: {} });
+    analyzerStub.lookupProperty.mockRejectedValue(new Error('quota exceeded'));
+    const bundle = await service.getPrefillBundle(
+      { zip: '78702', address: '123 Main St' },
+      { isPro: true, now: NOW },
+    );
+    expect(bundle.parcel).toBeNull();
+  });
+
   it('pro tier: RentCast failure degrades to geo layer with a note', async () => {
     const { service, analyzerStub } = makeService({
       metrics: {
