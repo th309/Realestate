@@ -789,6 +789,51 @@ body {
   }
 }
 
+/* ── Sticky app-chrome geometry ───────────────────────────────────────────
+   Two bars pin to the top of an (app) route, and anything that sticks or
+   scroll-snaps below them has to know how tall they are. This is the single
+   source of that number.
+
+   Hardcoding it is what produced the two bugs these replace: the breadcrumbs
+   sat at `top-16` (64px) under a 57px AppBar, leaving a 7px seam that page
+   content scrolled through on every app route; and the analyzer's input
+   column pinned at `top-6` (24px), parking its first 77px behind the chrome.
+
+   TWO top bars exist, and they are NOT the same height. AppChrome picks
+   between them by path: the dark `AppBar` for the tool routes in
+   APP_CHROME_ROUTES, and the marketing `Header` for everything else. Pinning
+   to the wrong one leaves a seam on half the app and an overlap on the other
+   half, so both heights are tokenised and consumers pick per route.
+
+   `--app-bar-h`     AppBar: `h-14` (56px) + its 1px bottom border.
+   `--site-bar-h`    Header: `h-16` (64px) + its 1px bottom border.
+   `--breadcrumbs-h` GlobalBreadcrumbs: a text-sm row with `py-2` + 1px border.
+   `--app-chrome-h`  AppBar + breadcrumbs — the correct `top` for the next
+                     sticky thing on a tool route.
+   `--site-chrome-h` Header + breadcrumbs — the same, for a marketing route.
+
+   Breadcrumbs render on both regimes (any route not in
+   BREADCRUMB_EXCLUDED_PREFIXES), which is why they alone choose at runtime. */
+:root {
+  --app-bar-h: 57px;
+  --site-bar-h: 65px;
+  --breadcrumbs-h: 37px;
+  --app-chrome-h: calc(var(--app-bar-h) + var(--breadcrumbs-h));
+  --site-chrome-h: calc(var(--site-bar-h) + var(--breadcrumbs-h));
+}
+
+/* Installed PWA: both bars clear the notch (see .pt-safe-standalone above),
+   so everything pinned below them moves down by the same inset. Only the bar
+   heights are redefined — the `--*-chrome-h` sums re-resolve on their own,
+   because a custom property substitutes its `var()` references lazily, at the
+   point of use, rather than freezing a value at declaration. */
+@media (display-mode: standalone) {
+  :root {
+    --app-bar-h: calc(57px + env(safe-area-inset-top));
+    --site-bar-h: calc(65px + env(safe-area-inset-top));
+  }
+}
+
 /* Landscape notch clearance — extends the .pb-safe/.pt-safe pair above. */
 .pl-safe {
   padding-left: env(safe-area-inset-left);

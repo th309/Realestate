@@ -21,6 +21,7 @@ import { FlipUpgradePathPanel } from "./FlipUpgradePathPanel";
 import { RecommendationCard } from "./RecommendationCard";
 import { ScoreBreakdownTable } from "./ScoreBreakdownTable";
 import { UpgradePathPanel } from "./UpgradePathPanel";
+import { JUMP_TARGET_SCROLL_MARGIN } from "../../lib/jump-items";
 import type { SectionAiProps } from "../../lib/use-section-ai-insights";
 
 interface GradingResultPanelProps {
@@ -159,7 +160,7 @@ export function GradingResultPanel({
         autoKills={result.autoKills}
         onEditCriteria={onEditAutoKillCriteria}
       />
-      <div id="verdict" className="scroll-mt-20">
+      <div id="verdict" className={JUMP_TARGET_SCROLL_MARGIN}>
         <RecommendationCard
           result={result}
           onCustomizeClick={onCustomizeClick}
@@ -175,19 +176,26 @@ export function GradingResultPanel({
             against 1136px of levers, which left ~740px of dead column. The
             table sticks instead, so the grade breakdown stays on screen while
             you read the levers that move it.
+
+            It pins below the sticky chrome, not at the top of the viewport:
+            `--app-chrome-h` (the AppBar + breadcrumbs height, defined in
+            app/globals.css) plus the analyzer's own jump bar already hold the
+            top of the screen. That is the same offset the jump targets reserve,
+            so the table settles exactly where a jump link would land it — see
+            JUMP_BAR_STICKY and JUMP_TARGET_SCROLL_MARGIN in lib/jump-items.
           */}
           <div
             id="grading"
-            className="min-w-0 scroll-mt-20 min-[1240px]:sticky min-[1240px]:top-6"
+            className={`min-w-0 ${JUMP_TARGET_SCROLL_MARGIN} min-[1240px]:sticky min-[1240px]:top-[calc(var(--app-chrome-h)_+_76px)]`}
           >
             {scoreTable}
           </div>
-          <div id="improve" className="min-w-0 scroll-mt-20">
+          <div id="improve" className={`min-w-0 ${JUMP_TARGET_SCROLL_MARGIN}`}>
             {leverPanel}
           </div>
         </div>
       ) : (
-        <div id="grading" className="scroll-mt-20">
+        <div id="grading" className={JUMP_TARGET_SCROLL_MARGIN}>
           {scoreTable}
         </div>
       )}

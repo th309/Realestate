@@ -28,6 +28,7 @@ import type { CompPin } from "./sections/CompsSection";
 import { MarketContextSection } from "./sections/MarketContextSection";
 import { AfterTaxSection } from "./sections/AfterTaxSection";
 import { NotesSection } from "./sections/NotesSection";
+import { JUMP_TARGET_SCROLL_MARGIN } from "../lib/jump-items";
 import type { Strategy } from "../lib/strategy-tile-mappers";
 import type { SectionAiProps } from "../lib/use-section-ai-insights";
 
@@ -135,7 +136,7 @@ export function AnalyzerSections({
         is a single rank of metric tiles that reads like the KPI row.
       */}
       <div className="grid grid-cols-1 gap-6 min-[1240px]:grid-cols-2">
-        <div id="projection" className="min-w-0 scroll-mt-20">
+        <div id="projection" className={`min-w-0 ${JUMP_TARGET_SCROLL_MARGIN}`}>
           <ProjectionSection
             input={input}
             projection={projection}
@@ -143,7 +144,7 @@ export function AnalyzerSections({
             {...sectionAi.projection}
           />
         </div>
-        <div id="expenses" className="min-w-0 scroll-mt-20">
+        <div id="expenses" className={`min-w-0 ${JUMP_TARGET_SCROLL_MARGIN}`}>
           <ExpenseSection
             grossRentMonthly={grossRentMonthly}
             vacancyMonthly={vacancyMonthly}
@@ -159,7 +160,10 @@ export function AnalyzerSections({
           the two are a close height match, which is what keeps a paired row
           from leaving a dead column. */}
       <div className="grid grid-cols-1 gap-6 min-[1240px]:grid-cols-2">
-        <div id="sensitivity" className="min-w-0 scroll-mt-20">
+        <div
+          id="sensitivity"
+          className={`min-w-0 ${JUMP_TARGET_SCROLL_MARGIN}`}
+        >
           <SensitivitySection
             input={input}
             rental={rental}
@@ -172,7 +176,7 @@ export function AnalyzerSections({
             {...sectionAi.sensitivity}
           />
         </div>
-        <div id="aftertax" className="min-w-0 scroll-mt-20">
+        <div id="aftertax" className={`min-w-0 ${JUMP_TARGET_SCROLL_MARGIN}`}>
           <AfterTaxSection
             afterTax={afterTax}
             marginalTaxRate={marginalTaxRate}
@@ -181,7 +185,7 @@ export function AnalyzerSections({
         </div>
       </div>
 
-      <div id="comps" className="scroll-mt-20">
+      <div id="comps" className={JUMP_TARGET_SCROLL_MARGIN}>
         <CompsSection
           subjectLat={subjectLat}
           subjectLon={subjectLon}
@@ -195,7 +199,7 @@ export function AnalyzerSections({
           {...sectionAi.comps}
         />
       </div>
-      <div id="market" className="scroll-mt-20">
+      <div id="market" className={JUMP_TARGET_SCROLL_MARGIN}>
         <MarketContextSection
           chain={marketContext?.chain ?? null}
           initialGeoLevel={marketContext?.geo_level ?? null}

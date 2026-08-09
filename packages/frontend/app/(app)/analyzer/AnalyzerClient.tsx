@@ -16,8 +16,8 @@ import { AnalyzerSections } from "./components/AnalyzerSections";
 import { toEngineStrategy } from "./lib/use-grading-result";
 import { useAnalyzerDefaultsPrefill } from "./lib/use-analyzer-defaults-prefill";
 import { StrategyKPI } from "./components/Hero/StrategyKPI";
-import { JumpBar } from "@/app/components/app-shell";
-import { getJumpItems } from "./lib/jump-items";
+import { StickyJumpBar } from "./components/chrome/StickyJumpBar";
+import { JUMP_TARGET_SCROLL_MARGIN } from "./lib/jump-items";
 import { MarketScoreStrip } from "./components/MarketScoreStrip";
 import { PropertyImagery } from "./components/PropertyImagery";
 import { StaleDealNotice } from "./components/cards/StaleDealNotice";
@@ -251,12 +251,7 @@ export default function AnalyzerClient({
           />
 
           <div className="space-y-6 min-w-0">
-            {hasGradableInput && (
-              <JumpBar
-                items={getJumpItems(!!grading.data)}
-                activeId={grading.data ? "verdict" : "cashflow"}
-              />
-            )}
+            {hasGradableInput && <StickyJumpBar hasGrading={!!grading.data} />}
             <SavedAnalysesPanel />
             {hasGradableInput && <EditInputsBar onClick={chrome.openInputs} />}
 
@@ -323,7 +318,7 @@ export default function AnalyzerClient({
             )}
 
             {hasGradableInput && (
-              <div id="cashflow" className="scroll-mt-20">
+              <div id="cashflow" className={JUMP_TARGET_SCROLL_MARGIN}>
                 <StrategyKPI
                   ctx={{
                     input: analyzer.input,

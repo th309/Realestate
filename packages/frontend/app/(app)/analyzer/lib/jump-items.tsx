@@ -29,6 +29,32 @@ import type { JumpItem } from "@/app/components/app-shell";
 const GRADING_ANCHORS = new Set(["verdict", "grading", "improve"]);
 
 /**
+ * Where the jump bar pins, measured from the top of the viewport.
+ *
+ * The analyzer scrolls on the window, under two bars that are already sticky:
+ * the AppBar, and GlobalBreadcrumbs directly beneath it. Their combined height
+ * is `--app-chrome-h` (defined in app/globals.css, and the single source of
+ * truth for that stack — it also absorbs the safe-area inset when the installed
+ * PWA runs standalone), so pinning there puts the jump bar just below both.
+ * `z-30` keeps it under the breadcrumbs (`z-40`) and the AppBar (`z-50`), so it
+ * slides beneath them rather than over them.
+ */
+export const JUMP_BAR_STICKY = "sticky top-[var(--app-chrome-h)] z-30";
+
+/**
+ * Scroll margin every jump target must carry.
+ *
+ * An anchor scrolls its target flush to the viewport top, which parks it behind
+ * the sticky chrome. This reserves the full stack: `--app-chrome-h` (the AppBar
+ * + breadcrumbs height, defined in app/globals.css) for the chrome the jump bar
+ * pins under, plus 76px for the jump bar itself — its 68px (52px bar + 16px of
+ * canvas padding) and 8px of air — so an anchored section lands just below the
+ * bar rather than under it.
+ */
+export const JUMP_TARGET_SCROLL_MARGIN =
+  "scroll-mt-[calc(var(--app-chrome-h)_+_76px)]";
+
+/**
  * Jump items for the current state. Never offer a link to a section that is
  * not on the page.
  */

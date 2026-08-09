@@ -22,6 +22,12 @@ interface AnalyzerSidebarProps {
  * BRRRR fields, per-field provenance rows) must still reach its last control
  * rather than sit pinned with its bottom off-screen.
  *
+ * Both offsets are derived from `--app-chrome-h` (globals.css: AppBar +
+ * GlobalBreadcrumbs) rather than a bare `top-6`, because that chrome is sticky
+ * and opaque: pinning 24px from the viewport top parked the column's first
+ * ~70px behind it once the page scrolled, and the matching `100dvh - 3rem`
+ * over-measured the space actually left below the chrome by the same amount.
+ *
  * `h-full` is load-bearing and easy to delete by accident. A sticky element
  * only sticks within its own containing block, so this wrapper has to span the
  * grid row for the panel to follow the scroll. Without it — and with
@@ -36,7 +42,7 @@ export function AnalyzerSidebar({
 }: AnalyzerSidebarProps) {
   return (
     <div className="hidden h-full min-[1140px]:block">
-      <div className="sticky top-6 max-h-[calc(100dvh-3rem)] space-y-4 overflow-y-auto overscroll-contain">
+      <div className="sticky top-[calc(var(--app-chrome-h)_+_1rem)] max-h-[calc(100dvh_-_var(--app-chrome-h)_-_2rem)] space-y-4 overflow-y-auto overscroll-contain">
         {inputPanel}
         {propertyRecord && <PropertyRecordCard record={propertyRecord} />}
       </div>
