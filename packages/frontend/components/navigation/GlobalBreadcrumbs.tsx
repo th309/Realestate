@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { Breadcrumbs } from "./Breadcrumbs";
+import { isAppChromeRoute } from "@/app/components/app-shell/app-routes";
 import {
   ROUTE_LABELS,
   isBreadcrumbExcluded,
@@ -44,10 +45,23 @@ export function GlobalBreadcrumbs() {
   // The current page is the last crumb — render it as plain text, not a link.
   items[items.length - 1] = { label: items[items.length - 1].label };
 
+  // This bar sits under whichever top bar AppChrome chose, and the two are
+  // different heights — AppBar is 57px, the marketing Header is 65px. The old
+  // hardcoded `top-16` (64px) split the difference and was wrong for both: a
+  // 7px seam that page content scrolled through on tool routes, and a 1px
+  // overlap on the rest. Both tokens live in globals.css and carry the extra
+  // safe-area inset in an installed PWA. Written as two whole class strings
+  // because Tailwind scans source text — an interpolated name never generates.
+  const barOffset = isAppChromeRoute(pathname)
+    ? "top-[var(--app-bar-h)]"
+    : "top-[var(--site-bar-h)]";
+
   return (
     // Plain <div> wrapper — the inner <Breadcrumbs> already provides the
     // <nav aria-label="Breadcrumb"> landmark; nesting two would be invalid.
-    <div className="sticky top-16 z-40 border-b border-outline-variant bg-surface-container-lowest/95 backdrop-blur-sm">
+    <div
+      className={`sticky ${barOffset} z-40 border-b border-outline-variant bg-surface-container-lowest/95 backdrop-blur-sm`}
+    >
       <div className="mx-auto max-w-[1920px] px-4 py-2 sm:px-6 lg:px-8">
         <Breadcrumbs items={items} showHome className="text-sm" />
       </div>
