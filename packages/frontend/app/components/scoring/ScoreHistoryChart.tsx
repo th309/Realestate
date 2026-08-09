@@ -272,23 +272,23 @@ export function ScoreHistoryChart({
           >
             <CartesianGrid
               strokeDasharray="3 3"
-              stroke="var(--outline-variant)"
+              stroke="var(--color-outline-variant)"
               opacity={0.5}
             />
             <XAxis
               dataKey="dateLabel"
-              tick={{ fontSize: 10, fill: "var(--on-surface-variant)" }}
+              tick={{ fontSize: 10, fill: "var(--color-on-surface-variant)" }}
               tickLine={false}
-              axisLine={{ stroke: "var(--outline-variant)" }}
+              axisLine={{ stroke: "var(--color-outline-variant)" }}
               interval="preserveStartEnd"
             />
             {/* Score Y-Axis (left) */}
             <YAxis
               yAxisId="score"
               domain={[0, 100]}
-              tick={{ fontSize: 10, fill: "var(--on-surface-variant)" }}
+              tick={{ fontSize: 10, fill: "var(--color-on-surface-variant)" }}
               tickLine={false}
-              axisLine={{ stroke: "var(--outline-variant)" }}
+              axisLine={{ stroke: "var(--color-outline-variant)" }}
               width={35}
             />
             {/* Return Y-Axis (right) - only if we have return data */}
@@ -296,17 +296,17 @@ export function ScoreHistoryChart({
               <YAxis
                 yAxisId="return"
                 orientation="right"
-                tick={{ fontSize: 10, fill: "var(--on-surface-variant)" }}
+                tick={{ fontSize: 10, fill: "var(--color-on-surface-variant)" }}
                 tickLine={false}
-                axisLine={{ stroke: "var(--outline-variant)" }}
+                axisLine={{ stroke: "var(--color-outline-variant)" }}
                 tickFormatter={(v) => `${v}%`}
                 width={45}
               />
             )}
             <Tooltip
               contentStyle={{
-                backgroundColor: "var(--surface-container)",
-                border: "1px solid var(--outline-variant)",
+                backgroundColor: "var(--color-surface-container)",
+                border: "1px solid var(--color-outline-variant)",
                 borderRadius: "8px",
                 fontSize: "11px",
               }}
@@ -320,7 +320,7 @@ export function ScoreHistoryChart({
             <ReferenceLine
               yAxisId="score"
               y={50}
-              stroke="var(--outline)"
+              stroke="var(--color-outline)"
               strokeDasharray="3 3"
               opacity={0.5}
             />

@@ -199,25 +199,25 @@ export function QuintilePerformance() {
             >
               <CartesianGrid
                 strokeDasharray="3 3"
-                stroke="var(--outline-variant)"
+                stroke="var(--color-outline-variant)"
                 opacity={0.5}
               />
               <XAxis
                 dataKey="name"
-                tick={{ fontSize: 11, fill: "var(--on-surface-variant)" }}
+                tick={{ fontSize: 11, fill: "var(--color-on-surface-variant)" }}
                 tickLine={false}
-                axisLine={{ stroke: "var(--outline-variant)" }}
+                axisLine={{ stroke: "var(--color-outline-variant)" }}
               />
               <YAxis
-                tick={{ fontSize: 11, fill: "var(--on-surface-variant)" }}
+                tick={{ fontSize: 11, fill: "var(--color-on-surface-variant)" }}
                 tickLine={false}
-                axisLine={{ stroke: "var(--outline-variant)" }}
+                axisLine={{ stroke: "var(--color-outline-variant)" }}
                 tickFormatter={(v) => `${v}%`}
               />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "var(--surface-container)",
-                  border: "1px solid var(--outline-variant)",
+                  backgroundColor: "var(--color-surface-container)",
+                  border: "1px solid var(--color-outline-variant)",
                   borderRadius: "12px",
                   fontSize: "12px",
                 }}
@@ -233,7 +233,7 @@ export function QuintilePerformance() {
               />
               <ReferenceLine
                 y={0}
-                stroke="var(--outline)"
+                stroke="var(--color-outline)"
                 strokeDasharray="3 3"
               />
               <Bar dataKey="return" name="Excess Return" radius={[6, 6, 0, 0]}>

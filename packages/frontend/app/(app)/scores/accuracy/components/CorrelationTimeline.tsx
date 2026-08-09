@@ -141,26 +141,26 @@ export function CorrelationTimeline() {
             >
               <CartesianGrid
                 strokeDasharray="3 3"
-                stroke="var(--outline-variant)"
+                stroke="var(--color-outline-variant)"
                 opacity={0.5}
               />
               <XAxis
                 dataKey="date"
-                tick={{ fontSize: 10, fill: "var(--on-surface-variant)" }}
+                tick={{ fontSize: 10, fill: "var(--color-on-surface-variant)" }}
                 tickLine={false}
-                axisLine={{ stroke: "var(--outline-variant)" }}
+                axisLine={{ stroke: "var(--color-outline-variant)" }}
                 interval="preserveStartEnd"
               />
               <YAxis
-                tick={{ fontSize: 11, fill: "var(--on-surface-variant)" }}
+                tick={{ fontSize: 11, fill: "var(--color-on-surface-variant)" }}
                 tickLine={false}
-                axisLine={{ stroke: "var(--outline-variant)" }}
+                axisLine={{ stroke: "var(--color-outline-variant)" }}
                 domain={[0, "auto"]}
               />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "var(--surface-container)",
-                  border: "1px solid var(--outline-variant)",
+                  backgroundColor: "var(--color-surface-container)",
+                  border: "1px solid var(--color-outline-variant)",
                   borderRadius: "12px",
                   fontSize: "12px",
                 }}
@@ -187,10 +187,10 @@ export function CorrelationTimeline() {
               <Line
                 type="monotone"
                 dataKey="correlation"
-                stroke="var(--primary)"
+                stroke="var(--color-primary)"
                 strokeWidth={2.5}
-                dot={{ fill: "var(--primary)", r: 3 }}
-                activeDot={{ r: 5, fill: "var(--primary)" }}
+                dot={{ fill: "var(--color-primary)", r: 3 }}
+                activeDot={{ r: 5, fill: "var(--color-primary)" }}
               />
             </LineChart>
           </ResponsiveContainer>
@@ -199,7 +199,7 @@ export function CorrelationTimeline() {
         {/* Legend */}
         <div className="mt-3 flex justify-center gap-6 text-xs text-on-surface-variant">
           <div className="flex items-center gap-1.5">
-            <div className="w-6 h-0.5 bg-[var(--primary)] rounded" />
+            <div className="w-6 h-0.5 bg-[var(--color-primary)] rounded" />
             <span>PropertyIQ Correlation</span>
           </div>
           <div className="flex items-center gap-1.5">
