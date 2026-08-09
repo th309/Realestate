@@ -1,6 +1,31 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { UserFeaturesService } from '../features/user-features.service';
 import { UserDetail, UserStats } from './users.types';
+import {
+  getOverrideCountsForUsers,
+  getPaywallCountsForUsers,
+  getReportCountsForUsers,
+  getBehaviorSignalsForUsers,
+  getFirstReportTimestampsForUsers,
+} from './users-batch-fetch.helper';
+
+/** Earliest of first-value-event / first-report, minutes after signup. Null
+ * when neither has happened yet. Duplicated from users-list.helper.ts —
+ * both files are well under the size limit and this is 6 lines. */
+function computeTimeToFirstValueMinutes(
+  createdAt: string,
+  firstValueAt: string | null | undefined,
+  firstReportAt: string | null | undefined,
+): number | null {
+  const candidates = [firstValueAt, firstReportAt].filter(
+    (t): t is string => !!t,
+  );
+  if (candidates.length === 0) return null;
+  const earliest = candidates.reduce((a, b) => (a < b ? a : b));
+  const minutes =
+    (new Date(earliest).getTime() - new Date(createdAt).getTime()) / 60000;
+  return minutes >= 0 ? Math.round(minutes) : 0;
+}
 
 export async function fetchUserDetail(
   client: SupabaseClient,
@@ -55,57 +80,29 @@ export async function fetchUserDetail(
     .eq('is_active', true)
     .single();
 
-  // reports_generated_this_month (below) is never written anywhere in the
-  // backend — see getReportCountsForUsers for the real source (the `reports`
-  // table) that this counts against instead.
-  const monthStart = new Date();
-  monthStart.setUTCDate(1);
-  monthStart.setUTCHours(0, 0, 0, 0);
-
-  // Get usage counts
+  // Reuses the same batch helpers the list endpoint uses (with a one-element
+  // userIds array) rather than duplicating slightly-different inline
+  // queries — the previous version's paywall count here only read the
+  // legacy paywall_events table, silently diverging from the list view's
+  // (broader) count for the same user.
   const [
-    overrideCount,
-    paywallCount,
-    savedQueries,
-    watchlist,
-    alerts,
-    reportsGenerated,
+    overrideCounts,
+    paywallCounts,
+    reportCounts,
+    behaviorSignals,
+    firstReportTimestamps,
   ] = await Promise.all([
-    client
-      .from('user_feature_overrides')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .then((r) => r.count || 0),
-    client
-      .from('paywall_events')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .eq('event_type', 'view')
-      .then((r) => r.count || 0),
-    client
-      .from('analytics_saved_queries')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .then((r) => r.count || 0),
-    client
-      .from('analytics_watchlist')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .then((r) => r.count || 0),
-    client
-      .from('analytics_alerts')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .eq('is_active', true)
-      .then((r) => r.count || 0),
-    client
-      .from('reports')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .eq('status', 'ready')
-      .gte('created_at', monthStart.toISOString())
-      .then((r) => r.count || 0),
+    getOverrideCountsForUsers(client, [userId]),
+    getPaywallCountsForUsers(client, [userId]),
+    getReportCountsForUsers(client, [userId]),
+    getBehaviorSignalsForUsers(client, [userId]),
+    getFirstReportTimestampsForUsers(client, [userId]),
   ]);
+  const overrideCount = overrideCounts.get(userId) || 0;
+  const paywallCount = paywallCounts.get(userId) || 0;
+  const reportsGenerated = reportCounts.get(userId) || 0;
+  const signals = behaviorSignals.get(userId);
+  const firstReportAt = firstReportTimestamps.get(userId);
 
   return {
     id: profile.id,
@@ -132,9 +129,13 @@ export async function fetchUserDetail(
     overrideCount,
     paywallHits: paywallCount,
     reportsGenerated,
-    savedQueriesCount: savedQueries,
-    watchlistCount: watchlist,
-    alertsCount: alerts,
+    scoreViews: signals?.scoreViews || 0,
+    analyzerRuns: signals?.analyzerRuns || 0,
+    timeToFirstValueMinutes: computeTimeToFirstValueMinutes(
+      profile.created_at,
+      signals?.firstValueAt,
+      firstReportAt,
+    ),
     overrides,
     grandfatheringDetails: grandfather
       ? {

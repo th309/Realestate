@@ -26,13 +26,17 @@ export interface UserListItem {
   // Beta
   isBetaTester: boolean;
   betaTesterId?: string;
-  // Usage
+  // Usage — see users-batch-fetch.helper.ts for what each is sourced from and
+  // why (replaced Saved Queries/Watchlist/Alerts, which were 0 for every user
+  // in the product, not just this one — uninformative on a per-user view).
   overrideCount: number;
   paywallHits: number;
   reportsGenerated: number;
-  savedQueriesCount: number;
-  watchlistCount: number;
-  alertsCount: number;
+  scoreViews: number;
+  analyzerRuns: number;
+  /** Minutes from signup to first score view / analyzer run / report — the
+   * activation signal. Null when neither has happened yet. */
+  timeToFirstValueMinutes: number | null;
 }
 
 export interface UserDetail extends UserListItem {
