@@ -141,7 +141,6 @@ function getPanelTitle(cardId: string | null): string {
     "score-computation": "Score Computation",
     "users-growth": "Users & Growth",
     "revenue-mrr": "Revenue / MRR",
-    "feature-usage": "Feature Usage",
     "tier-distribution": "Tier Distribution",
     "feedback-queue": "Feedback Queue",
   };

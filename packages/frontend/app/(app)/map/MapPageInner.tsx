@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { FeatureCollection } from "geojson";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
-import type { GeoLevel, SearchResult, MapData } from "./types";
+import type { SearchResult, MapData } from "./types";
 import { Sidebar, RightDetailPanel, MapContextMenu } from "./components";
 import { MapToolbar } from "./MapToolbar";
 import { MapCanvas } from "./MapCanvas";
@@ -20,6 +20,7 @@ import { useSidebarScoreData } from "./hooks/useSidebarScoreData";
 import { useMapCamera } from "./hooks/useMapCamera";
 import { useMapDeepLinkNav } from "./hooks/useMapDeepLinkNav";
 import { useSelectedGeoCinematic } from "./hooks/useSelectedGeoCinematic";
+import { useTrackedMapFilters } from "./hooks/useTrackedMapFilters";
 
 import { MAPBOX_ACCESS_TOKEN } from "./config";
 import { useEntitlements } from "@/lib/entitlements";
@@ -28,7 +29,6 @@ import {
   useTopMarketMatches,
   useMarketMatch,
 } from "@/lib/data";
-import { trackEvent } from "@/lib/analytics/tracker";
 
 mapboxgl.accessToken = MAPBOX_ACCESS_TOKEN;
 
@@ -176,28 +176,30 @@ export default function MapPageInner() {
 
   const sidebarScoreData = useSidebarScoreData(scoreResponse, scoresLoading);
 
-  // Handler to change geo level and clear state filter for levels that don't need it
-  const handleGeoLevelChange = useCallback(
-    (level: GeoLevel) => {
-      setGeoLevel(level);
-      setSelectedGeography(null);
-      setRightPanelOpen(false);
-      // Clear state filter when switching to levels that don't require it
-      // (only city, zip, tract need state filtering)
-      if (!["city", "zip", "tract"].includes(level)) {
-        setSelectedState("");
-      }
-    },
-    [setGeoLevel, setSelectedState, setSelectedGeography, setRightPanelOpen],
-  );
-
-  const handleSelectMetric = useCallback(
-    (id: string) => {
-      trackEvent("feature.map_filter", { metric_id: id, geo_level: geoLevel });
-      setSelectedMetric(id);
-    },
-    [geoLevel, setSelectedMetric],
-  );
+  // Every filter control (geo level, metric, state, forecast horizon,
+  // rent-index type, renter-demand type, view mode), each wrapped with
+  // `feature.map_filter` tracking. See useTrackedMapFilters for why this
+  // lives in its own hook rather than inline here.
+  const {
+    handleGeoLevelChange,
+    handleSelectMetric,
+    handleStateChange,
+    handleForecastHorizonChange,
+    handleRentIndexTypeChange,
+    handleRenterDemandTypeChange,
+    handleViewModeChangeTracked,
+  } = useTrackedMapFilters({
+    geoLevel,
+    setGeoLevel,
+    setSelectedState,
+    setSelectedMetric,
+    setForecastHorizon,
+    setRentIndexType,
+    setRenterDemandType,
+    handleViewModeChange,
+    setSelectedGeography,
+    setRightPanelOpen,
+  });
 
   // Deep-link navigation (/map?geo=...&id=...)
   useMapDeepLinkNav({
@@ -282,7 +284,7 @@ export default function MapPageInner() {
         selectedMetric={selectedMetric}
         selectedState={selectedState}
         onGeoLevelChange={handleGeoLevelChange}
-        onStateChange={setSelectedState}
+        onStateChange={handleStateChange}
         quizCompleted={quizCompleted}
         scoreViewMode={scoreViewMode}
         onScoreViewModeChange={setScoreViewMode}
@@ -326,14 +328,15 @@ export default function MapPageInner() {
             onToggleCategory={toggleCategory}
             onSelectMetric={handleSelectMetric}
             onGeoLevelChange={handleGeoLevelChange}
-            onStateChange={setSelectedState}
-            onForecastHorizonChange={setForecastHorizon}
-            onRentIndexTypeChange={setRentIndexType}
-            onRenterDemandTypeChange={setRenterDemandType}
+            onStateChange={handleStateChange}
+            onForecastHorizonChange={handleForecastHorizonChange}
+            onRentIndexTypeChange={handleRentIndexTypeChange}
+            onRenterDemandTypeChange={handleRenterDemandTypeChange}
             onMouseDown={handleMouseDown}
-            onViewModeChange={handleViewModeChange}
+            onViewModeChange={handleViewModeChangeTracked}
             onCloseMobileMenu={() => setMobileMenuOpen(false)}
             scoreData={sidebarScoreData}
+            selectedRegionId={selectedGeography?.id}
             onScoreCardClick={() =>
               selectedGeography && setRightPanelOpen(true)
             }

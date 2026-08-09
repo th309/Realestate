@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * SidebarScoreCard Component
  *
@@ -8,10 +10,12 @@
  * No hardcoded tier gating — use the admin tiers page to move scores between tiers.
  */
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { InsightsIcon } from "../Icons";
 import { TrendArrow, getTrendDirection, formatTrendValue } from "./TrendArrow";
 import { ScoreDisplay } from "@/app/components/scoring/ScoreDisplay";
+import { trackEvent } from "@/lib/analytics/tracker";
 import { Loader2 } from "lucide-react";
 
 interface ScoreInfo {
@@ -28,6 +32,16 @@ interface ScoreInfo {
 const SCORED_LEVELS = ["metro", "county", "zip"] as const;
 type ScoredLevel = (typeof SCORED_LEVELS)[number];
 
+// This component renders TWICE simultaneously for the same logical score —
+// once in the desktop sidebar (Sidebar.tsx) and once in the mobile detail
+// panel (RightDetailPanel.tsx, which only CSS-hides via `md:hidden` rather
+// than unmounting). A per-instance `useRef` guard can't see the other
+// instance, so both independently fire `feature.score_view`, inflating the
+// count ~2x. Module scope IS shared across both instances (same module,
+// same singleton), so this de-dupes across them by regionId — see the
+// `regionId` prop doc below for why that's the key instead of score value.
+let lastTrackedScoreKey: string | null = null;
+
 interface SidebarScoreCardProps {
   /** Single PropertyIQ score */
   score?: ScoreInfo;
@@ -36,6 +50,18 @@ interface SidebarScoreCardProps {
   onUpgradeClick?: () => void;
   /** Current map geography. State has no score — see the empty state below. */
   geoLevel?: string;
+  /**
+   * The selected geography's stable id (e.g. FIPS/CBSA code) — the score_view
+   * dedup key. Typed optional because `selectedGeography` clears to
+   * `undefined` for one render on selection changes (geo-level switch, panel
+   * close) BEFORE the async score refetch catches up, so `currentScore` can
+   * still be the previous region's stale value on that render — tracking
+   * MUST be skipped then, not fall back to a geoLevel+score key, or that
+   * transient produces a spurious extra event (two different regions sharing
+   * a score would also collide on that key). Both real render sites always
+   * have a genuine regionId whenever there's a genuine score to report.
+   */
+  regionId?: string;
   /** Switches the map to a scored level from the state-level message. */
   onGeoLevelChange?: (level: ScoredLevel) => void;
 }
@@ -46,11 +72,29 @@ export function SidebarScoreCard({
   onClick,
   onUpgradeClick,
   geoLevel,
+  regionId,
   onGeoLevelChange,
 }: SidebarScoreCardProps) {
   const hasScore = currentScore?.score !== undefined && !isLoading;
   const isBreakdownLocked = currentScore?.access === "teaser";
   const isStateLevel = geoLevel === "state";
+
+  // Track score view once per distinct region, de-duped across both
+  // simultaneously-mounted instances of this component — see
+  // lastTrackedScoreKey's comment above. Requires regionId (see its prop
+  // doc): without one, this is the stale-score transient during a selection
+  // change, not a real view of a new region — skip rather than fall back.
+  useEffect(() => {
+    if (!hasScore || !regionId) return;
+    if (lastTrackedScoreKey === regionId) return;
+    lastTrackedScoreKey = regionId;
+    trackEvent("feature.score_view", {
+      geography_type: geoLevel ?? null,
+      region_id: regionId,
+      score_type: "propertyiq",
+      surface: "map",
+    });
+  }, [hasScore, geoLevel, regionId]);
 
   // Show trend arrow only when we have real trend data from API (not when missing/no history)
   const trendDirection =

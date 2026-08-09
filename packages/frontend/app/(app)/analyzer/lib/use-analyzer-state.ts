@@ -31,6 +31,7 @@ import {
   pickMarketContext,
   resolveInitialAnalyzerState,
   shouldAutoFetchProperty,
+  useAnalyzerAutoFetch,
   useMarketRefreshGate,
 } from "./use-analyzer-state.hydration";
 import type { MarketContext } from "@/lib/data/fetchers/analyzer";
@@ -176,24 +177,15 @@ export function useAnalyzerState({
 
   // Auto-fetch on first render when address arrived via ?address= query param,
   // saving the user a click in the common deep-link flow — but never for a
-  // hydrated saved deal (see shouldAutoFetchProperty). Note: `mutate` from
-  // useMutation is stable, so we only depend on the trigger conditions.
-  const autoFetchedRef = useRef(false);
-  const mutate = propertyLookup.mutate;
-  useEffect(() => {
-    if (
-      !shouldAutoFetchProperty({
-        isPro,
-        address,
-        paramAddress,
-        alreadyFetched: autoFetchedRef.current,
-        isHydrated,
-      })
-    )
-      return;
-    autoFetchedRef.current = true;
-    mutate({ address: address.trim() });
-  }, [isPro, address, paramAddress, mutate, isHydrated]);
+  // hydrated saved deal, and never for free tier, which reports a paywall view
+  // instead of fetching. See useAnalyzerAutoFetch.
+  useAnalyzerAutoFetch({
+    isPro,
+    address,
+    paramAddress,
+    isHydrated,
+    mutate: propertyLookup.mutate,
+  });
 
   const { projection, sensitivity, afterTax, breakEven, brrrrTimeline } =
     useDerivedAnalytics(analyzer.input, assumptions, arvLocal, rehabBudget);

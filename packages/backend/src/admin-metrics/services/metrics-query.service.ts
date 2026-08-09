@@ -30,7 +30,6 @@ const ALLOWED_TIMESERIES_TABLES = new Set([
   'admin_alerts',
   'admin_score_snapshots',
   'admin_user_snapshots',
-  'admin_page_views',
 ]);
 
 /** admin_alerts uses triggered_at; all other admin tables use timestamp. */

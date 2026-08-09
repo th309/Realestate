@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { trackEvent } from "@/lib/analytics/tracker";
 import { InputPanel } from "./InputPanel";
 import type { AnalysisMode } from "./StrategyControls";
 import type { useAnalyzerState } from "../../lib/use-analyzer-state";
@@ -74,6 +75,10 @@ export function AnalyzerInputPanel({
         // Redis cache on the backend, refresh becomes ~instant — no second
         // RentCast roundtrip needed for the same address.
         const trimmed = address.trim();
+        // Boolean, never the address itself — no PII in analytics.
+        trackEvent("feature.analyzer_run", {
+          address_provided: trimmed.length > 0,
+        });
         if (trimmed.length > 0) {
           const next = `/analyzer?address=${encodeURIComponent(trimmed)}`;
           router.replace(next);

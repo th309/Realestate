@@ -45,6 +45,10 @@ interface SidebarProps {
   viewMode: ViewMode;
   mobileMenuOpen: boolean;
   scoreData?: ScoreData;
+  /** Currently selected geography's id — passed through to SidebarScoreCard
+   * so its score_view tracking can de-dupe by exact region rather than by
+   * score value, which two different regions could share. */
+  selectedRegionId?: string;
   onToggleCategory: (id: string) => void;
   onSelectMetric: (id: string) => void;
   onGeoLevelChange: (level: GeoLevel) => void;
@@ -73,6 +77,7 @@ export function Sidebar({
   viewMode,
   mobileMenuOpen,
   scoreData,
+  selectedRegionId,
   onToggleCategory,
   onSelectMetric,
   onGeoLevelChange,
@@ -206,6 +211,7 @@ export function Sidebar({
           onUpgradeClick={() => (window.location.href = "/pricing")}
           geoLevel={geoLevel}
           onGeoLevelChange={onGeoLevelChange}
+          regionId={selectedRegionId}
         />
 
         {/* Metric Categories */}
