@@ -61,7 +61,6 @@ const VALID_GEO_LEVELS: GeoLevel[] = [
   "metro",
   "county",
   "zip",
-  "city",
   "tract",
 ];
 

@@ -42,14 +42,7 @@ export function GeoLevelPills({
   excludeLevels = [],
   wrap = true,
 }: GeoLevelPillsProps) {
-  const allLevels = [
-    "National",
-    "State",
-    "Metro",
-    "County",
-    "City",
-    "Zip",
-  ] as const;
+  const allLevels = ["National", "State", "Metro", "County", "Zip"] as const;
   const levels = allLevels.filter(
     (l) => !excludeLevels.includes(l.toLowerCase()),
   );

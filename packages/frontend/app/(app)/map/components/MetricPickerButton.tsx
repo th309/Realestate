@@ -1,32 +1,61 @@
 "use client";
 
-import { SlidersHorizontal } from "lucide-react";
-import type { GeoLevel, MetricCategory } from "../types";
+import { useCallback, useRef, useState } from "react";
+import { ChevronDown, SlidersHorizontal } from "lucide-react";
+import type {
+  ForecastHorizon,
+  GeoLevel,
+  MetricCategory,
+  RentIndexType,
+  RenterDemandType,
+} from "../types";
 import { MetricTitle } from "@/app/components/MetricTitle";
+import { MetricPickerPopover } from "./MetricPickerPopover";
 
 interface MetricPickerButtonProps {
   metricCategories: MetricCategory[];
+  expandedCategories: string[];
   selectedMetric: string;
   geoLevel: GeoLevel;
-  /** Opens the catalogue — expands the sidebar on desktop, the sheet on mobile. */
-  onOpen: () => void;
+  forecastHorizon: ForecastHorizon;
+  rentIndexType: RentIndexType;
+  renterDemandType: RenterDemandType;
+  onToggleCategory: (id: string) => void;
+  onSelectMetric: (id: string) => void;
+  onForecastHorizonChange: (horizon: ForecastHorizon) => void;
+  onRentIndexTypeChange: (type: RentIndexType) => void;
+  onRenterDemandTypeChange: (type: RenterDemandType) => void;
 }
 
 /**
- * Shows which metric the map is currently painting, and opens the catalogue.
- *
- * The catalogue itself stays in the sidebar — all seven categories keep their
- * question subtitles ("Can I afford to live here?"). What was missing is any
- * statement of the ACTIVE metric outside that sidebar: collapse it, or open
- * the map on a narrow screen, and nothing on the page said what the colours
- * meant. This button always does, and clicking it brings the catalogue back.
+ * Shows which metric the map is currently painting, and IS the picker —
+ * clicking it drops the full catalogue anchored right below the button, so
+ * switching metrics never depends on the sidebar's collapsed/expanded state
+ * (which, on desktop, is usually already open and doesn't visibly react to
+ * this button — the previous behaviour looked like a dead label).
  */
 export function MetricPickerButton({
   metricCategories,
+  expandedCategories,
   selectedMetric,
   geoLevel,
-  onOpen,
+  forecastHorizon,
+  rentIndexType,
+  renterDemandType,
+  onToggleCategory,
+  onSelectMetric,
+  onForecastHorizonChange,
+  onRentIndexTypeChange,
+  onRenterDemandTypeChange,
 }: MetricPickerButtonProps) {
+  const [open, setOpen] = useState(false);
+  const anchorRef = useRef<HTMLButtonElement>(null);
+  // Stable identity — MetricPickerPopover's keydown/pointer-outside effect
+  // depends on this, and this button re-renders on every category toggle
+  // (expandedCategories is lifted state), so an inline arrow here churned
+  // that effect on every expand/collapse click.
+  const handleClose = useCallback(() => setOpen(false), []);
+
   // Category comes from the sidebar catalogue, but the metric NAME comes from
   // MetricTitle — the same source the legend uses. Taking the name from the
   // catalogue instead had this button reading "Home Value" while the legend
@@ -35,24 +64,50 @@ export function MetricPickerButton({
   const categoryName = findCategoryName(metricCategories, selectedMetric);
 
   return (
-    <button
-      type="button"
-      onClick={onOpen}
-      aria-label="Change metric"
-      className="flex min-w-0 flex-shrink-0 items-center gap-2 rounded-[10px] border border-outline-variant bg-surface px-3 py-1.5 text-left transition-colors hover:border-primary"
-    >
-      <SlidersHorizontal className="size-3.5 flex-none text-on-surface-variant" />
-      <span className="min-w-0">
-        <span className="block truncate text-[12.5px] font-semibold leading-tight text-on-surface">
-          <MetricTitle metricId={selectedMetric} geoLevel={geoLevel} />
-        </span>
-        {categoryName && (
-          <span className="block truncate text-[10px] leading-tight text-on-surface-variant">
-            {categoryName}
+    <>
+      <button
+        ref={anchorRef}
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        aria-label="Change metric"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        className="flex min-w-0 flex-shrink-0 items-center gap-2 rounded-[10px] border border-outline-variant bg-surface px-3 py-1.5 text-left transition-colors hover:border-primary"
+      >
+        <SlidersHorizontal className="size-3.5 flex-none text-on-surface-variant" />
+        <span className="min-w-0">
+          <span className="block truncate text-[12.5px] font-semibold leading-tight text-on-surface">
+            <MetricTitle metricId={selectedMetric} geoLevel={geoLevel} />
           </span>
-        )}
-      </span>
-    </button>
+          {categoryName && (
+            <span className="block truncate text-[10px] leading-tight text-on-surface-variant">
+              {categoryName}
+            </span>
+          )}
+        </span>
+        <ChevronDown
+          className={`size-3.5 flex-none text-on-surface-variant transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+
+      <MetricPickerPopover
+        open={open}
+        onClose={handleClose}
+        anchorRef={anchorRef}
+        metricCategories={metricCategories}
+        expandedCategories={expandedCategories}
+        selectedMetric={selectedMetric}
+        geoLevel={geoLevel}
+        forecastHorizon={forecastHorizon}
+        rentIndexType={rentIndexType}
+        renterDemandType={renterDemandType}
+        onToggleCategory={onToggleCategory}
+        onSelectMetric={onSelectMetric}
+        onForecastHorizonChange={onForecastHorizonChange}
+        onRentIndexTypeChange={onRentIndexTypeChange}
+        onRenterDemandTypeChange={onRenterDemandTypeChange}
+      />
+    </>
   );
 }
 
