@@ -8,11 +8,27 @@ import {
   getGrandfathersForUsers,
   getBetaTestersForUsers,
   getOrganizationsForUsers,
-  getSavedQueryCountsForUsers,
-  getWatchlistCountsForUsers,
-  getAlertCountsForUsers,
   getReportCountsForUsers,
+  getBehaviorSignalsForUsers,
+  getFirstReportTimestampsForUsers,
 } from './users-batch-fetch.helper';
+
+/** Earliest of first-value-event / first-report, minutes after signup. Null
+ * when neither has happened yet. */
+function computeTimeToFirstValueMinutes(
+  createdAt: string,
+  firstValueAt: string | null | undefined,
+  firstReportAt: string | null | undefined,
+): number | null {
+  const candidates = [firstValueAt, firstReportAt].filter(
+    (t): t is string => !!t,
+  );
+  if (candidates.length === 0) return null;
+  const earliest = candidates.reduce((a, b) => (a < b ? a : b));
+  const minutes =
+    (new Date(earliest).getTime() - new Date(createdAt).getTime()) / 60000;
+  return minutes >= 0 ? Math.round(minutes) : 0;
+}
 
 export async function fetchUsersList(
   client: SupabaseClient,
@@ -76,10 +92,9 @@ export async function fetchUsersList(
     grandfathers,
     betaTesters,
     organizations,
-    savedQueries,
-    watchlists,
-    alerts,
     reportCounts,
+    behaviorSignals,
+    firstReportTimestamps,
   ] = await Promise.all([
     getTrialsForUsers(client, userIds),
     getOverrideCountsForUsers(client, userIds),
@@ -89,10 +104,9 @@ export async function fetchUsersList(
     getOrganizationsForUsers(client, [
       ...new Set(profiles?.map((p) => p.organization_id).filter(Boolean) || []),
     ]),
-    getSavedQueryCountsForUsers(client, userIds),
-    getWatchlistCountsForUsers(client, userIds),
-    getAlertCountsForUsers(client, userIds),
     getReportCountsForUsers(client, userIds),
+    getBehaviorSignalsForUsers(client, userIds),
+    getFirstReportTimestampsForUsers(client, userIds),
   ]);
 
   const users: UserListItem[] = (profiles || []).map((profile) => {
@@ -102,6 +116,8 @@ export async function fetchUsersList(
     const org = profile.organization_id
       ? organizations.get(profile.organization_id)
       : null;
+    const signals = behaviorSignals.get(profile.id);
+    const firstReportAt = firstReportTimestamps.get(profile.id);
 
     return {
       id: profile.id,
@@ -134,9 +150,13 @@ export async function fetchUsersList(
       overrideCount: overrideCounts.get(profile.id) || 0,
       paywallHits: paywallCounts.get(profile.id) || 0,
       reportsGenerated: reportCounts.get(profile.id) || 0,
-      savedQueriesCount: savedQueries.get(profile.id) || 0,
-      watchlistCount: watchlists.get(profile.id) || 0,
-      alertsCount: alerts.get(profile.id) || 0,
+      scoreViews: signals?.scoreViews || 0,
+      analyzerRuns: signals?.analyzerRuns || 0,
+      timeToFirstValueMinutes: computeTimeToFirstValueMinutes(
+        profile.created_at,
+        signals?.firstValueAt,
+        firstReportAt,
+      ),
     };
   });
 

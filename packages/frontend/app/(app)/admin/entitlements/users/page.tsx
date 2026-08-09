@@ -19,12 +19,27 @@ import {
   Beaker,
   Star,
   BarChart3,
-  Bell,
   Eye,
   FileText,
-  Bookmark,
+  TrendingUp,
+  Calculator,
+  Zap,
 } from "lucide-react";
 import { fetchAPIRaw } from "@/lib/data";
+
+/**
+ * "—" under 1 minute, "Xm"/"Xh"/"Xd" otherwise. null (neither a score view,
+ * analyzer run, nor report has happened yet) reads as "—", same as 0 minutes
+ * would with a naive formatter — distinguish "hasn't happened" from "just
+ * happened" by checking null explicitly before calling this.
+ */
+function formatTimeToValue(minutes: number | null): string {
+  if (minutes === null) return "—";
+  if (minutes < 1) return "<1m";
+  if (minutes < 60) return `${minutes}m`;
+  if (minutes < 1440) return `${Math.round(minutes / 60)}h`;
+  return `${Math.round(minutes / 1440)}d`;
+}
 
 // Types
 interface UserOverride {
@@ -63,13 +78,17 @@ interface UserData {
   // Beta
   isBetaTester: boolean;
   betaTesterId?: string;
-  // Usage
+  // Usage — replaced savedQueriesCount/watchlistCount/alertsCount, which read
+  // tables with 0 rows across every user in the product, not just this one:
+  // uninformative on a per-user view. See backend users-batch-fetch.helper.ts.
   overrideCount: number;
   paywallHits: number;
   reportsGenerated: number;
-  savedQueriesCount: number;
-  watchlistCount: number;
-  alertsCount: number;
+  scoreViews: number;
+  analyzerRuns: number;
+  /** Minutes from signup to first score view / analyzer run / report. Null
+   * when none has happened yet. */
+  timeToFirstValueMinutes: number | null;
   // For detail view
   overrides?: UserOverride[];
 }
@@ -235,10 +254,16 @@ function UserCard({
         </div>
 
         <div className="flex items-center gap-4 text-sm text-on-surface-variant">
-          <div className="text-center hidden md:block" title="Paywall hits">
+          <div className="text-center hidden md:block" title="Score views">
             <div className="font-medium text-on-surface flex items-center gap-1">
-              <Eye className="w-3 h-3" />
-              {user.paywallHits}
+              <TrendingUp className="w-3 h-3" />
+              {user.scoreViews}
+            </div>
+          </div>
+          <div className="text-center hidden md:block" title="Analyzer runs">
+            <div className="font-medium text-on-surface flex items-center gap-1">
+              <Calculator className="w-3 h-3" />
+              {user.analyzerRuns}
             </div>
           </div>
           <div className="text-center hidden md:block" title="Reports">
@@ -247,22 +272,19 @@ function UserCard({
               {user.reportsGenerated}
             </div>
           </div>
-          <div className="text-center hidden md:block" title="Saved queries">
+          <div className="text-center hidden md:block" title="Paywall hits">
             <div className="font-medium text-on-surface flex items-center gap-1">
-              <BarChart3 className="w-3 h-3" />
-              {user.savedQueriesCount}
+              <Eye className="w-3 h-3" />
+              {user.paywallHits}
             </div>
           </div>
-          <div className="text-center hidden md:block" title="Watchlist">
+          <div
+            className="text-center hidden md:block"
+            title="Time to first value"
+          >
             <div className="font-medium text-on-surface flex items-center gap-1">
-              <Bookmark className="w-3 h-3" />
-              {user.watchlistCount}
-            </div>
-          </div>
-          <div className="text-center hidden md:block" title="Alerts">
-            <div className="font-medium text-on-surface flex items-center gap-1">
-              <Bell className="w-3 h-3" />
-              {user.alertsCount}
+              <Zap className="w-3 h-3" />
+              {formatTimeToValue(user.timeToFirstValueMinutes)}
             </div>
           </div>
           <ChevronDown
@@ -324,13 +346,25 @@ function UserCard({
             )}
           </div>
 
-          {/* Usage Stats */}
-          <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+          {/* Usage Stats — Overrides moved into the Feature Overrides section
+              below (its count header), since it's a config flag you set, not
+              something the user did; showing it as a usage tile here read as
+              a 6th behavioral stat when it's a fundamentally different kind
+              of fact. */}
+          <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
             <div className="bg-surface-container-high rounded-lg p-2 text-center">
               <div className="text-lg font-semibold text-on-surface">
-                {user.paywallHits}
+                {user.scoreViews}
               </div>
-              <div className="text-xs text-on-surface-variant">Paywall</div>
+              <div className="text-xs text-on-surface-variant">Score Views</div>
+            </div>
+            <div className="bg-surface-container-high rounded-lg p-2 text-center">
+              <div className="text-lg font-semibold text-on-surface">
+                {user.analyzerRuns}
+              </div>
+              <div className="text-xs text-on-surface-variant">
+                Analyzer Runs
+              </div>
             </div>
             <div className="bg-surface-container-high rounded-lg p-2 text-center">
               <div className="text-lg font-semibold text-on-surface">
@@ -340,27 +374,17 @@ function UserCard({
             </div>
             <div className="bg-surface-container-high rounded-lg p-2 text-center">
               <div className="text-lg font-semibold text-on-surface">
-                {user.savedQueriesCount}
+                {user.paywallHits}
               </div>
-              <div className="text-xs text-on-surface-variant">Queries</div>
+              <div className="text-xs text-on-surface-variant">Paywall</div>
             </div>
             <div className="bg-surface-container-high rounded-lg p-2 text-center">
               <div className="text-lg font-semibold text-on-surface">
-                {user.watchlistCount}
+                {formatTimeToValue(user.timeToFirstValueMinutes)}
               </div>
-              <div className="text-xs text-on-surface-variant">Watchlist</div>
-            </div>
-            <div className="bg-surface-container-high rounded-lg p-2 text-center">
-              <div className="text-lg font-semibold text-on-surface">
-                {user.alertsCount}
+              <div className="text-xs text-on-surface-variant">
+                To First Value
               </div>
-              <div className="text-xs text-on-surface-variant">Alerts</div>
-            </div>
-            <div className="bg-surface-container-high rounded-lg p-2 text-center">
-              <div className="text-lg font-semibold text-on-surface">
-                {user.overrideCount}
-              </div>
-              <div className="text-xs text-on-surface-variant">Overrides</div>
             </div>
           </div>
 
@@ -368,7 +392,12 @@ function UserCard({
           <div>
             <div className="flex items-center justify-between mb-3">
               <h4 className="text-sm font-medium text-on-surface">
-                Feature Overrides
+                Feature Overrides{" "}
+                {overrides.length > 0 && (
+                  <span className="text-on-surface-variant font-normal">
+                    ({overrides.length})
+                  </span>
+                )}
               </h4>
               <button
                 onClick={(e) => {
@@ -656,13 +685,24 @@ function UserCard({
                 </h5>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
                   <div className="flex items-center gap-2">
-                    <Eye className="w-4 h-4 text-on-surface-variant" />
+                    <TrendingUp className="w-4 h-4 text-on-surface-variant" />
                     <div>
                       <div className="font-medium text-on-surface">
-                        {user.paywallHits}
+                        {user.scoreViews}
                       </div>
                       <div className="text-xs text-on-surface-variant">
-                        Paywall Hits
+                        Score Views
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Calculator className="w-4 h-4 text-on-surface-variant" />
+                    <div>
+                      <div className="font-medium text-on-surface">
+                        {user.analyzerRuns}
+                      </div>
+                      <div className="text-xs text-on-surface-variant">
+                        Analyzer Runs
                       </div>
                     </div>
                   </div>
@@ -678,35 +718,24 @@ function UserCard({
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <BarChart3 className="w-4 h-4 text-on-surface-variant" />
+                    <Eye className="w-4 h-4 text-on-surface-variant" />
                     <div>
                       <div className="font-medium text-on-surface">
-                        {user.savedQueriesCount}
+                        {user.paywallHits}
                       </div>
                       <div className="text-xs text-on-surface-variant">
-                        Saved Queries
+                        Paywall Hits
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Bookmark className="w-4 h-4 text-on-surface-variant" />
+                    <Zap className="w-4 h-4 text-on-surface-variant" />
                     <div>
                       <div className="font-medium text-on-surface">
-                        {user.watchlistCount}
+                        {formatTimeToValue(user.timeToFirstValueMinutes)}
                       </div>
                       <div className="text-xs text-on-surface-variant">
-                        Watchlist Items
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Bell className="w-4 h-4 text-on-surface-variant" />
-                    <div>
-                      <div className="font-medium text-on-surface">
-                        {user.alertsCount}
-                      </div>
-                      <div className="text-xs text-on-surface-variant">
-                        Alerts
+                        To First Value
                       </div>
                     </div>
                   </div>
@@ -826,13 +855,11 @@ export default function UserOverridesPage() {
               reportsGenerated: (u.reportsGenerated ??
                 u.reports_generated ??
                 0) as number,
-              savedQueriesCount: (u.savedQueriesCount ??
-                u.saved_queries_count ??
-                0) as number,
-              watchlistCount: (u.watchlistCount ??
-                u.watchlist_count ??
-                0) as number,
-              alertsCount: (u.alertsCount ?? u.alerts_count ?? 0) as number,
+              scoreViews: (u.scoreViews ?? u.score_views ?? 0) as number,
+              analyzerRuns: (u.analyzerRuns ?? u.analyzer_runs ?? 0) as number,
+              timeToFirstValueMinutes: (u.timeToFirstValueMinutes ??
+                u.time_to_first_value_minutes ??
+                null) as number | null,
               overrides: u.overrides as UserOverride[] | undefined,
             })),
           );
