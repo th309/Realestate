@@ -134,6 +134,36 @@ export async function getWatchlistCountsForUsers(
   return counts;
 }
 
+/**
+ * `user_profiles.reports_generated_this_month` is written nowhere in the
+ * backend — it reads back 0 for every user, including ones with dozens of
+ * real reports. The `reports` table is the actual source of truth; this
+ * counts each user's REPORT-GENERATED reports (`status = 'ready'`, matching
+ * the terminal success state ReportViewer's poll loop watches for — a
+ * `failed` attempt was not "generated") for the current calendar month, to
+ * match what the dead column was named for.
+ */
+export async function getReportCountsForUsers(
+  client: SupabaseClient,
+  userIds: string[],
+): Promise<Map<string, number>> {
+  if (userIds.length === 0) return new Map();
+  const monthStart = new Date();
+  monthStart.setUTCDate(1);
+  monthStart.setUTCHours(0, 0, 0, 0);
+  const { data } = await client
+    .from('reports')
+    .select('user_id')
+    .in('user_id', userIds)
+    .eq('status', 'ready')
+    .gte('created_at', monthStart.toISOString());
+  const counts = new Map<string, number>();
+  (data || []).forEach((r) =>
+    counts.set(r.user_id, (counts.get(r.user_id) || 0) + 1),
+  );
+  return counts;
+}
+
 export async function getAlertCountsForUsers(
   client: SupabaseClient,
   userIds: string[],

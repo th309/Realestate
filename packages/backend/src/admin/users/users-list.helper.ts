@@ -11,6 +11,7 @@ import {
   getSavedQueryCountsForUsers,
   getWatchlistCountsForUsers,
   getAlertCountsForUsers,
+  getReportCountsForUsers,
 } from './users-batch-fetch.helper';
 
 export async function fetchUsersList(
@@ -36,7 +37,6 @@ export async function fetchUsersList(
         id, email, full_name, subscription_tier, subscription_status,
         stripe_customer_id, stripe_subscription_id,
         organization_id, organization_role,
-        reports_generated_this_month,
         created_at, updated_at, last_login_at
       `,
       { count: 'exact' },
@@ -79,6 +79,7 @@ export async function fetchUsersList(
     savedQueries,
     watchlists,
     alerts,
+    reportCounts,
   ] = await Promise.all([
     getTrialsForUsers(client, userIds),
     getOverrideCountsForUsers(client, userIds),
@@ -91,6 +92,7 @@ export async function fetchUsersList(
     getSavedQueryCountsForUsers(client, userIds),
     getWatchlistCountsForUsers(client, userIds),
     getAlertCountsForUsers(client, userIds),
+    getReportCountsForUsers(client, userIds),
   ]);
 
   const users: UserListItem[] = (profiles || []).map((profile) => {
@@ -131,7 +133,7 @@ export async function fetchUsersList(
       // Usage
       overrideCount: overrideCounts.get(profile.id) || 0,
       paywallHits: paywallCounts.get(profile.id) || 0,
-      reportsGenerated: profile.reports_generated_this_month || 0,
+      reportsGenerated: reportCounts.get(profile.id) || 0,
       savedQueriesCount: savedQueries.get(profile.id) || 0,
       watchlistCount: watchlists.get(profile.id) || 0,
       alertsCount: alerts.get(profile.id) || 0,
