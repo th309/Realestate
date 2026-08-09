@@ -19,7 +19,7 @@ import { EntitlementsService } from '../entitlements/entitlements.service';
 // Types
 // ---------------------------------------------------------------------------
 
-/** Dependencies required only by `sendConversationMessage`. */
+/** Dependencies required only by `streamConversationMessage`. */
 export interface ConversationDeps {
   reportAiService: ReportAiService;
   newsScoutService: NewsScoutService;
@@ -32,19 +32,34 @@ export interface ConversationDeps {
 // Conversation helpers
 // ---------------------------------------------------------------------------
 
+/** SSE event shape yielded by streamConversationMessage(), mirrored on the frontend. */
+export type ConversationStreamEvent =
+  | { type: 'text'; content: string }
+  | { type: 'done' }
+  | { type: 'error'; content: string };
+
 /**
- * Send a user message in a report conversation and generate an AI response.
+ * Send a user message in a report conversation and stream the AI response.
  *
  * Creates the conversation row if it does not exist yet, checks the user's AI
- * entitlement, asks the AI for a response, then persists the new exchange.
+ * entitlement, streams the AI's reply as it's generated, then persists the
+ * full exchange once the stream ends.
  */
-export async function sendConversationMessage(
+export async function* streamConversationMessage(
   supabase: SupabaseClient,
   deps: ConversationDeps,
   reportId: string,
   userId: string,
   content: string,
-): Promise<any> {
+): AsyncGenerator<ConversationStreamEvent> {
+  // Get report for context — validated before touching report_conversations so
+  // a bad/foreign reportId errors cleanly instead of creating an orphan row.
+  const report = await deps.getReport(reportId, userId);
+  if (!report) {
+    yield { type: 'error', content: 'Report not found' };
+    return;
+  }
+
   // Get or create conversation
   let { data: conversation } = await supabase
     .from('report_conversations')
@@ -68,9 +83,6 @@ export async function sendConversationMessage(
     if (error) throw error;
     conversation = newConv;
   }
-
-  // Get report for context
-  const report = await deps.getReport(reportId, userId);
 
   // Extract news context from report's realtime data if available
   let newsContext: string | undefined;
@@ -98,35 +110,28 @@ export async function sendConversationMessage(
     ['feature:ai_insights'],
   );
   if (convAiAccess.access['feature:ai_insights']?.level !== 'full') {
-    return {
-      messages: [
-        ...(conversation.messages || []),
-        {
-          id: Date.now().toString(),
-          role: 'user',
-          content,
-          timestamp: new Date().toISOString(),
-        },
-        {
-          id: (Date.now() + 1).toString(),
-          role: 'assistant',
-          content:
-            'AI-powered conversation requires an Enterprise plan. Upgrade to unlock AI chat for your reports.',
-          timestamp: new Date().toISOString(),
-        },
-      ],
+    yield {
+      type: 'text',
+      content:
+        'AI-powered conversation requires an Enterprise plan. Upgrade to unlock AI chat for your reports.',
     };
+    yield { type: 'done' };
+    return;
   }
 
-  // Generate AI response
-  const response = await deps.reportAiService.generateConversationResponse(
+  // Stream the AI response, accumulating the full text for persistence
+  let response = '';
+  for await (const delta of deps.reportAiService.streamConversationResponse(
     content,
     conversation.messages || [],
     report,
     newsContext,
-  );
+  )) {
+    response += delta;
+    yield { type: 'text', content: delta };
+  }
 
-  // Update conversation
+  // Persist the full exchange now that the stream has ended
   const messages = [
     ...(conversation.messages || []),
     {
@@ -152,11 +157,7 @@ export async function sendConversationMessage(
     })
     .eq('id', conversation.id);
 
-  return {
-    response,
-    exchange_count: (conversation.exchange_count || 0) + 1,
-    limit_reached: false,
-  };
+  yield { type: 'done' };
 }
 
 // ---------------------------------------------------------------------------

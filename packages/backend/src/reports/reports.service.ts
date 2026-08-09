@@ -26,26 +26,10 @@ import {
   SaveBuilderTemplateDto,
 } from './dto/generate-report.dto';
 import { generateReportAsync, ReportDeps } from './reports-orchestrator';
-import {
-  sendConversationMessage as sendConversationMessageFn,
-  getConversation as getConversationFn,
-  createShareLink as createShareLinkFn,
-  getSharedReport as getSharedReportFn,
-} from './reports-sharing';
-import { regenerateNarratives as regenerateNarrativesFn } from './reports-narrative-regeneration';
-
-export interface ReportTemplate {
-  id: string;
-  slug: string;
-  name: string;
-  description: string;
-  icon: string;
-  version: number;
-  tier_required: string;
-  config: any;
-}
+import { ReportTemplateCatalogService } from './report-template-catalog.service';
 
 // Re-export types for consumers
+export type { ReportTemplate } from './report-template-catalog.service';
 export type { ScoreContext } from './reports-score-context';
 export type {
   HistoricalMetricData,
@@ -67,48 +51,12 @@ export class ReportsService {
     private readonly marketSnapshotService: MarketSnapshotService,
     private readonly metricResolutionService: MetricResolutionService,
     private readonly reportGenerationV2: ReportGenerationV2Service,
+    private readonly reportTemplateCatalog: ReportTemplateCatalogService,
   ) {}
 
   // ============================================================================
-  // Template CRUD
+  // Template CRUD (catalog reads delegate to ReportTemplateCatalogService)
   // ============================================================================
-
-  // Public catalog: every active, public template, ordered by tier_required.
-  // Intentionally NOT filtered by a caller-supplied tier — a client tier must
-  // never influence what the server returns (tier is resolved server-side for
-  // access decisions, not for catalog visibility).
-  async getTemplates(): Promise<ReportTemplate[]> {
-    const client = this.supabase.getClient();
-    const query = client
-      .from('report_templates')
-      .select('*')
-      .eq('is_active', true)
-      .eq('is_public', true)
-      .order('tier_required', { ascending: true });
-
-    const { data, error } = await query;
-    if (error) {
-      this.logger.error('Failed to fetch templates:', error);
-      return [];
-    }
-    return data || [];
-  }
-
-  async getTemplateBySlug(slug: string): Promise<ReportTemplate | null> {
-    const client = this.supabase.getClient();
-    const { data, error } = await client
-      .from('report_templates')
-      .select('*')
-      .eq('slug', slug)
-      .eq('is_active', true)
-      .single();
-
-    if (error) {
-      this.logger.error(`Failed to fetch template ${slug}:`, error);
-      return null;
-    }
-    return data;
-  }
 
   /**
    * Persist a report-builder layout as a private, user-owned template row in
@@ -163,7 +111,9 @@ export class ReportsService {
     const client = this.supabase.getClient();
     const startTime = Date.now();
 
-    const template = await this.getTemplateBySlug(dto.template_slug);
+    const template = await this.reportTemplateCatalog.getTemplateBySlug(
+      dto.template_slug,
+    );
     if (!template) {
       throw new Error(`Template not found: ${dto.template_slug}`);
     }
@@ -299,65 +249,9 @@ export class ReportsService {
     return true;
   }
 
-  // ── Sharing & Conversations (delegates to reports-sharing.ts) ──────
-
-  async sendConversationMessage(
-    reportId: string,
-    userId: string,
-    content: string,
-  ): Promise<any> {
-    return sendConversationMessageFn(
-      this.supabase.getClient(),
-      {
-        reportAiService: this.reportAiService,
-        newsScoutService: this.newsScoutService,
-        entitlementsService: this.entitlementsService,
-        getReport: (rid, uid) => this.getReport(rid, uid),
-      },
-      reportId,
-      userId,
-      content,
-    );
-  }
-
-  async getConversation(reportId: string, userId: string): Promise<any> {
-    return getConversationFn(this.supabase.getClient(), reportId, userId);
-  }
-
-  async createShareLink(
-    reportId: string,
-    userId: string,
-    accessLevel: 'view' | 'download',
-    expiresInDays?: number,
-  ): Promise<string> {
-    return createShareLinkFn(
-      this.supabase.getClient(),
-      reportId,
-      userId,
-      accessLevel,
-      expiresInDays,
-    );
-  }
-
-  async getSharedReport(token: string): Promise<any> {
-    return getSharedReportFn(this.supabase.getClient(), token);
-  }
-
-  // ── Narrative Regeneration (delegates to reports-narratives.ts) ───
-
-  async regenerateNarratives(
-    reportId: string,
-    userId: string,
-    userInputs: Record<string, any>,
-  ): Promise<{ updated_keys: string[]; ai_narrative: Record<string, any> }> {
-    return regenerateNarrativesFn(
-      this.supabase.getClient(),
-      this.logger,
-      reportId,
-      userId,
-      userInputs,
-    );
-  }
+  // Sharing, conversations, and narrative regeneration live in
+  // ReportsSharingService / ReportsNarrativeRegenerationService — see
+  // reports.controller.ts, which injects those directly.
 
   // ── Private Helpers ──────────────────────────────────────────────
 

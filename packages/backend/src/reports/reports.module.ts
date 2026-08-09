@@ -11,8 +11,12 @@
 import { Module } from '@nestjs/common';
 import { ReportsService } from './reports.service';
 import { ReportsController } from './reports.controller';
+import { ReportSharingController } from './report-sharing.controller';
 import { ResearchBriefController } from './research-brief/research-brief.controller';
 import { ReportAiService } from './report-ai.service';
+import { ReportTemplateCatalogService } from './report-template-catalog.service';
+import { ReportsSharingService } from './reports-sharing.service';
+import { ReportsNarrativeRegenerationService } from './reports-narrative-regeneration.service';
 import { NewsScoutService } from './news-scout.service';
 import { ResearchBriefService } from './research-brief/research-brief.service';
 import { ReportGenerationV2Service } from './report-generation-v2.service';
@@ -44,6 +48,9 @@ import { MetricResolutionModule } from '../metric-resolution/metric-resolution.m
   providers: [
     ReportsService,
     ReportAiService,
+    ReportTemplateCatalogService,
+    ReportsSharingService,
+    ReportsNarrativeRegenerationService,
     NewsScoutService,
     ResearchBriefService,
     ReportGenerationV2Service,
@@ -52,12 +59,16 @@ import { MetricResolutionModule } from '../metric-resolution/metric-resolution.m
   ],
   controllers: [
     ReportsController,
+    ReportSharingController,
     ResearchBriefController,
     ReportFollowUpController,
   ],
   exports: [
     ReportsService,
     ReportAiService,
+    ReportTemplateCatalogService,
+    ReportsSharingService,
+    ReportsNarrativeRegenerationService,
     NewsScoutService,
     ResearchBriefService,
     ReportGenerationV2Service,

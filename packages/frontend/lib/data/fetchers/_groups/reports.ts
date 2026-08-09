@@ -14,11 +14,17 @@ export {
   fetchReportList,
   generateReport,
   regenerateNarratives,
-  sendReportMessage,
-  fetchReportConversation,
   type GenerateReportRequest,
   type GenerateReportResponse,
 } from "../reports";
+
+// Report conversation ("Ask AI" streaming chat + history)
+export {
+  streamReportMessage,
+  fetchReportConversation,
+  type ConversationMessage,
+  type ConversationStreamEvent,
+} from "../report-conversation";
 
 // Report follow-up (alerts + market changes)
 export {

@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { X, Send, Loader2, AlertCircle } from "lucide-react";
-import { sendReportMessage, fetchReportConversation } from "@/lib/data";
+import { streamReportMessage, fetchReportConversation } from "@/lib/data";
 import { useAuth } from "@/lib/auth";
 import { useEntitlements } from "@/lib/entitlements/EntitlementsContext";
 
@@ -78,30 +78,50 @@ export function ConversationPanel({
       content: content.trim(),
       timestamp: new Date().toISOString(),
     };
+    const assistantMessageId = (Date.now() + 1).toString();
 
-    setMessages((prev) => [...prev, userMessage]);
+    setMessages((prev) => [
+      ...prev,
+      userMessage,
+      {
+        id: assistantMessageId,
+        role: "assistant",
+        content: "",
+        timestamp: new Date().toISOString(),
+      },
+    ]);
     setInput("");
     setIsLoading(true);
     setError(null);
 
+    const dropEmptyPlaceholder = () =>
+      setMessages((prev) =>
+        prev.filter((m) => !(m.id === assistantMessageId && !m.content)),
+      );
+
     try {
-      const data = await sendReportMessage(reportId, content.trim(), {
+      for await (const event of streamReportMessage(reportId, content.trim(), {
         userId,
         userTier: tier ?? undefined,
-      });
-
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: "assistant",
-        content: data.response,
-        timestamp: new Date().toISOString(),
-      };
-
-      setMessages((prev) => [...prev, assistantMessage]);
+      })) {
+        if (event.type === "text") {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantMessageId
+                ? { ...m, content: m.content + event.content }
+                : m,
+            ),
+          );
+        } else if (event.type === "error") {
+          setError(event.content);
+          dropEmptyPlaceholder();
+        }
+      }
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Failed to get AI response",
       );
+      dropEmptyPlaceholder();
     } finally {
       setIsLoading(false);
     }
@@ -150,30 +170,33 @@ export function ConversationPanel({
             </div>
           </div>
         ) : (
-          messages.map((msg) => (
-            <div
-              key={msg.id}
-              className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-            >
+          messages.map((msg, index) => {
+            const isStreamingPlaceholder =
+              isLoading &&
+              !msg.content &&
+              msg.role === "assistant" &&
+              index === messages.length - 1;
+            return (
               <div
-                className={`max-w-[85%] px-4 py-3 rounded-2xl text-sm ${
-                  msg.role === "user"
-                    ? "bg-primary text-on-primary rounded-br-sm"
-                    : "bg-surface-container-high text-on-surface rounded-bl-sm"
-                }`}
+                key={msg.id}
+                className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
               >
-                {msg.content}
+                <div
+                  className={`max-w-[85%] px-4 py-3 rounded-2xl text-sm ${
+                    msg.role === "user"
+                      ? "bg-primary text-on-primary rounded-br-sm"
+                      : "bg-surface-container-high text-on-surface rounded-bl-sm"
+                  }`}
+                >
+                  {isStreamingPlaceholder ? (
+                    <Loader2 className="w-5 h-5 animate-spin text-on-surface-variant" />
+                  ) : (
+                    msg.content
+                  )}
+                </div>
               </div>
-            </div>
-          ))
-        )}
-
-        {isLoading && (
-          <div className="flex justify-start">
-            <div className="px-4 py-3 bg-surface-container-high rounded-2xl rounded-bl-sm">
-              <Loader2 className="w-5 h-5 animate-spin text-on-surface-variant" />
-            </div>
-          </div>
+            );
+          })
         )}
 
         {error && (
