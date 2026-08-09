@@ -22,6 +22,19 @@ interface UseMapViewParamsOptions {
   isMetricGated: (metricId: string) => boolean;
 }
 
+// Levels a `?level=` URL param may set directly. Excludes "city" — there's no
+// city-level metric data, so a stale bookmark or shared link with `level=city`
+// must not boot the map into a geo level with no pill to show for it (matches
+// the same allowlist-and-fallback pattern in embed/map-full/useEmbedMapConfig).
+const VALID_URL_GEO_LEVELS: readonly GeoLevel[] = [
+  "national",
+  "state",
+  "metro",
+  "county",
+  "zip",
+  "tract",
+];
+
 /**
  * Owns the core map view parameters (geo level, metric, state filter, and the
  * forecast/rent/renter sub-selectors), initialised from URL params so the
@@ -43,7 +56,10 @@ export function useMapViewParams({
 
   // Core state — initialized from URL params so browser back-button restores previous view
   const [geoLevel, setGeoLevel] = useState<GeoLevel>(() => {
-    return (searchParams.get("level") as GeoLevel) || "state";
+    const level = searchParams.get("level");
+    return level && VALID_URL_GEO_LEVELS.includes(level as GeoLevel)
+      ? (level as GeoLevel)
+      : "state";
   });
   const [selectedState, setSelectedState] = useState<string>(() => {
     return searchParams.get("st") || "";

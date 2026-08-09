@@ -1,6 +1,13 @@
 "use client";
 
-import type { GeoLevel, MetricCategory, SearchResult } from "./types";
+import type {
+  ForecastHorizon,
+  GeoLevel,
+  MetricCategory,
+  RentIndexType,
+  RenterDemandType,
+  SearchResult,
+} from "./types";
 import {
   MenuIcon,
   SearchWidget,
@@ -34,9 +41,17 @@ interface MapToolbarProps {
   /** Map/Table view switch — the Table View FAB used to float over the canvas. */
   showTableView: boolean;
   onShowTableView: (open: boolean) => void;
-  /** Metric catalogue, for naming the active metric and reopening the sidebar. */
+  /** Metric catalogue — powers the anchored dropdown on MetricPickerButton. */
   metricCategories: MetricCategory[];
-  onOpenMetricPicker: () => void;
+  expandedCategories: string[];
+  onToggleCategory: (id: string) => void;
+  onSelectMetric: (id: string) => void;
+  forecastHorizon: ForecastHorizon;
+  rentIndexType: RentIndexType;
+  renterDemandType: RenterDemandType;
+  onForecastHorizonChange: (horizon: ForecastHorizon) => void;
+  onRentIndexTypeChange: (type: RentIndexType) => void;
+  onRenterDemandTypeChange: (type: RenterDemandType) => void;
 }
 
 /**
@@ -65,7 +80,15 @@ export function MapToolbar({
   showTableView,
   onShowTableView,
   metricCategories,
-  onOpenMetricPicker,
+  expandedCategories,
+  onToggleCategory,
+  onSelectMetric,
+  forecastHorizon,
+  rentIndexType,
+  renterDemandType,
+  onForecastHorizonChange,
+  onRentIndexTypeChange,
+  onRenterDemandTypeChange,
 }: MapToolbarProps) {
   return (
     <ControlBar>
@@ -98,12 +121,20 @@ export function MapToolbar({
         />
       </div>
 
-      {/* States what the map is painting, and reopens the catalogue. */}
+      {/* States what the map is painting, and IS the dropdown to change it. */}
       <MetricPickerButton
         metricCategories={metricCategories}
+        expandedCategories={expandedCategories}
         selectedMetric={selectedMetric}
         geoLevel={geoLevel}
-        onOpen={onOpenMetricPicker}
+        forecastHorizon={forecastHorizon}
+        rentIndexType={rentIndexType}
+        renterDemandType={renterDemandType}
+        onToggleCategory={onToggleCategory}
+        onSelectMetric={onSelectMetric}
+        onForecastHorizonChange={onForecastHorizonChange}
+        onRentIndexTypeChange={onRentIndexTypeChange}
+        onRenterDemandTypeChange={onRenterDemandTypeChange}
       />
 
       {/* Map / Table — was a floating FAB bottom-right of the canvas, an
@@ -161,7 +192,6 @@ export function MapToolbar({
       <div className="w-full basis-full space-y-2 md:hidden">
         <GeoLevelPills
           isMobile
-          excludeLevels={["city"]}
           geoLevel={geoLevel}
           selectedMetric={selectedMetric}
           selectedState={selectedState}

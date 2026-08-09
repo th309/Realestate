@@ -211,7 +211,6 @@ export function MapShowcase() {
               selectedState={selectedState}
               onGeoLevelChange={handleGeoLevelChange}
               onStateChange={setSelectedState}
-              excludeLevels={["city"]}
             />
           </div>
 
