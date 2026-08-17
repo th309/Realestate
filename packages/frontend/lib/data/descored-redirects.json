@@ -1,137 +1,2977 @@
 [
   {
-    "source": "/markets/zip/10975-southfields-ny",
-    "destination": "/markets/county/orange-county-ny",
+    "source": "/markets/county/cimarron-county-ok",
+    "destination": "/markets/state/oklahoma",
     "permanent": false
   },
   {
-    "source": "/markets/zip/12482-south-cairo-ny",
-    "destination": "/markets/county/greene-county-ny",
+    "source": "/markets/county/cimarron-county-ok/zips",
+    "destination": "/markets/state/oklahoma",
     "permanent": false
   },
   {
-    "source": "/markets/zip/13404-martinsburg-ny",
-    "destination": "/markets/county/lewis-county-ny",
+    "source": "/markets/zip/01026-cummington-ma",
+    "destination": "/markets/county/hampshire-county-ma",
     "permanent": false
   },
   {
-    "source": "/markets/zip/21540-luke-md",
-    "destination": "/markets/county/allegany-county-md",
+    "source": "/markets/zip/01347-lake-pleasant-ma",
+    "destination": "/markets/county/franklin-county-ma",
     "permanent": false
   },
   {
-    "source": "/markets/zip/25857-josephine-wv",
+    "source": "/markets/zip/01853-lowell-ma",
+    "destination": "/markets/county/middlesex-county-ma",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/02051-marshfield-hills-ma",
+    "destination": "/markets/county/plymouth-county-ma",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/02366-south-carver-ma",
+    "destination": "/markets/county/plymouth-county-ma",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/02471-watertown-ma",
+    "destination": "/markets/county/middlesex-county-ma",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/02815-clayville-ri",
+    "destination": "/markets/county/providence-county-ri",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/03607-south-acworth-nh",
+    "destination": "/markets/county/sullivan-county-nh",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/03609-north-walpole-nh",
+    "destination": "/markets/county/cheshire-county-nh",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/03751-georges-mills-nh",
+    "destination": "/markets/county/sullivan-county-nh",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/03910-york-beach-me",
+    "destination": "/markets/county/york-county-me",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/04006-biddeford-pool-me",
+    "destination": "/markets/county/york-county-me",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/04451-kingman-me",
+    "destination": "/markets/county/aroostook-county-me",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/04491-vanceboro-me",
+    "destination": "/markets/county/washington-county-me",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/04613-birch-harbor-me",
+    "destination": "/markets/county/hancock-county-me",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/05040-east-corinth-vt",
+    "destination": "/markets/county/orange-county-vt",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/05083-west-fairlee-vt",
+    "destination": "/markets/county/orange-county-vt",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/05649-east-barre-vt",
+    "destination": "/markets/county/washington-county-vt",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/05664-northfield-falls-vt",
+    "destination": "/markets/county/washington-county-vt",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/05904-gilman-vt",
+    "destination": "/markets/county/essex-county-vt",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/06075-stafford-ct",
+    "destination": "/markets/county/capitol-planning-region-county-ct",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/06263-rogers-ct",
+    "destination": "/markets/county/northeastern-connecticut-planning-region-county-ct",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/06389-yantic-ct",
+    "destination": "/markets/county/southeastern-connecticut-planning-region-county-ct",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/08042-juliustown-nj",
+    "destination": "/markets/county/burlington-county-nj",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/12045-coeymans-ny",
+    "destination": "/markets/county/albany-county-ny",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/12115-malden-bridge-ny",
+    "destination": "/markets/county/columbia-county-ny",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/12161-south-bethlehem-ny",
+    "destination": "/markets/county/albany-county-ny",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/12174-stuyvesant-falls-ny",
+    "destination": "/markets/county/columbia-county-ny",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/12194-west-fulton-ny",
+    "destination": "/markets/county/schoharie-county-ny",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/12432-glasco-ny",
+    "destination": "/markets/county/ulster-county-ny",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/12812-blue-mountain-lake-ny",
+    "destination": "/markets/county/hamilton-county-ny",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/12924-keeseville-ny",
+    "destination": "/markets/county/clinton-county-ny",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/12973-piercefield-ny",
+    "destination": "/markets/county/st-lawrence-county-ny",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/12978-redford-ny",
+    "destination": "/markets/county/clinton-county-ny",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/13071-genoa-ny",
+    "destination": "/markets/county/cayuga-county-ny",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/13103-mallory-ny",
+    "destination": "/markets/county/oswego-county-ny",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/13163-wampsville-ny",
+    "destination": "/markets/county/madison-county-ny",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/13475-van-hornesville-ny",
+    "destination": "/markets/county/herkimer-county-ny",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/13738-blodgett-mills-ny",
+    "destination": "/markets/county/cortland-county-ny",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/13802-maine-ny",
+    "destination": "/markets/county/broome-county-ny",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/14030-chaffee-ny",
+    "destination": "/markets/county/cattaraugus-county-ny",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/14060-farmersville-station-ny",
+    "destination": "/markets/county/allegany-county-ny",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/14082-java-center-ny",
+    "destination": "/markets/county/wyoming-county-ny",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/14113-north-java-ny",
+    "destination": "/markets/county/wyoming-county-ny",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/14129-perrysburg-ny",
+    "destination": "/markets/county/cattaraugus-county-ny",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/14135-sheridan-ny",
+    "destination": "/markets/county/chautauqua-county-ny",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/14173-yorkshire-ny",
+    "destination": "/markets/county/cattaraugus-county-ny",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/14592-york-ny",
+    "destination": "/markets/county/livingston-county-ny",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/14708-alma-ny",
+    "destination": "/markets/county/allegany-county-ny",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/14786-west-clarksville-ny",
+    "destination": "/markets/county/allegany-county-ny",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/14839-greenwood-ny",
+    "destination": "/markets/county/steuben-county-ny",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/14881-slaterville-springs-ny",
+    "destination": "/markets/county/tompkins-county-ny",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/14887-tyrone-ny",
+    "destination": "/markets/county/schuyler-county-ny",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/14894-wellsburg-ny",
+    "destination": "/markets/county/chemung-county-ny",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/15028-coulters-pa",
+    "destination": "/markets/county/allegheny-county-pa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/15047-greenock-pa",
+    "destination": "/markets/county/allegheny-county-pa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/15082-sturgeon-pa",
+    "destination": "/markets/county/allegheny-county-pa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/15127-ingomar-pa",
+    "destination": "/markets/county/allegheny-county-pa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/15327-dilliner-pa",
+    "destination": "/markets/county/greene-county-pa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/15344-jefferson-pa",
+    "destination": "/markets/county/greene-county-pa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/15351-nemacolin-pa",
+    "destination": "/markets/county/greene-county-pa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/15434-elco-pa",
+    "destination": "/markets/county/washington-county-pa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/15447-isabella-pa",
+    "destination": "/markets/county/fayette-county-pa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/15451-lake-lynn-pa",
+    "destination": "/markets/county/fayette-county-pa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/15561-sipesville-pa",
+    "destination": "/markets/county/somerset-county-pa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/15562-springs-pa",
+    "destination": "/markets/county/somerset-county-pa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/15684-slickville-pa",
+    "destination": "/markets/county/westmoreland-county-pa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/15716-black-lick-pa",
+    "destination": "/markets/county/indiana-county-pa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/15737-elmora-pa",
+    "destination": "/markets/county/cambria-county-pa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/15764-oliveburg-pa",
+    "destination": "/markets/county/jefferson-county-pa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/15779-torrance-pa",
+    "destination": "/markets/county/westmoreland-county-pa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/15929-dilltown-pa",
+    "destination": "/markets/county/indiana-county-pa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/15934-elton-pa",
+    "destination": "/markets/county/cambria-county-pa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/15960-twin-rocks-pa",
+    "destination": "/markets/county/cambria-county-pa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/16124-fredonia-pa",
+    "destination": "/markets/county/mercer-county-pa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/16131-hartstown-pa",
+    "destination": "/markets/county/crawford-county-pa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/16132-hillsville-pa",
+    "destination": "/markets/county/lawrence-county-pa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/16212-cadogan-pa",
+    "destination": "/markets/county/armstrong-county-pa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/16250-sagamore-pa",
+    "destination": "/markets/county/armstrong-county-pa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/16402-bear-lake-pa",
+    "destination": "/markets/county/warren-county-pa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/16667-osterburg-pa",
+    "destination": "/markets/county/bedford-county-pa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/16683-spruce-creek-pa",
+    "destination": "/markets/county/huntingdon-county-pa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/16750-turtlepoint-pa",
+    "destination": "/markets/county/mckean-county-pa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/16848-lamar-pa",
+    "destination": "/markets/county/clinton-county-pa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/16853-milesburg-pa",
+    "destination": "/markets/county/centre-county-pa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/16932-mainesburg-pa",
+    "destination": "/markets/county/tioga-county-pa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/17021-east-waterford-pa",
+    "destination": "/markets/county/juniata-county-pa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/17083-quentin-pa",
+    "destination": "/markets/county/lebanon-county-pa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/17237-mont-alto-pa",
+    "destination": "/markets/county/franklin-county-pa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/17260-shirleysburg-pa",
+    "destination": "/markets/county/huntingdon-county-pa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/17263-state-line-pa",
+    "destination": "/markets/county/franklin-county-pa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/17508-brownstown-pa",
+    "destination": "/markets/county/lancaster-county-pa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/17534-intercourse-pa",
+    "destination": "/markets/county/lancaster-county-pa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/17550-maytown-pa",
+    "destination": "/markets/county/lancaster-county-pa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/17867-rebuck-pa",
+    "destination": "/markets/county/northumberland-county-pa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/17951-mar-lin-pa",
+    "destination": "/markets/county/schuylkill-county-pa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/18035-cherryville-pa",
+    "destination": "/markets/county/northampton-county-pa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/18056-hereford-pa",
+    "destination": "/markets/county/berks-county-pa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/18083-stockertown-pa",
+    "destination": "/markets/county/northampton-county-pa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/18211-andreas-pa",
+    "destination": "/markets/county/schuylkill-county-pa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/18356-shawnee-on-delaware-pa",
+    "destination": "/markets/county/monroe-county-pa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/18420-fleetville-pa",
+    "destination": "/markets/county/lackawanna-county-pa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/18846-sugar-run-pa",
+    "destination": "/markets/county/bradford-county-pa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/18913-carversville-pa",
+    "destination": "/markets/county/bucks-county-pa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/19028-edgemont-pa",
+    "destination": "/markets/county/delaware-county-pa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/20140-rectortown-va",
+    "destination": "/markets/county/fauquier-county-va",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/20143-catharpin-va",
+    "destination": "/markets/county/prince-william-county-va",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/20160-lincoln-va",
+    "destination": "/markets/county/loudoun-county-va",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/20188-warrenton-va",
+    "destination": "/markets/county/fauquier-county-va",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/20838-barnesville-md",
+    "destination": "/markets/county/montgomery-county-md",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/21139-riderwood-md",
+    "destination": "/markets/county/baltimore-county-md",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/21641-hillsboro-md",
+    "destination": "/markets/county/caroline-county-md",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/21650-massey-md",
+    "destination": "/markets/county/kent-county-md",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/21657-queen-anne-md",
+    "destination": "/markets/county/queen-annes-county-md",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/21721-chewsville-md",
+    "destination": "/markets/county/washington-county-md",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/21790-tuscarora-md",
+    "destination": "/markets/county/frederick-county-md",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/21920-elk-mills-md",
+    "destination": "/markets/county/cecil-county-md",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/22106-mc-lean-va",
+    "destination": "/markets/county/fairfax-county-va",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/22442-coles-point-va",
+    "destination": "/markets/county/westmoreland-county-va",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/22579-wicomico-church-va",
+    "destination": "/markets/county/northumberland-county-va",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/22834-linville-va",
+    "destination": "/markets/county/rockingham-county-va",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/23129-oilville-va",
+    "destination": "/markets/county/goochland-county-va",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/23184-wicomico-va",
+    "destination": "/markets/county/gloucester-county-va",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/23843-dolphin-va",
+    "destination": "/markets/county/brunswick-county-va",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/23952-lunenburg-va",
+    "destination": "/markets/county/lunenburg-county-va",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/24082-critz-va",
+    "destination": "/markets/county/patrick-county-va",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/24161-sandy-level-va",
+    "destination": "/markets/county/pittsylvania-county-va",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/24256-haysi-va",
+    "destination": "/markets/county/dickenson-county-va",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/24602-bandy-va",
+    "destination": "/markets/county/tazewell-county-va",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/24607-breaks-va",
+    "destination": "/markets/county/dickenson-county-va",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/24620-hurley-va",
+    "destination": "/markets/county/buchanan-county-va",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/24847-itmann-wv",
+    "destination": "/markets/county/wyoming-county-wv",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/24895-wilcoe-wv",
+    "destination": "/markets/county/mcdowell-county-wv",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/24993-wolfcreek-wv",
+    "destination": "/markets/county/monroe-county-wv",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/25011-bancroft-wv",
+    "destination": "/markets/county/putnam-county-wv",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/25108-hewett-wv",
+    "destination": "/markets/county/boone-county-wv",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/25121-lake-wv",
+    "destination": "/markets/county/logan-county-wv",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/25125-lizemores-wv",
+    "destination": "/markets/county/clay-county-wv",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/25180-saxon-wv",
     "destination": "/markets/county/raleigh-county-wv",
     "permanent": false
   },
   {
-    "source": "/markets/zip/26421-pullman-wv",
-    "destination": "/markets/county/ritchie-county-wv",
+    "source": "/markets/zip/25193-sylvester-wv",
+    "destination": "/markets/county/boone-county-wv",
     "permanent": false
   },
   {
-    "source": "/markets/zip/27877-severn-nc",
-    "destination": "/markets/county/northampton-county-nc",
+    "source": "/markets/zip/25261-millstone-wv",
+    "destination": "/markets/county/calhoun-county-wv",
     "permanent": false
   },
   {
-    "source": "/markets/zip/28093-lincolnton-nc",
-    "destination": "/markets/county/lincoln-county-nc",
+    "source": "/markets/zip/25266-newton-wv",
+    "destination": "/markets/county/roane-county-wv",
     "permanent": false
   },
   {
-    "source": "/markets/zip/29592-sellers-sc",
-    "destination": "/markets/county/dillon-county-sc",
+    "source": "/markets/zip/25267-normantown-wv",
+    "destination": "/markets/county/gilmer-county-wv",
     "permanent": false
   },
   {
-    "source": "/markets/zip/36583-tibbie-al",
-    "destination": "/markets/county/washington-county-al",
+    "source": "/markets/zip/25611-bruno-wv",
+    "destination": "/markets/county/logan-county-wv",
     "permanent": false
   },
   {
-    "source": "/markets/zip/43007-broadway-oh",
-    "destination": "/markets/county/union-county-oh",
+    "source": "/markets/zip/25688-north-matewan-wv",
+    "destination": "/markets/county/mingo-county-wv",
     "permanent": false
   },
   {
-    "source": "/markets/zip/43346-roundhead-oh",
-    "destination": "/markets/county/hardin-county-oh",
+    "source": "/markets/zip/25837-edmond-wv",
+    "destination": "/markets/county/fayette-county-wv",
     "permanent": false
   },
   {
-    "source": "/markets/zip/50862-sharpsburg-ia",
-    "destination": "/markets/county/taylor-county-ia",
+    "source": "/markets/zip/25841-flat-top-wv",
+    "destination": "/markets/county/mercer-county-wv",
     "permanent": false
   },
   {
-    "source": "/markets/zip/53195-zenda-wi",
-    "destination": "/markets/county/walworth-county-wi",
+    "source": "/markets/zip/25913-ravencliff-wv",
+    "destination": "/markets/county/wyoming-county-wv",
     "permanent": false
   },
   {
-    "source": "/markets/zip/57264-stockholm-sd",
+    "source": "/markets/zip/26036-dallas-wv",
+    "destination": "/markets/county/marshall-county-wv",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/26136-big-bend-wv",
+    "destination": "/markets/county/calhoun-county-wv",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/26152-munday-wv",
+    "destination": "/markets/county/calhoun-county-wv",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/26224-helvetia-wv",
+    "destination": "/markets/county/randolph-county-wv",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/26238-volga-wv",
+    "destination": "/markets/county/barbour-county-wv",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/26275-junior-wv",
+    "destination": "/markets/county/barbour-county-wv",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/26282-monterville-wv",
+    "destination": "/markets/county/randolph-county-wv",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/26422-reynoldsville-wv",
+    "destination": "/markets/county/harrison-county-wv",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/26424-rosemont-wv",
+    "destination": "/markets/county/taylor-county-wv",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/26576-idamay-wv",
+    "destination": "/markets/county/marion-county-wv",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/26629-little-birch-wv",
+    "destination": "/markets/county/braxton-county-wv",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/27813-black-creek-nc",
+    "destination": "/markets/county/wilson-county-nc",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/27873-saratoga-nc",
+    "destination": "/markets/county/wilson-county-nc",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/28430-cerro-gordo-nc",
+    "destination": "/markets/county/columbus-county-nc",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/28434-council-nc",
+    "destination": "/markets/county/bladen-county-nc",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/28436-delco-nc",
+    "destination": "/markets/county/columbus-county-nc",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/28528-gloucester-nc",
+    "destination": "/markets/county/carteret-county-nc",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/28552-lowland-nc",
+    "destination": "/markets/county/pamlico-county-nc",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/28554-maury-nc",
+    "destination": "/markets/county/greene-county-nc",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/29065-jenkinsville-sc",
+    "destination": "/markets/county/fairfield-county-sc",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/29122-peak-sc",
+    "destination": "/markets/county/newberry-county-sc",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/29175-westville-sc",
+    "destination": "/markets/county/kershaw-county-sc",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/29434-cordesville-sc",
+    "destination": "/markets/county/berkeley-county-sc",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/29580-nesmith-sc",
+    "destination": "/markets/county/williamsburg-county-sc",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/29594-tatum-sc",
+    "destination": "/markets/county/marlboro-county-sc",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/29849-ulmer-sc",
+    "destination": "/markets/county/allendale-county-sc",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/30015-covington-ga",
+    "destination": "/markets/county/newton-county-ga",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/30172-shannon-ga",
+    "destination": "/markets/county/floyd-county-ga",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/30426-girard-ga",
+    "destination": "/markets/county/burke-county-ga",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/31066-musella-ga",
+    "destination": "/markets/county/crawford-county-ga",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/31512-ambrose-ga",
+    "destination": "/markets/county/coffee-county-ga",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/32332-gretna-fl",
+    "destination": "/markets/county/gadsden-county-fl",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/32463-wausau-fl",
+    "destination": "/markets/county/washington-county-fl",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/33836-davenport-fl",
+    "destination": "/markets/county/polk-county-fl",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/35543-bear-creek-al",
+    "destination": "/markets/county/marion-county-al",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/35746-fackler-al",
+    "destination": "/markets/county/jackson-county-al",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/35775-valhermoso-springs-al",
+    "destination": "/markets/county/morgan-county-al",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/36029-fitzpatrick-al",
+    "destination": "/markets/county/bullock-county-al",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/36071-rutledge-al",
+    "destination": "/markets/county/crenshaw-county-al",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/36749-jones-al",
+    "destination": "/markets/county/autauga-county-al",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/36907-cuba-al",
+    "destination": "/markets/county/sumter-county-al",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/36919-silas-al",
+    "destination": "/markets/county/choctaw-county-al",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/37359-mulberry-tn",
+    "destination": "/markets/county/moore-county-tn",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/37732-elgin-tn",
+    "destination": "/markets/county/scott-county-tn",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/37864-sevierville-tn",
+    "destination": "/markets/county/sevier-county-tn",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/38236-mansfield-tn",
+    "destination": "/markets/county/henry-county-tn",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/38259-trimble-tn",
+    "destination": "/markets/county/dyer-county-tn",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/38339-guys-tn",
+    "destination": "/markets/county/mcnairy-county-tn",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/38781-winstonville-ms",
+    "destination": "/markets/county/bolivar-county-ms",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/39067-ethel-ms",
+    "destination": "/markets/county/attala-county-ms",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/39323-chunky-ms",
+    "destination": "/markets/county/newton-county-ms",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/39326-daleville-ms",
+    "destination": "/markets/county/kemper-county-ms",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/39456-mc-lain-ms",
+    "destination": "/markets/county/greene-county-ms",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/39506-gulfport-ms",
+    "destination": "/markets/county/harrison-county-ms",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/39555-hurley-ms",
+    "destination": "/markets/county/jackson-county-ms",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/39668-union-church-ms",
+    "destination": "/markets/county/jefferson-county-ms",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/39776-woodland-ms",
+    "destination": "/markets/county/chickasaw-county-ms",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/40062-saint-francis-ky",
+    "destination": "/markets/county/marion-county-ky",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/40115-custer-ky",
+    "destination": "/markets/county/breckinridge-county-ky",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/40140-garfield-ky",
+    "destination": "/markets/county/breckinridge-county-ky",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/40310-burgin-ky",
+    "destination": "/markets/county/mercer-county-ky",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/40807-benham-ky",
+    "destination": "/markets/county/harlan-county-ky",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/41044-germantown-ky",
+    "destination": "/markets/county/robertson-county-ky",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/41174-south-portsmouth-ky",
+    "destination": "/markets/county/lewis-county-ky",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/41214-debord-ky",
+    "destination": "/markets/county/martin-county-ky",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/41566-steele-ky",
+    "destination": "/markets/county/pike-county-ky",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/41645-langley-ky",
+    "destination": "/markets/county/floyd-county-ky",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/41739-dwarf-ky",
+    "destination": "/markets/county/perry-county-ky",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/41763-slemp-ky",
+    "destination": "/markets/county/perry-county-ky",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/41764-smilax-ky",
+    "destination": "/markets/county/leslie-county-ky",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/42028-burna-ky",
+    "destination": "/markets/county/livingston-county-ky",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/42266-pembroke-ky",
+    "destination": "/markets/county/christian-county-ky",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/42285-sweeden-ky",
+    "destination": "/markets/county/edmonson-county-ky",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/42325-bremen-ky",
+    "destination": "/markets/county/muhlenberg-county-ky",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/42349-horse-branch-ky",
+    "destination": "/markets/county/ohio-county-ky",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/42361-olaton-ky",
+    "destination": "/markets/county/ohio-county-ky",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/42371-rumsey-ky",
+    "destination": "/markets/county/mclean-county-ky",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/42441-nebo-ky",
+    "destination": "/markets/county/hopkins-county-ky",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/42762-millwood-ky",
+    "destination": "/markets/county/grayson-county-ky",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/43005-bladensburg-oh",
+    "destination": "/markets/county/knox-county-oh",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/43027-homer-oh",
+    "destination": "/markets/county/licking-county-oh",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/43109-brice-oh",
+    "destination": "/markets/county/franklin-county-oh",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/43330-kirby-oh",
+    "destination": "/markets/county/wyandot-county-oh",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/43333-lewistown-oh",
+    "destination": "/markets/county/logan-county-oh",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/43336-middleburg-oh",
+    "destination": "/markets/county/logan-county-oh",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/43462-rudolph-oh",
+    "destination": "/markets/county/wood-county-oh",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/43463-stony-ridge-oh",
+    "destination": "/markets/county/wood-county-oh",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/43536-mark-center-oh",
+    "destination": "/markets/county/defiance-county-oh",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/43721-brownsville-oh",
+    "destination": "/markets/county/licking-county-oh",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/43735-east-fultonham-oh",
+    "destination": "/markets/county/muskingum-county-oh",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/43788-summerfield-oh",
+    "destination": "/markets/county/noble-county-oh",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/44068-north-kingsville-oh",
+    "destination": "/markets/county/ashtabula-county-oh",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/44610-berlin-oh",
+    "destination": "/markets/county/holmes-county-oh",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/44689-wilmot-oh",
+    "destination": "/markets/county/holmes-county-oh",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/44690-winesburg-oh",
+    "destination": "/markets/county/holmes-county-oh",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/45160-owensville-oh",
+    "destination": "/markets/county/clermont-county-oh",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/45164-port-william-oh",
+    "destination": "/markets/county/clinton-county-oh",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/45166-reesville-oh",
+    "destination": "/markets/county/clinton-county-oh",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/45310-burkettsville-oh",
+    "destination": "/markets/county/mercer-county-oh",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/45319-donnelsville-oh",
+    "destination": "/markets/county/clark-county-oh",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/45348-new-weston-oh",
+    "destination": "/markets/county/darke-county-oh",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/45636-haverhill-oh",
+    "destination": "/markets/county/scioto-county-oh",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/45874-ohio-city-oh",
+    "destination": "/markets/county/van-wert-county-oh",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/45890-vanlue-oh",
+    "destination": "/markets/county/hancock-county-oh",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/46133-glenwood-in",
+    "destination": "/markets/county/rush-county-in",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/46302-boone-grove-in",
+    "destination": "/markets/county/porter-county-in",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/46381-thayer-in",
+    "destination": "/markets/county/newton-county-in",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/46731-craigville-in",
+    "destination": "/markets/county/wells-county-in",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/46796-wolflake-in",
+    "destination": "/markets/county/noble-county-in",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/47017-cross-plains-in",
+    "destination": "/markets/county/ripley-county-in",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/47035-new-trenton-in",
+    "destination": "/markets/county/franklin-county-in",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/47160-new-middletown-in",
+    "destination": "/markets/county/harrison-county-in",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/47162-new-washington-in",
+    "destination": "/markets/county/clark-county-in",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/47244-hartsville-in",
+    "destination": "/markets/county/bartholomew-county-in",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/47361-mount-summit-in",
+    "destination": "/markets/county/henry-county-in",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/47535-freelandville-in",
+    "destination": "/markets/county/knox-county-in",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/47576-saint-croix-in",
+    "destination": "/markets/county/crawford-county-in",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/47612-cynthiana-in",
+    "destination": "/markets/county/posey-county-in",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/47837-carbon-in",
+    "destination": "/markets/county/parke-county-in",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/47884-universal-in",
+    "destination": "/markets/county/vermillion-county-in",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/47925-buffalo-in",
+    "destination": "/markets/county/white-county-in",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/47968-new-ross-in",
+    "destination": "/markets/county/montgomery-county-in",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/48614-brant-mi",
+    "destination": "/markets/county/saginaw-county-mi",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/48633-lake-george-mi",
+    "destination": "/markets/county/clare-county-mi",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/48870-palo-mi",
+    "destination": "/markets/county/ionia-county-mi",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/49239-frontier-mi",
+    "destination": "/markets/county/hillsdale-county-mi",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/49248-jasper-mi",
+    "destination": "/markets/county/lenawee-county-mi",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/49312-brohman-mi",
+    "destination": "/markets/county/newaygo-county-mi",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/49922-dollar-bay-mi",
+    "destination": "/markets/county/houghton-county-mi",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/50042-brayton-ia",
+    "destination": "/markets/county/audubon-county-ia",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/50051-clemons-ia",
+    "destination": "/markets/county/marshall-county-ia",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/50123-humeston-ia",
+    "destination": "/markets/county/wayne-county-ia",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/50155-macksburg-ia",
+    "destination": "/markets/county/madison-county-ia",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/50252-swan-ia",
+    "destination": "/markets/county/marion-county-ia",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/50275-woodburn-ia",
+    "destination": "/markets/county/clarke-county-ia",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/50432-crystal-lake-ia",
+    "destination": "/markets/county/hancock-county-ia",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/50451-lakota-ia",
+    "destination": "/markets/county/kossuth-county-ia",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/50468-rockford-ia",
+    "destination": "/markets/county/floyd-county-ia",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/50471-rudd-ia",
+    "destination": "/markets/county/floyd-county-ia",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/50476-stacyville-ia",
+    "destination": "/markets/county/mitchell-county-ia",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/50567-nemaha-ia",
+    "destination": "/markets/county/sac-county-ia",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/50599-woolstock-ia",
+    "destination": "/markets/county/wright-county-ia",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/50619-clarksville-ia",
+    "destination": "/markets/county/butler-county-ia",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/50681-westgate-ia",
+    "destination": "/markets/county/fayette-county-ia",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/51018-cushing-ia",
+    "destination": "/markets/county/ida-county-ia",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/51520-arion-ia",
+    "destination": "/markets/county/crawford-county-ia",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/51544-lewis-ia",
+    "destination": "/markets/county/cass-county-ia",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/51558-moorhead-ia",
+    "destination": "/markets/county/monona-county-ia",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/51649-randolph-ia",
+    "destination": "/markets/county/fremont-county-ia",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/52165-ridgeway-ia",
+    "destination": "/markets/county/winneshiek-county-ia",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/52169-wadena-ia",
+    "destination": "/markets/county/fayette-county-ia",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/52236-homestead-ia",
+    "destination": "/markets/county/iowa-county-ia",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/52312-morley-ia",
+    "destination": "/markets/county/jones-county-ia",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/52329-rowley-ia",
+    "destination": "/markets/county/buchanan-county-ia",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/52536-blakesburg-ia",
+    "destination": "/markets/county/wapello-county-ia",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/52573-mount-sterling-ia",
+    "destination": "/markets/county/van-buren-county-ia",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/52584-pulaski-ia",
+    "destination": "/markets/county/davis-county-ia",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/52701-andover-ia",
+    "destination": "/markets/county/clinton-county-ia",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/52746-donahue-ia",
+    "destination": "/markets/county/scott-county-ia",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/52752-grandview-ia",
+    "destination": "/markets/county/louisa-county-ia",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/52760-moscow-ia",
+    "destination": "/markets/county/cedar-county-ia",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/53026-greenbush-wi",
+    "destination": "/markets/county/sheboygan-county-wi",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/53931-fairwater-wi",
+    "destination": "/markets/county/fond-du-lac-county-wi",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/53939-kingston-wi",
+    "destination": "/markets/county/green-lake-county-wi",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/53940-lake-delton-wi",
+    "destination": "/markets/county/sauk-county-wi",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/54120-fence-wi",
+    "destination": "/markets/county/florence-county-wi",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/54407-amherst-junction-wi",
+    "destination": "/markets/county/portage-county-wi",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/54441-hewitt-wi",
+    "destination": "/markets/county/wood-county-wi",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/54721-arkansaw-wi",
+    "destination": "/markets/county/pepin-county-wi",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/54842-hawthorne-wi",
+    "destination": "/markets/county/douglas-county-wi",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/54927-butte-des-morts-wi",
+    "destination": "/markets/county/winnebago-county-wi",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/55029-grandy-mn",
+    "destination": "/markets/county/isanti-county-mn",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/55973-sargeant-mn",
+    "destination": "/markets/county/mower-county-mn",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/56025-easton-mn",
+    "destination": "/markets/county/faribault-county-mn",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/56042-hartland-mn",
+    "destination": "/markets/county/freeborn-county-mn",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/56090-vernon-center-mn",
+    "destination": "/markets/county/blue-earth-county-mn",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/56123-currie-mn",
+    "destination": "/markets/county/murray-county-mn",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/56239-ghent-mn",
+    "destination": "/markets/county/lyon-county-mn",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/56251-kandiyohi-mn",
+    "destination": "/markets/county/kandiyohi-county-mn",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/56325-elrosa-mn",
+    "destination": "/markets/county/stearns-county-mn",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/56335-greenwald-mn",
+    "destination": "/markets/county/stearns-county-mn",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/56371-roscoe-mn",
+    "destination": "/markets/county/stearns-county-mn",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/56553-kent-mn",
+    "destination": "/markets/county/wilkin-county-mn",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/56646-gully-mn",
+    "destination": "/markets/county/polk-county-mn",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/56735-lancaster-mn",
+    "destination": "/markets/county/kittson-county-mn",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/57238-goodwin-sd",
+    "destination": "/markets/county/deuel-county-sd",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/57251-marvin-sd",
     "destination": "/markets/county/grant-county-sd",
     "permanent": false
   },
   {
-    "source": "/markets/zip/66412-bremen-ks",
+    "source": "/markets/zip/57375-stickney-sd",
+    "destination": "/markets/county/aurora-county-sd",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/57427-bath-sd",
+    "destination": "/markets/county/brown-county-sd",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/57465-northville-sd",
+    "destination": "/markets/county/faulk-county-sd",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/58005-argusville-nd",
+    "destination": "/markets/county/cass-county-nd",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/58021-davenport-nd",
+    "destination": "/markets/county/cass-county-nd",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/58030-fairmount-nd",
+    "destination": "/markets/county/richland-county-nd",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/58214-arvilla-nd",
+    "destination": "/markets/county/grand-forks-county-nd",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/58275-reynolds-nd",
+    "destination": "/markets/county/traill-county-nd",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/58330-edmore-nd",
+    "destination": "/markets/county/ramsey-county-nd",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/58355-nekoma-nd",
+    "destination": "/markets/county/cavalier-county-nd",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/58380-tolna-nd",
+    "destination": "/markets/county/nelson-county-nd",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/58430-denhoff-nd",
+    "destination": "/markets/county/sheridan-county-nd",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/58481-spiritwood-nd",
+    "destination": "/markets/county/barnes-county-nd",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/58497-ypsilanti-nd",
+    "destination": "/markets/county/stutsman-county-nd",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/58625-dodge-nd",
+    "destination": "/markets/county/dunn-county-nd",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/58645-medora-nd",
+    "destination": "/markets/county/billings-county-nd",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/58651-rhame-nd",
+    "destination": "/markets/state/north-dakota",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/58710-anamoose-nd",
+    "destination": "/markets/county/mchenry-county-nd",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/58733-des-lacs-nd",
+    "destination": "/markets/county/ward-county-nd",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/58755-mcgregor-nd",
+    "destination": "/markets/county/divide-county-nd",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/58768-norwich-nd",
+    "destination": "/markets/county/mchenry-county-nd",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/58783-souris-nd",
+    "destination": "/markets/county/bottineau-county-nd",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/58792-voltaire-nd",
+    "destination": "/markets/county/mchenry-county-nd",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/58844-fortuna-nd",
+    "destination": "/markets/county/divide-county-nd",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/59006-ballantine-mt",
+    "destination": "/markets/county/yellowstone-county-mt",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/59403-great-falls-mt",
+    "destination": "/markets/county/cascade-county-mt",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/59443-fort-shaw-mt",
+    "destination": "/markets/county/cascade-county-mt",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/59526-harlem-mt",
+    "destination": "/markets/county/blaine-county-mt",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/59532-kremlin-mt",
+    "destination": "/markets/county/hill-county-mt",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/59727-divide-mt",
+    "destination": "/markets/county/beaverhead-county-mt",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/59745-norris-mt",
+    "destination": "/markets/county/madison-county-mt",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/60109-burlington-il",
+    "destination": "/markets/county/kane-county-il",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/60470-ransom-il",
+    "destination": "/markets/county/lasalle-county-il",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/60949-ludlow-il",
+    "destination": "/markets/county/champaign-county-il",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/60973-wellington-il",
+    "destination": "/markets/county/iroquois-county-il",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/61007-baileyville-il",
+    "destination": "/markets/county/ogle-county-il",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/61043-holcomb-il",
+    "destination": "/markets/county/ogle-county-il",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/61044-kent-il",
+    "destination": "/markets/county/stephenson-county-il",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/61049-lindenwood-il",
+    "destination": "/markets/county/ogle-county-il",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/61335-mc-nabb-il",
+    "destination": "/markets/county/putnam-county-il",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/61344-mineral-il",
+    "destination": "/markets/county/bureau-county-il",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/61367-sublette-il",
+    "destination": "/markets/county/lee-county-il",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/61424-camp-grove-il",
+    "destination": "/markets/county/marshall-county-il",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/61435-gerlaw-il",
+    "destination": "/markets/county/warren-county-il",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/61475-sciota-il",
+    "destination": "/markets/county/mcdonough-county-il",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/61552-mossville-il",
+    "destination": "/markets/county/peoria-county-il",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/61735-dewitt-il",
+    "destination": "/markets/county/de-witt-county-il",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/61839-de-land-il",
+    "destination": "/markets/county/piatt-county-il",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/62017-coffeen-il",
+    "destination": "/markets/county/montgomery-county-il",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/62019-donnellson-il",
+    "destination": "/markets/county/bond-county-il",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/62027-eldred-il",
+    "destination": "/markets/county/greene-county-il",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/62077-panama-il",
+    "destination": "/markets/county/bond-county-il",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/62081-rockbridge-il",
+    "destination": "/markets/county/greene-county-il",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/62248-hecker-il",
+    "destination": "/markets/county/monroe-county-il",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/62279-renault-il",
+    "destination": "/markets/county/monroe-county-il",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/62280-rockwood-il",
+    "destination": "/markets/county/randolph-county-il",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/62289-summerfield-il",
+    "destination": "/markets/county/st-clair-county-il",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/62324-clayton-il",
+    "destination": "/markets/county/adams-county-il",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/62349-loraine-il",
+    "destination": "/markets/county/adams-county-il",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/62375-timewell-il",
+    "destination": "/markets/county/brown-county-il",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/62424-dieterich-il",
+    "destination": "/markets/county/effingham-county-il",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/62432-hidalgo-il",
+    "destination": "/markets/county/jasper-county-il",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/62477-west-union-il",
+    "destination": "/markets/county/clark-county-il",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/62537-harristown-il",
+    "destination": "/markets/county/macon-county-il",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/62538-harvel-il",
+    "destination": "/markets/county/montgomery-county-il",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/62624-browning-il",
+    "destination": "/markets/county/schuyler-county-il",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/62633-easton-il",
+    "destination": "/markets/county/mason-county-il",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/62668-murrayville-il",
+    "destination": "/markets/county/morgan-county-il",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/62682-san-jose-il",
+    "destination": "/markets/county/mason-county-il",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/62819-buckner-il",
+    "destination": "/markets/county/franklin-county-il",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/62841-freeman-spur-il",
+    "destination": "/markets/county/williamson-county-il",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/62856-logan-il",
+    "destination": "/markets/county/franklin-county-il",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/62860-macedonia-il",
+    "destination": "/markets/county/hamilton-county-il",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/62862-mill-shoals-il",
+    "destination": "/markets/county/white-county-il",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/62872-opdyke-il",
+    "destination": "/markets/county/jefferson-county-il",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/62877-richview-il",
+    "destination": "/markets/county/washington-county-il",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/63061-luebbering-mo",
+    "destination": "/markets/county/franklin-county-mo",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/63386-west-alton-mo",
+    "destination": "/markets/county/st-charles-county-mo",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/63454-maywood-mo",
+    "destination": "/markets/county/lewis-county-mo",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/63460-novelty-mo",
+    "destination": "/markets/county/knox-county-mo",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/63469-shelbyville-mo",
+    "destination": "/markets/county/shelby-county-mo",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/63538-elmer-mo",
+    "destination": "/markets/county/macon-county-mo",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/63551-livonia-mo",
+    "destination": "/markets/county/putnam-county-mo",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/63747-friedheim-mo",
+    "destination": "/markets/county/cape-girardeau-county-mo",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/63867-matthews-mo",
+    "destination": "/markets/county/new-madrid-county-mo",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/63874-risco-mo",
+    "destination": "/markets/county/new-madrid-county-mo",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/63882-wyatt-mo",
+    "destination": "/markets/county/mississippi-county-mo",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/63964-silva-mo",
+    "destination": "/markets/county/wayne-county-mo",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/64028-farley-mo",
+    "destination": "/markets/county/platte-county-mo",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/64072-missouri-city-mo",
+    "destination": "/markets/county/clay-county-mo",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/64480-rea-mo",
+    "destination": "/markets/county/andrew-county-mo",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/64630-browning-mo",
+    "destination": "/markets/county/linn-county-mo",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/64642-gilman-city-mo",
+    "destination": "/markets/county/harrison-county-mo",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/64676-rothville-mo",
+    "destination": "/markets/county/chariton-county-mo",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/64688-wheeling-mo",
+    "destination": "/markets/county/livingston-county-mo",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/64728-bronaugh-mo",
+    "destination": "/markets/county/vernon-county-mo",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/65054-loose-creek-mo",
+    "destination": "/markets/county/osage-county-mo",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/65062-mount-sterling-mo",
+    "destination": "/markets/county/gasconade-county-mo",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/65076-saint-thomas-mo",
+    "destination": "/markets/county/osage-county-mo",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/65080-tebbetts-mo",
+    "destination": "/markets/county/callaway-county-mo",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/65085-westphalia-mo",
+    "destination": "/markets/county/osage-county-mo",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/65232-benton-city-mo",
+    "destination": "/markets/county/audrain-county-mo",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/65244-clifton-hill-mo",
+    "destination": "/markets/county/randolph-county-mo",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/65285-thompson-mo",
+    "destination": "/markets/county/audrain-county-mo",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/65322-blackwater-mo",
+    "destination": "/markets/county/cooper-county-mo",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/65654-freistatt-mo",
+    "destination": "/markets/county/lawrence-county-mo",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/65783-windyville-mo",
+    "destination": "/markets/county/dallas-county-mo",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/66501-mc-farland-ks",
+    "destination": "/markets/county/wabaunsee-county-ks",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/66518-oketo-ks",
     "destination": "/markets/county/marshall-county-ks",
     "permanent": false
   },
   {
-    "source": "/markets/zip/67018-bluff-city-ks",
-    "destination": "/markets/county/harper-county-ks",
+    "source": "/markets/zip/66526-paxico-ks",
+    "destination": "/markets/county/wabaunsee-county-ks",
     "permanent": false
   },
   {
-    "source": "/markets/zip/68960-naponee-ne",
-    "destination": "/markets/county/franklin-county-ne",
+    "source": "/markets/zip/66540-soldier-ks",
+    "destination": "/markets/county/jackson-county-ks",
     "permanent": false
   },
   {
-    "source": "/markets/zip/70556-mermentau-la",
-    "destination": "/markets/county/acadia-county-la",
+    "source": "/markets/zip/66554-randolph-ks",
+    "destination": "/markets/county/riley-county-ks",
     "permanent": false
   },
   {
-    "source": "/markets/zip/72037-coy-ar",
+    "source": "/markets/zip/66742-gas-ks",
+    "destination": "/markets/county/allen-county-ks",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/66761-piqua-ks",
+    "destination": "/markets/county/woodson-county-ks",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/66936-burr-oak-ks",
+    "destination": "/markets/county/jewell-county-ks",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/66959-munden-ks",
+    "destination": "/markets/county/republic-county-ks",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/67016-bentley-ks",
+    "destination": "/markets/county/sedgwick-county-ks",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/67035-cunningham-ks",
+    "destination": "/markets/county/kingman-county-ks",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/67057-hardtner-ks",
+    "destination": "/markets/county/barber-county-ks",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/67072-latham-ks",
+    "destination": "/markets/county/butler-county-ks",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/67109-mullinville-ks",
+    "destination": "/markets/county/kiowa-county-ks",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/67138-sharon-ks",
+    "destination": "/markets/county/barber-county-ks",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/67227-wichita-ks",
+    "destination": "/markets/county/sedgwick-county-ks",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/67340-dearing-ks",
+    "destination": "/markets/county/montgomery-county-ks",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/67349-howard-ks",
+    "destination": "/markets/county/elk-county-ks",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/67442-falun-ks",
+    "destination": "/markets/county/saline-county-ks",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/67482-talmage-ks",
+    "destination": "/markets/county/dickinson-county-ks",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/67485-tipton-ks",
+    "destination": "/markets/county/mitchell-county-ks",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/67491-windom-ks",
+    "destination": "/markets/county/mcpherson-county-ks",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/67519-belpre-ks",
+    "destination": "/markets/county/edwards-county-ks",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/67631-collyer-ks",
+    "destination": "/markets/county/trego-county-ks",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/67657-palco-ks",
+    "destination": "/markets/county/rooks-county-ks",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/67757-selden-ks",
+    "destination": "/markets/county/sheridan-county-ks",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/68058-south-bend-ne",
+    "destination": "/markets/county/cass-county-ne",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/68323-burchard-ne",
+    "destination": "/markets/county/pawnee-county-ne",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/68332-crab-orchard-ne",
+    "destination": "/markets/county/johnson-county-ne",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/68377-jansen-ne",
+    "destination": "/markets/county/jefferson-county-ne",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/68445-swanton-ne",
+    "destination": "/markets/county/saline-county-ne",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/68454-unadilla-ne",
+    "destination": "/markets/county/otoe-county-ne",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/68457-verdon-ne",
+    "destination": "/markets/county/richardson-county-ne",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/68629-clarkson-ne",
+    "destination": "/markets/county/colfax-county-ne",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/68659-rogers-ne",
+    "destination": "/markets/county/colfax-county-ne",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/68760-niobrara-ne",
+    "destination": "/markets/county/knox-county-ne",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/68789-winnetoon-ne",
+    "destination": "/markets/county/knox-county-ne",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/68816-archer-ne",
+    "destination": "/markets/county/merrick-county-ne",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/68834-eddyville-ne",
+    "destination": "/markets/county/dawson-county-ne",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/68856-merna-ne",
+    "destination": "/markets/county/custer-county-ne",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/68859-north-loup-ne",
+    "destination": "/markets/county/valley-county-ne",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/68936-edison-ne",
+    "destination": "/markets/county/furnas-county-ne",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/68976-smithfield-ne",
+    "destination": "/markets/county/gosper-county-ne",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/69212-crookston-ne",
+    "destination": "/markets/county/cherry-county-ne",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/69352-lyman-ne",
+    "destination": "/markets/county/scotts-bluff-county-ne",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/70174-new-orleans-la",
+    "destination": "/markets/county/orleans-county-la",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/70340-amelia-la",
+    "destination": "/markets/county/st-mary-county-la",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/70375-mathews-la",
+    "destination": "/markets/county/lafourche-county-la",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/70519-cade-la",
+    "destination": "/markets/county/st-martin-county-la",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/70523-charenton-la",
+    "destination": "/markets/county/st-mary-county-la",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/71247-hodge-la",
+    "destination": "/markets/county/jackson-county-la",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/71277-spearsville-la",
+    "destination": "/markets/county/union-county-la",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/71356-morrow-la",
+    "destination": "/markets/county/avoyelles-county-la",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/71426-fisher-la",
+    "destination": "/markets/county/sabine-county-la",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/71480-urania-la",
+    "destination": "/markets/county/lasalle-county-la",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/71942-friendship-ar",
+    "destination": "/markets/county/hot-spring-county-ar",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/71956-mountain-pine-ar",
+    "destination": "/markets/county/garland-county-ar",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/72057-grapevine-ar",
+    "destination": "/markets/county/grant-county-ar",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/72083-keo-ar",
     "destination": "/markets/county/lonoke-county-ar",
     "permanent": false
   },
   {
-    "source": "/markets/zip/73658-oakwood-ok",
-    "destination": "/markets/county/dewey-county-ok",
+    "source": "/markets/zip/72084-leola-ar",
+    "destination": "/markets/county/grant-county-ar",
     "permanent": false
   },
   {
-    "source": "/markets/zip/79566-wingate-tx",
-    "destination": "/markets/county/runnels-county-tx",
+    "source": "/markets/zip/72139-russell-ar",
+    "destination": "/markets/county/white-county-ar",
     "permanent": false
   },
   {
-    "source": "/markets/zip/83806-bovill-id",
-    "destination": "/markets/county/latah-county-id",
+    "source": "/markets/zip/72168-tucker-ar",
+    "destination": "/markets/county/jefferson-county-ar",
     "permanent": false
   },
   {
-    "source": "/markets/zip/88126-pep-nm",
-    "destination": "/markets/county/roosevelt-county-nm",
+    "source": "/markets/zip/72368-moro-ar",
+    "destination": "/markets/county/lee-county-ar",
     "permanent": false
   },
   {
-    "source": "/markets/zip/96029-flournoy-ca",
-    "destination": "/markets/county/tehama-county-ca",
+    "source": "/markets/zip/72424-datto-ar",
+    "destination": "/markets/county/clay-county-ar",
     "permanent": false
   },
   {
-    "source": "/markets/zip/96040-hat-creek-ca",
-    "destination": "/markets/county/shasta-county-ca",
+    "source": "/markets/zip/72435-knobel-ar",
+    "destination": "/markets/county/clay-county-ar",
     "permanent": false
   },
   {
-    "source": "/markets/zip/99566-chitina-ak",
-    "destination": "/markets/county/copper-river-census-area-county-ak",
+    "source": "/markets/zip/72546-ida-ar",
+    "destination": "/markets/county/cleburne-county-ar",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/72571-rosie-ar",
+    "destination": "/markets/county/independence-county-ar",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/72587-wiseman-ar",
+    "destination": "/markets/county/izard-county-ar",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/72636-gilbert-ar",
+    "destination": "/markets/county/searcy-county-ar",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/72669-pindall-ar",
+    "destination": "/markets/county/searcy-county-ar",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/72935-dyer-ar",
+    "destination": "/markets/county/crawford-county-ar",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/73455-ravia-ok",
+    "destination": "/markets/county/johnston-county-ok",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/73537-eldorado-ok",
+    "destination": "/markets/county/jackson-county-ok",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/73555-manitou-ok",
+    "destination": "/markets/county/tillman-county-ok",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/73559-mountain-park-ok",
+    "destination": "/markets/county/kiowa-county-ok",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/73569-terral-ok",
+    "destination": "/markets/county/jefferson-county-ok",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/73933-boise-city-ok",
+    "destination": "/markets/state/oklahoma",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/73950-turpin-ok",
+    "destination": "/markets/county/beaver-county-ok",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/74028-depew-ok",
+    "destination": "/markets/county/creek-county-ok",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/74460-schulter-ok",
+    "destination": "/markets/county/okmulgee-county-ok",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/74535-clarita-ok",
+    "destination": "/markets/county/coal-county-ok",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/74646-nardin-ok",
+    "destination": "/markets/county/grant-county-ok",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/74827-atwood-ok",
+    "destination": "/markets/county/hughes-county-ok",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/74837-cromwell-ok",
+    "destination": "/markets/county/seminole-county-ok",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/74931-bunch-ok",
+    "destination": "/markets/county/adair-county-ok",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/75101-bardwell-tx",
+    "destination": "/markets/county/ellis-county-tx",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/75694-woodlawn-tx",
+    "destination": "/markets/county/harrison-county-tx",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/75782-poynor-tx",
+    "destination": "/markets/county/henderson-county-tx",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/75865-woodlake-tx",
+    "destination": "/markets/county/trinity-county-tx",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/76388-weinert-tx",
+    "destination": "/markets/county/haskell-county-tx",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/76481-south-bend-tx",
+    "destination": "/markets/county/young-county-tx",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/76503-temple-tx",
+    "destination": "/markets/county/bell-county-tx",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/76940-mereta-tx",
+    "destination": "/markets/county/concho-county-tx",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/77574-league-city-tx",
+    "destination": "/markets/county/galveston-county-tx",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/77639-orangefield-tx",
+    "destination": "/markets/county/orange-county-tx",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/77969-la-salle-tx",
+    "destination": "/markets/county/jackson-county-tx",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/77989-thomaston-tx",
+    "destination": "/markets/county/dewitt-county-tx",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/78008-campbellton-tx",
+    "destination": "/markets/county/atascosa-county-tx",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/78116-gillett-tx",
+    "destination": "/markets/county/karnes-county-tx",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/78143-pandora-tx",
+    "destination": "/markets/county/wilson-county-tx",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/79342-loop-tx",
+    "destination": "/markets/county/gaines-county-tx",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/79346-morton-tx",
+    "destination": "/markets/county/cochran-county-tx",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/79350-new-deal-tx",
+    "destination": "/markets/county/lubbock-county-tx",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/79505-benjamin-tx",
+    "destination": "/markets/county/knox-county-tx",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/79565-westbrook-tx",
+    "destination": "/markets/county/mitchell-county-tx",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/79851-sierra-blanca-tx",
+    "destination": "/markets/county/hudspeth-county-tx",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/80261-denver-co",
+    "destination": "/markets/county/denver-county-co",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/80722-atwood-co",
+    "destination": "/markets/county/logan-county-co",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/80745-padroni-co",
+    "destination": "/markets/county/logan-county-co",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/81329-marvel-co",
+    "destination": "/markets/county/la-plata-county-co",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/81658-vail-co",
+    "destination": "/markets/county/eagle-county-co",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/82932-farson-wy",
+    "destination": "/markets/county/sweetwater-county-wy",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/83454-ucon-id",
+    "destination": "/markets/county/bonneville-county-id",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/83650-murphy-id",
+    "destination": "/markets/county/owyhee-county-id",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/84002-altonah-ut",
+    "destination": "/markets/county/duchesne-county-ut",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/84076-tridell-ut",
+    "destination": "/markets/county/uintah-county-ut",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/84338-trenton-ut",
+    "destination": "/markets/county/cache-county-ut",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/84510-aneth-ut",
+    "destination": "/markets/county/san-juan-county-ut",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/85366-yuma-az",
+    "destination": "/markets/county/yuma-county-az",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/87516-canones-nm",
+    "destination": "/markets/county/rio-arriba-county-nm",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/87734-ocate-nm",
+    "destination": "/markets/county/mora-county-nm",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/87930-arrey-nm",
+    "destination": "/markets/county/sierra-county-nm",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/88020-animas-nm",
+    "destination": "/markets/county/hidalgo-county-nm",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/88031-deming-nm",
+    "destination": "/markets/county/luna-county-nm",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/88032-dona-ana-nm",
+    "destination": "/markets/county/do�a-ana-county-nm",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/88421-garita-nm",
+    "destination": "/markets/county/san-miguel-county-nm",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/89039-cal-nev-ari-nv",
+    "destination": "/markets/county/clark-county-nv",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/89822-carlin-nv",
+    "destination": "/markets/county/elko-county-nv",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/90633-la-habra-ca",
+    "destination": "/markets/county/orange-county-ca",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/94074-san-gregorio-ca",
+    "destination": "/markets/county/san-mateo-county-ca",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/95312-cressey-ca",
+    "destination": "/markets/county/merced-county-ca",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/95417-branscomb-ca",
+    "destination": "/markets/county/mendocino-county-ca",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/95471-rio-nido-ca",
+    "destination": "/markets/county/sonoma-county-ca",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/95651-lotus-ca",
+    "destination": "/markets/county/el-dorado-county-ca",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/95659-nicolaus-ca",
+    "destination": "/markets/county/sutter-county-ca",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/95698-zamora-ca",
+    "destination": "/markets/county/yolo-county-ca",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/97145-tolovana-park-or",
+    "destination": "/markets/county/clatsop-county-or",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/97476-sixes-or",
+    "destination": "/markets/county/curry-county-or",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/97817-bates-or",
+    "destination": "/markets/county/grant-county-or",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/97859-meacham-or",
+    "destination": "/markets/county/umatilla-county-or",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/97905-durkee-or",
+    "destination": "/markets/county/baker-county-or",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/98554-lebam-wa",
+    "destination": "/markets/county/pacific-county-wa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/98819-conconully-wa",
+    "destination": "/markets/county/okanogan-county-wa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/98909-yakima-wa",
+    "destination": "/markets/county/yakima-county-wa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/99020-marshall-wa",
+    "destination": "/markets/county/spokane-county-wa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/99039-waverly-wa",
+    "destination": "/markets/county/spokane-county-wa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/99124-elmer-city-wa",
+    "destination": "/markets/county/okanogan-county-wa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/99135-hartline-wa",
+    "destination": "/markets/county/grant-county-wa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/99176-thornton-wa",
+    "destination": "/markets/county/whitman-county-wa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/99329-dixie-wa",
+    "destination": "/markets/county/walla-walla-county-wa",
+    "permanent": false
+  },
+  {
+    "source": "/markets/zip/99755-denali-national-park-ak",
+    "destination": "/markets/county/denali-borough-county-ak",
     "permanent": false
   }
 ]

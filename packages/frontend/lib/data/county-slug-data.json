@@ -4545,15 +4545,6 @@
     "isCity": false
   },
   {
-    "fips": "40025",
-    "slug": "cimarron-county-ok",
-    "name": "Cimarron County",
-    "shortName": "Cimarron County, OK",
-    "state": "OK",
-    "cbsaCode": null,
-    "isCity": false
-  },
-  {
     "fips": "12017",
     "slug": "citrus-county-fl",
     "name": "Citrus County",
@@ -21627,15 +21618,6 @@
     "isCity": false
   },
   {
-    "fips": "51159",
-    "slug": "richmond-county-va",
-    "name": "Richmond County",
-    "shortName": "Richmond County, VA",
-    "state": "VA",
-    "cbsaCode": null,
-    "isCity": false
-  },
-  {
     "fips": "51760",
     "slug": "richmond-city-va",
     "name": "Richmond City",
@@ -21643,6 +21625,15 @@
     "state": "VA",
     "cbsaCode": "40060",
     "isCity": true
+  },
+  {
+    "fips": "51159",
+    "slug": "richmond-county-va",
+    "name": "Richmond County",
+    "shortName": "Richmond County, VA",
+    "state": "VA",
+    "cbsaCode": null,
+    "isCity": false
   },
   {
     "fips": "20161",
@@ -23814,15 +23805,6 @@
     "isCity": false
   },
   {
-    "fips": "29510",
-    "slug": "st-louis-city-mo",
-    "name": "St. Louis City",
-    "shortName": "St. Louis City, MO",
-    "state": "MO",
-    "cbsaCode": "41180",
-    "isCity": true
-  },
-  {
     "fips": "29189",
     "slug": "st-louis-county-mo",
     "name": "St. Louis County",
@@ -23830,6 +23812,15 @@
     "state": "MO",
     "cbsaCode": "41180",
     "isCity": false
+  },
+  {
+    "fips": "29510",
+    "slug": "st-louis-city-mo",
+    "name": "St. Louis City",
+    "shortName": "St. Louis City, MO",
+    "state": "MO",
+    "cbsaCode": "41180",
+    "isCity": true
   },
   {
     "fips": "12111",
