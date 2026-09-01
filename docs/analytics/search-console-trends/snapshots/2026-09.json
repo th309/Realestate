@@ -1,0 +1,133 @@
+{
+  "asOf": "2026-09-01",
+  "windowStart": "2026-05-31",
+  "windowEnd": "2026-08-29",
+  "top": [
+    {
+      "query": "sonora california days on market dom average time to sell homes real estate august 2026 how long to sell (site:zillow.com or site:redfin.com or site:realtor.com or site:trulia.com)",
+      "impressions": 24,
+      "clicks": 0,
+      "position": 1.4583333333333333
+    },
+    {
+      "query": "chicago real estate forecast",
+      "impressions": 22,
+      "clicks": 0,
+      "position": 56.72727272727273
+    },
+    {
+      "query": "housing market forecast",
+      "impressions": 17,
+      "clicks": 0,
+      "position": 35.588235294117645
+    },
+    {
+      "query": "best real estate location analysis platforms used by institutional investors in the united states",
+      "impressions": 16,
+      "clicks": 0,
+      "position": 83.5625
+    },
+    {
+      "query": "21218 market trend",
+      "impressions": 11,
+      "clicks": 0,
+      "position": 10.727272727272727
+    },
+    {
+      "query": "housing forecast",
+      "impressions": 11,
+      "clicks": 0,
+      "position": 57.54545454545455
+    },
+    {
+      "query": "phoenix housing market forecast",
+      "impressions": 11,
+      "clicks": 0,
+      "position": 54
+    },
+    {
+      "query": "nashville real estate market forecast",
+      "impressions": 9,
+      "clicks": 0,
+      "position": 61.888888888888886
+    },
+    {
+      "query": "seattle housing market forecast",
+      "impressions": 9,
+      "clicks": 0,
+      "position": 39
+    },
+    {
+      "query": "chattanooga housing market forecast 2026",
+      "impressions": 8,
+      "clicks": 0,
+      "position": 9.625
+    },
+    {
+      "query": "investment property market insights idaho",
+      "impressions": 8,
+      "clicks": 0,
+      "position": 78.5
+    },
+    {
+      "query": "atlanta housing market forecast",
+      "impressions": 7,
+      "clicks": 0,
+      "position": 55.285714285714285
+    },
+    {
+      "query": "dallas real estate forecast",
+      "impressions": 7,
+      "clicks": 0,
+      "position": 28.571428571428573
+    },
+    {
+      "query": "pittsburgh real estate market forecast",
+      "impressions": 7,
+      "clicks": 0,
+      "position": 48.857142857142854
+    },
+    {
+      "query": "albuquerque housing market forecast 2026",
+      "impressions": 6,
+      "clicks": 0,
+      "position": 8.333333333333332
+    },
+    {
+      "query": "cleveland housing market forecast 2026",
+      "impressions": 6,
+      "clicks": 0,
+      "position": 7.166666666666667
+    },
+    {
+      "query": "home appreciation in round rock/ williamson county",
+      "impressions": 6,
+      "clicks": 0,
+      "position": 37
+    },
+    {
+      "query": "houston real estate forecast",
+      "impressions": 6,
+      "clicks": 0,
+      "position": 45.5
+    },
+    {
+      "query": "san diego real estate forecast",
+      "impressions": 6,
+      "clicks": 0,
+      "position": 68.16666666666667
+    },
+    {
+      "query": "seattle real estate market forecast",
+      "impressions": 6,
+      "clicks": 0,
+      "position": 45.166666666666664
+    }
+  ],
+  "totalDistinct": 8050,
+  "exclusionCounts": {
+    "bot": 14,
+    "brand": 17,
+    "geo": 417
+  }
+}

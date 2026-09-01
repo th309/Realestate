@@ -6,6 +6,39 @@ Do not hand-edit old entries — just let the monthly job append.
 
 ---
 
+## 2026-09-01 — automated run
+
+**Verdict:** 20 professional/investor-intent queries in the top 20 this run. 12 new vs last run (e.g. "sonora california days on market dom average time to sell homes real estate august 2026 how long to sell (site:zillow.com or site:redfin.com or site:realtor.com or site:trulia.com)"). 12 dropped out of the top 20. Biggest mover: "housing market forecast" (+6 impressions).
+
+Window: 2026-05-31 to 2026-08-29 (trailing 90 days, 3-day lag pullback). Scanned 8050 distinct queries; excluded 14 bot-pattern, 17 branded, 417 generic geo-lookup.
+
+| Query | Impressions | Δ vs last run | Clicks | Avg position |
+| --- | --- | --- | --- | --- |
+| sonora california days on market dom average time to sell homes real estate august 2026 how long to sell (site:zillow.com or site:redfin.com or site:realtor.com or site:trulia.com) | 24 | new | 0 | 1.5 |
+| chicago real estate forecast | 22 | 0 | 0 | 56.7 |
+| housing market forecast | 17 | +6 | 0 | 35.6 |
+| best real estate location analysis platforms used by institutional investors in the united states | 16 | new | 0 | 83.6 |
+| 21218 market trend | 11 | 0 | 0 | 10.7 |
+| housing forecast | 11 | +1 | 0 | 57.5 |
+| phoenix housing market forecast | 11 | 0 | 0 | 54.0 |
+| nashville real estate market forecast | 9 | 0 | 0 | 61.9 |
+| seattle housing market forecast | 9 | 0 | 0 | 39.0 |
+| chattanooga housing market forecast 2026 | 8 | new | 0 | 9.6 |
+| investment property market insights idaho | 8 | -5 | 0 | 78.5 |
+| atlanta housing market forecast | 7 | new | 0 | 55.3 |
+| dallas real estate forecast | 7 | new | 0 | 28.6 |
+| pittsburgh real estate market forecast | 7 | new | 0 | 48.9 |
+| albuquerque housing market forecast 2026 | 6 | new | 0 | 8.3 |
+| cleveland housing market forecast 2026 | 6 | new | 0 | 7.2 |
+| home appreciation in round rock/ williamson county | 6 | new | 0 | 37.0 |
+| houston real estate forecast | 6 | new | 0 | 45.5 |
+| san diego real estate forecast | 6 | new | 0 | 68.2 |
+| seattle real estate market forecast | 6 | new | 0 | 45.2 |
+
+Next comparison should be against this entry.
+
+---
+
 ## 2026-08-01 — automated run
 
 **Verdict:** 20 professional/investor-intent queries in the top 20 this run. 5 new vs last run (e.g. "housing market forecast"). 5 dropped out of the top 20. Biggest mover: "chicago real estate forecast" (+16 impressions).
@@ -104,6 +137,7 @@ Window: 2026-04-17 to 2026-07-16 (trailing 90 days, 3-day lag pullback). Scanned
 Next comparison should be against this entry.
 
 ---
+
 
 
 
